@@ -56,6 +56,9 @@ function sepBy(sep, rule) {
   return optional(sepBy1(sep, rule))
 }
 
+function sepBy1prec(sep, precedence, rule) {
+  return seq(rule, repeat(prec(precedence, seq(sep, rule))))
+}
 
 // /**
 //  *
@@ -111,31 +114,31 @@ function sepBy(sep, rule) {
 //   ));
 // }
 
-// /**
-//  *
-//  * @param {GrammarSymbols<string>} $
-//  * @param {number} prior
-//  * @param {Rule|string} ops
-//  *
-//  * @returns {PrecLeftRule}
-//  *
-//  */
-// function exprOp($, prior, ops) {
-//   return prec.left(prior, seq($.expression, ops, repeat($.attribute_instance), $.expression));
-// }
+/**
+ *
+ * @param {GrammarSymbols<string>} $
+ * @param {number} prior
+ * @param {Rule|string} ops
+ *
+ * @returns {PrecLeftRule}
+ *
+ */
+function exprOp($, prior, ops) {
+  return prec.left(prior, seq($.expression, ops, repeat($.attribute_instance), $.expression));
+}
 
-// /**
-//  *
-//  * @param {GrammarSymbols<string>} $
-//  * @param {number} prior
-//  * @param {Rule|string} ops
-//  *
-//  * @returns {PrecLeftRule}
-//  *
-//  */
-// function constExprOp($, prior, ops) {
-//   return prec.left(prior, seq($.constant_expression, ops, repeat($.attribute_instance), $.constant_expression));
-// }
+/**
+ *
+ * @param {GrammarSymbols<string>} $
+ * @param {number} prior
+ * @param {Rule|string} ops
+ *
+ * @returns {PrecLeftRule}
+ *
+ */
+function constExprOp($, prior, ops) {
+  return prec.left(prior, seq($.constant_expression, ops, repeat($.attribute_instance), $.constant_expression));
+}
 
 // /**
 //  *
@@ -371,27 +374,6 @@ const rules = {
   //   [ timeunits_declaration ] { module_item } 'endmodule' [ ':' _module_identifier ]
   // | 'extern' module_nonansi_header
   // | 'extern' module_ansi_header
-
-  // module_header: $ => seq(
-  //   // repeat($.attribute_instance),
-  //   $.module_keyword,
-  //   optional($.lifetime),
-  //   $._module_identifier
-  // ),
-
-  // module_nonansi_header: $ => seq(
-  //   repeat($.package_import_declaration),
-  //   optional($.parameter_port_list),
-  //   $.list_of_ports
-  // ),
-
-  // module_ansi_header: $ => seq(
-  //   repeat($.package_import_declaration),
-  //   choice(
-  //     seq($.parameter_port_list, optional($.list_of_port_declarations)),
-  //     $.list_of_port_declarations
-  //   )
-  // ),
 
   module_declaration: $ => choice(
     seq(
@@ -681,69 +663,77 @@ const rules = {
   ),
 
   port_declaration: $ => seq(
-    // repeat($.attribute_instance),
-    // choice(
-    //   $.inout_declaration,
-    //   $.input_declaration,
-    //   $.output_declaration,
-    //   $.ref_declaration,
-    //   $.interface_port_declaration
-    // )
+    repeat($.attribute_instance),
+    choice(
+      // $.inout_declaration,
+      $.input_declaration,
+      $.output_declaration,
+      // $.ref_declaration,
+      // $.interface_port_declaration
+    )
   ),
 
-  port1: $ => choice( // Reordered, not empty
+  port1: $ => prec('port1', choice( // Reordered, not empty
     $._port_expression,
     seq('.', $.port_identifier, '(', optional($._port_expression), ')')
-  ),
+  )),
 
   _port_expression: $ => choice(
     $.port_reference,
     seq('{', sepBy1(',', $.port_reference), '}')
   ),
 
-  port_reference: $ => seq(
+  port_reference: $ => prec('port_reference', seq(
     $.port_identifier,
     // optional($.constant_select1)
+  )),
+
+  port_direction: $ => choice('input', 'output', 'inout', 'ref'),
+
+  // INFO: Drom's one
+  net_port_header1: $ => choice(
+    seq(optional($.port_direction), $.net_port_type1),
+    $.port_direction
   ),
+  // End of INFO
 
-  // port_direction: $ => choice('input', 'output', 'inout', 'ref'),
+  // INFO: Mine, adapted to 1800-2023
+  // INFO: Gave issues with ansi_port_declaration with example:
+  //  input clk;
+  // net_port_header1: $ => seq(optional($.port_direction), $.net_port_type1),
+  // End of INFO
 
-  // net_port_header1: $ => choice(
-  //   seq(optional($.port_direction), $.net_port_type1),
-  //   $.port_direction
-  // ),
+  variable_port_header: $ => seq(optional($.port_direction), $._variable_port_type),
 
-  // variable_port_header: $ => seq(
-  //   optional($.port_direction),
-  //   $._variable_port_type
-  // ),
+  // INFO: Drom's one
+  interface_port_header: $ => prec('interface_port_header', seq(
+    choice(
+      $.interface_identifier,
+      'interface'
+    ),
+    optional(seq('.', $.modport_identifier))
+  )),
+  // End of INFO
 
-  // interface_port_header: $ => seq(
-  //   choice(
-  //     $.interface_identifier,
-  //     'interface'
-  //   ),
-  //   optseq('.', $.modport_identifier)
-  // ),
-
-  ansi_port_declaration: $ => choice(
-    // seq(
-    //   optional(choice($.net_port_header1, $.interface_port_header)),
-    //   $.port_identifier,
-    //   repeat($.unpacked_dimension),
-    //   optseq('=', $.constant_expression)
-    // ),
-    // seq(
-    //   optional($.variable_port_header),
-    //   $.port_identifier,
-    //   repeat($._variable_dimension),
-    //   optseq('=', $.constant_expression)
-    // ),
-    // seq(
-    //   optional($.port_direction), '.', $.port_identifier,
-    //   '(', optional($.expression), ')'
-    // )
-  ),
+  ansi_port_declaration: $ => prec('ansi_port_declaration', choice(
+    seq(
+      optional(choice($.net_port_header1, $.interface_port_header)),
+      $.port_identifier,
+      repeat(prec('ansi_port_declaration', $.unpacked_dimension)),
+      // repeat($.unpacked_dimension),
+      optional(seq('=', $.constant_expression))
+    ),
+    seq(
+      optional($.variable_port_header),
+      $.port_identifier,
+      repeat($._variable_dimension),
+      optional(seq('=', $.constant_expression))
+    ),
+    seq(
+      optional($.port_direction), '.', $.port_identifier,
+      '(', optional($.expression), ')'
+    )
+  )),
 
   // /* A.1.4 Module items */
 
@@ -781,7 +771,7 @@ const rules = {
   ),
 
   _module_item: $ => choice(
-    // seq($.port_declaration, ';'),
+    seq($.port_declaration, ';'),
     $._non_port_module_item
   ),
 
@@ -1246,21 +1236,21 @@ const rules = {
   //   'inout', optional($.net_port_type1), $.list_of_port_identifiers
   // ),
 
-  // input_declaration: $ => seq(
-  //   'input',
-  //   choice(
-  //     seq(optional($.net_port_type1), $.list_of_port_identifiers),
-  //     seq(optional($._variable_port_type), $.list_of_variable_identifiers)
-  //   )
-  // ),
+  input_declaration: $ => seq(
+    'input',
+    choice(
+      seq(optional($.net_port_type1), $.list_of_port_identifiers),
+      seq(optional($._variable_port_type), $.list_of_variable_identifiers)
+    )
+  ),
 
-  // output_declaration: $ => seq(
-  //   'output',
-  //   choice(
-  //     seq(optional($.net_port_type1), $.list_of_port_identifiers),
-  //     seq(optional($._variable_port_type), $.list_of_variable_port_identifiers)
-  //   )
-  // ),
+  output_declaration: $ => seq(
+    'output',
+    choice(
+      seq(optional($.net_port_type1), $.list_of_port_identifiers),
+      seq(optional($._variable_port_type), $.list_of_variable_port_identifiers)
+    )
+  ),
 
   // interface_port_declaration: $ => seq(
   //   $.interface_identifier,
@@ -1435,10 +1425,10 @@ const rules = {
     // $.type_reference
   ),
 
-  data_type_or_implicit1: $ => choice(
-    // $.data_type,
+  data_type_or_implicit1: $ => prec('data_type_or_implicit1', choice(
+    $.data_type,
     $.implicit_data_type1
-  ),
+  )),
 
   // INFO: Original by Drom, changed from standard to avoid matching the empty string
   implicit_data_type1: $ => choice( // reordered : repeat -> repeat1
@@ -1492,6 +1482,7 @@ const rules = {
 
   net_type: $ => choice('supply0', 'supply1', 'tri', 'triand', 'trior', 'trireg', 'tri0', 'tri1', 'uwire', 'wire', 'wand', 'wor'),
 
+  // INFO: Original by drom
   // net_port_type1: $ => choice(
   //   prec.left(-1, seq($.net_type, $.data_type_or_implicit1)),
   //   $.net_type,
@@ -1500,13 +1491,24 @@ const rules = {
   //   $._net_type_identifier,
   //   seq('interconnect', optional($.implicit_data_type1))
   // ),
+  // End of INFO
 
-  // _variable_port_type: $ => $._var_data_type,
+  // INFO: Larumbe's one
+  net_port_type1: $ => prec('net_port_type1', choice( // Reorder, avoid matching empty string
+    seq($.net_type, $.data_type_or_implicit1),
+    $.net_type,
+    $.data_type_or_implicit1,
+    $._net_type_identifier,
+    seq('interconnect', optional($.implicit_data_type1))
+  )),
+  // End of INFO
 
-  // _var_data_type: $ => prec.left(choice(
-  //   $.data_type,
-  //   seq('var', optional($.data_type_or_implicit1))
-  // )),
+  _variable_port_type: $ => $._var_data_type,
+
+  _var_data_type: $ => prec('_var_data_type', choice(
+    $.data_type,
+    seq('var', optional($.data_type_or_implicit1))
+  )),
 
   _signing: $ => choice('signed', 'unsigned'),
 
@@ -1609,10 +1611,20 @@ const rules = {
   // list_of_param_assignments: $ => prec.left(sepBy1(',', $.param_assignment)),
   list_of_param_assignments: $ => sepBy1(',', $.param_assignment),
 
+  // INFO: Original by drom
   // list_of_port_identifiers: $ => sep1(',', seq(
   //   $.port_identifier,
   //   repeat($.unpacked_dimension)
   // )),
+  // End of INFO:
+
+  // INFO: Larumbe's one
+  list_of_port_identifiers: $ => prec('list_of_port_identifiers', sepBy1prec(',', 'list_of_port_identifiers', seq(
+    $.port_identifier,
+    repeat(prec('list_of_port_identifiers', $.unpacked_dimension))
+  ))),
+  // End of INFO
+
 
   // list_of_udp_port_identifiers: $ => sep1(',', $.port_identifier),
 
@@ -1631,16 +1643,16 @@ const rules = {
 
   // list_of_variable_decl_assignments: $ => sep1(',', $.variable_decl_assignment),
 
-  // list_of_variable_identifiers: $ => sep1(',', seq(
-  //   $._variable_identifier,
-  //   repeat($._variable_dimension)
-  // )),
+  list_of_variable_identifiers: $ => prec('list_of_variable_identifiers', sepBy1prec(',', 'list_of_variable_identifiers', seq(
+    $._variable_identifier,
+    repeat(prec('list_of_variable_identifiers', $._variable_dimension))
+  ))),
 
-  // list_of_variable_port_identifiers: $ => sep1(',', seq(
-  //   $.port_identifier,
-  //   repeat($._variable_dimension),
-  //   optseq('=', $.constant_expression)
-  // )),
+  list_of_variable_port_identifiers: $ => prec('list_of_variable_port_identifiers', sepBy1prec(',', 'list_of_variable_port_identifiers', seq(
+    $.port_identifier,
+    repeat(prec('list_of_variable_port_identifiers', $._variable_dimension)),
+    optional(seq('=', $.constant_expression))
+  ))),
 
   // /* A.2.4 Declaration assignments */
 
@@ -1658,7 +1670,7 @@ const rules = {
 
   param_assignment: $ => seq(
     $.parameter_identifier,
-    // repeat($.unpacked_dimension),
+    repeat($._variable_dimension),
     optional(seq('=', $.constant_param_expression))
   ),
 
@@ -1744,20 +1756,20 @@ const rules = {
     $.unsized_dimension
   ),
 
-  // associative_dimension: $ => seq(
-  //   '[', choice($.data_type, '*'), ']'
-  // ),
+  associative_dimension: $ => seq(
+    '[', choice($.data_type, '*'), ']'
+  ),
 
-  // _variable_dimension: $ => choice(
-  //   $.unsized_dimension,
-  //   $.unpacked_dimension,
-  //   $.associative_dimension,
-  //   $.queue_dimension
-  // ),
+  _variable_dimension: $ => prec('_variable_dimension', choice(
+    $.unsized_dimension,
+    $.unpacked_dimension,
+    $.associative_dimension,
+    $.queue_dimension
+  )),
 
-  // queue_dimension: $ => seq(
-  //   '[', '$', optseq(':', $.constant_expression), ']'
-  // ),
+  queue_dimension: $ => seq(
+    '[', '$', optional(seq(':', $.constant_expression)), ']'
+  ),
 
   unsized_dimension: $ => seq('[', ']'),
 
@@ -4224,8 +4236,8 @@ const rules = {
     //   $.unary_operator, repeat($.attribute_instance), $.constant_primary
     // )),
 
-    // constExprOp($, PREC.ADD, choice('+', '-')),
-    // constExprOp($, PREC.MUL, choice('*', '/', '%')),
+    constExprOp($, PREC.ADD, choice('+', '-')),
+    constExprOp($, PREC.MUL, choice('*', '/', '%')),
     // constExprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
     // constExprOp($, PREC.LOGICAL_AND, '&&'),
     // constExprOp($, PREC.LOGICAL_OR, '||'),
@@ -4253,7 +4265,7 @@ const rules = {
 
   constant_param_expression: $ => choice(
     $.constant_mintypmax_expression,
-    // $.data_type,
+    $.data_type,
     '$'
   ),
 
@@ -4279,32 +4291,33 @@ const rules = {
     $.constant_expression, choice('+:', '-:'), $.constant_expression
   ),
 
-  // expression: $ => choice(
-  //   $.primary,
+  // TODO: Review precedences, and exprOp function, all this section in general
+  expression: $ => choice(
+    // $.primary,
 
-  //   prec.left(PREC.UNARY, seq(
-  //     $.unary_operator, repeat($.attribute_instance), $.primary
-  //   )),
-  //   prec.left(PREC.UNARY, $.inc_or_dec_expression),
-  //   prec.left(PREC.PARENT, seq('(', $.operator_assignment, ')')),
+    // prec.left(PREC.UNARY, seq(
+    //   $.unary_operator, repeat($.attribute_instance), $.primary
+    // )),
+    // prec.left(PREC.UNARY, $.inc_or_dec_expression),
+    // prec.left(PREC.PARENT, seq('(', $.operator_assignment, ')')),
 
-  //   exprOp($, PREC.ADD, choice('+', '-')),
-  //   exprOp($, PREC.MUL, choice('*', '/', '%')),
-  //   exprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
-  //   exprOp($, PREC.LOGICAL_AND, '&&'),
-  //   exprOp($, PREC.LOGICAL_OR, '||'),
-  //   exprOp($, PREC.POW, '**'),
-  //   exprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
-  //   exprOp($, PREC.AND, '&'),
-  //   exprOp($, PREC.OR, '|'),
-  //   exprOp($, PREC.XOR, choice('^', '^~', '~^')),
-  //   exprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
-  //   exprOp($, PREC.IMPLICATION, choice('->', '<->')),
+    exprOp($, PREC.ADD, choice('+', '-')),
+    exprOp($, PREC.MUL, choice('*', '/', '%')),
+    // exprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
+    // exprOp($, PREC.LOGICAL_AND, '&&'),
+    // exprOp($, PREC.LOGICAL_OR, '||'),
+    // exprOp($, PREC.POW, '**'),
+    // exprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
+    // exprOp($, PREC.AND, '&'),
+    // exprOp($, PREC.OR, '|'),
+    // exprOp($, PREC.XOR, choice('^', '^~', '~^')),
+    // exprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
+    // exprOp($, PREC.IMPLICATION, choice('->', '<->')),
 
-  //   $.conditional_expression,
-  //   $.inside_expression,
-  //   $.tagged_union_expression
-  // ),
+    // $.conditional_expression,
+    // $.inside_expression,
+    // $.tagged_union_expression
+  ),
 
   // tagged_union_expression: $ => prec.left(seq(
   //   'tagged',
@@ -4373,7 +4386,7 @@ const rules = {
 
   constant_primary: $ => choice(
     $.primary_literal,
-    // seq($.ps_parameter_identifier, optional($.constant_select1)),
+    seq($.ps_parameter_identifier, optional($.constant_select1)),
     // // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')),
     // // $.genvar_identifier,
     // // seq($.formal_port_identifier, optional($.constant_select1)),
@@ -4382,7 +4395,7 @@ const rules = {
     // seq($.constant_multiple_concatenation, optseq('[', $._constant_range_expression, ']')),
     // // $.constant_function_call,
     // // $._constant_let_expression,
-    // seq('(', $.constant_mintypmax_expression, ')'),
+    seq('(', $.constant_mintypmax_expression, ')'),
     // // $.constant_cast,
     // // // $.constant_assignment_pattern_expression,
     // $.type_reference,
@@ -4508,10 +4521,12 @@ const rules = {
   //   $.bit_select1
   // ),
 
-  constant_bit_select1: $ => repeat1(seq( // reordered -> non empty
+  // TODO: Review with bit_select tests
+  constant_bit_select1: $ => prec.left(repeat1(seq( // reordered -> non empty
     '[', $.constant_expression, ']'
-  )),
+  ))),
 
+  // TODO: Review with range tests
   constant_select1: $ => choice( // reordered -> non empty
     seq(
       repeat(seq('.', $.member_identifier, optional($.constant_bit_select1))), '.', $.member_identifier,
@@ -4742,7 +4757,7 @@ const rules = {
   ),
 
   // index_variable_identifier: $ => alias($._identifier, $.index_variable_identifier),
-  // interface_identifier: $ => alias($._identifier, $.interface_identifier),
+  interface_identifier: $ => alias($._identifier, $.interface_identifier),
   // interface_instance_identifier: $ => alias($._identifier, $.interface_instance_identifier),
   // inout_port_identifier: $ => alias($._identifier, $.inout_port_identifier),
   // input_port_identifier: $ => alias($._identifier, $.input_port_identifier),
@@ -4750,10 +4765,10 @@ const rules = {
   // library_identifier: $ => alias($._identifier, $.library_identifier),
   member_identifier: $ => alias($._identifier, $.member_identifier),
   // method_identifier: $ => alias($._identifier, $.method_identifier),
-  // modport_identifier: $ => alias($._identifier, $.modport_identifier),
+  modport_identifier: $ => alias($._identifier, $.modport_identifier),
   _module_identifier: $ => $._identifier,
   // _net_identifier: $ => $._identifier,
-  // _net_type_identifier: $ => $._identifier,
+  _net_type_identifier: $ => $._identifier,
   // output_port_identifier: $ => alias($._identifier, $.output_port_identifier),
   package_identifier: $ => alias($._identifier, $.package_identifier),
 
@@ -4813,23 +4828,24 @@ const rules = {
   //   $._hierarchical_tf_identifier
   // ),
 
-  // ps_parameter_identifier: $ => choice(
-  //   seq(
-  //     optional(choice(
-  //       $.package_scope,
-  //       $.class_scope
-  //     )),
-  //     $.parameter_identifier
-  //   ),
-  //   seq(
-  //     repseq(
-  //       $.generate_block_identifier,
-  //       optseq('[', $.constant_expression, ']'),
-  //       '.'
-  //     ),
-  //     $.parameter_identifier
-  //   )
-  // ),
+  // TODO: Fill and set all the cases
+  ps_parameter_identifier: $ => choice(
+    seq(
+      // optional(choice(
+      //   $.package_scope,
+      //   $.class_scope
+      // )),
+      $.parameter_identifier
+    ),
+    // seq(
+    //   repseq(
+    //     $.generate_block_identifier,
+    //     optseq('[', $.constant_expression, ']'),
+    //     '.'
+    //   ),
+    //   $.parameter_identifier
+    // )
+  ),
 
   // ps_type_identifier: $ => seq(
   //   optional(choice(
@@ -4861,7 +4877,7 @@ const rules = {
   // topmodule_identifier: $ => alias($._identifier, $.topmodule_identifier),
   _type_identifier: $ => $._identifier,
   // _udp_identifier: $ => $._identifier,
-  // _variable_identifier: $ => $._identifier
+  _variable_identifier: $ => $._identifier
 
   // /* A.9.4 White space */
 
@@ -4892,7 +4908,7 @@ module.exports = grammar({
 
   //   $.ps_class_identifier,
   //   $.ps_covergroup_identifier,
-  //   $.ps_parameter_identifier,
+    $.ps_parameter_identifier,
   //   $.ps_type_identifier,
   //   $.ps_checker_identifier,
 
@@ -4905,14 +4921,14 @@ module.exports = grammar({
   //   $.specparam_identifier,
   //   $.tf_identifier,
   //   $._type_identifier,
-  //   $._net_type_identifier,
-  //   $._variable_identifier,
+    $._net_type_identifier,
+    $._variable_identifier,
   //   $._udp_identifier,
     $.package_identifier,
   //   $.dynamic_array_variable_identifier,
   //   $.class_variable_identifier,
   //   $.interface_instance_identifier,
-  //   $.interface_identifier,
+    $.interface_identifier,
   //   $._module_identifier,
   //   $.let_identifier,
   //   $.sequence_identifier,
@@ -4933,13 +4949,74 @@ module.exports = grammar({
   //   $.cross_identifier
   ],
 
+  precedences: () => [
+    // module_nonansi_header  'input'  data_type  •  simple_identifier  …
+    //   1:  module_nonansi_header  'input'  (_var_data_type  data_type)  •  simple_identifier  …
+    //   2:  module_nonansi_header  'input'  (data_type_or_implicit1  data_type)  •  simple_identifier  …  (precedence: 'data_type_or_implicit1')
+    ['_var_data_type', 'data_type_or_implicit1'],
+
+    // module_nonansi_header  'input'  _identifier  •  ';'  …
+    //   1:  module_nonansi_header  'input'  _identifier  (_variable_dimension  unpacked_dimension)  •  ';'  …
+    //   2:  module_nonansi_header  'input'  _identifier  (list_of_port_identifiers_repeat1  unpacked_dimension)  •  ';'  …
+    // ['list_of_port_identifiers_repeat', '_variable_dimension'],
+    ['list_of_port_identifiers', '_variable_dimension'],
+
+    // LRM 6.10: Implicit declarations:
+    //   If an identifier is used in a port expression declaration, then an implicit net
+    //   of default net type shall be assumed, with the vector width of the port expression declaration.
+    //
+    // module_nonansi_header  'input'  _identifier  •  ';'  …
+    //   1:  module_nonansi_header  'input'  (list_of_port_identifiers  _identifier)  •  ';'  …
+    //   2:  module_nonansi_header  'input'  (list_of_variable_identifiers  _identifier)  •  ';'  …
+    ['list_of_port_identifiers', 'list_of_variable_identifiers'],
+    // module_nonansi_header  'output'  _identifier  •  ';'  …
+    //   1:  module_nonansi_header  'output'  (list_of_port_identifiers  _identifier)  •  ';'  …
+    //   2:  module_nonansi_header  'output'  (list_of_variable_port_identifiers  _identifier)  •  ';'  …
+    ['list_of_port_identifiers', 'list_of_variable_port_identifiers'],
+
+    // module_keyword  _module_identifier  '('  _identifier  •  ')'  …
+    //   1:  module_keyword  _module_identifier  '('  (ansi_port_declaration  _identifier)  •  ')'  …
+    //   2:  module_keyword  _module_identifier  '('  (port_reference  _identifier)  •  ')'  …
+    ['port_reference', 'ansi_port_declaration'],
+    // ['port_reference'],
+
+    // For ANSI port declaration, if there is no builtin net type assume it's an interface identifier and not a net
+    // module_keyword  _module_identifier  '('  _identifier  •  simple_identifier  …
+    //   1:  module_keyword  _module_identifier  '('  (interface_port_header  _identifier)  •  simple_identifier  …
+    //   2:  module_keyword  _module_identifier  '('  (net_port_type1  _identifier)  •  simple_identifier  …
+    ['interface_port_header', 'net_port_type1'],
+
+    // This one doesn't make much sense, but prioritize ansi_port_declaration
+    // module_keyword  _module_identifier  '('  _identifier  unpacked_dimension  •  ')'  …
+    //   1:  module_keyword  _module_identifier  '('  _identifier  (_variable_dimension  unpacked_dimension)  •  ')'  …            (precedence: '_variable_dimension')
+    //   2:  module_keyword  _module_identifier  '('  _identifier  (ansi_port_declaration_repeat1  unpacked_dimension)  •  ')'  …
+    ['ansi_port_declaration', '_variable_dimension'],
+
+    // This one doesn't seem to make much sense for module declarations, but port1
+    // will be used in module instantiation with unconnected ports, so prioritize it.
+    // module_keyword  _module_identifier  '('  '.'  _identifier  '('  ')'  •  ')'  …
+    //   1:  module_keyword  _module_identifier  '('  (ansi_port_declaration  '.'  _identifier  '('  ')')  •  ')'  …  (precedence: 'ansi_port_declaration')
+    //   2:  module_keyword  _module_identifier  '('  (port1  '.'  _identifier  '('  ')')  •  ')'  …
+    ['port1', 'ansi_port_declaration'],
+
+  ],
+
   conflicts: $ => [
 
     [$.list_of_param_assignments], // Help differentiate between many parameters and list of parameters
     [$.list_of_type_assignments],  // Help differentiate between many types and list of types
 
-    // TODO: Review after implementing ports! ansi and nonANSI
-    [$.list_of_ports, $.list_of_port_declarations], // empty portlist: list_of_ports for nonANSI vs list_of_port_declarations for ANSI ports
+    // module_keyword  _module_identifier  '('  ')'  •  ';'  …
+    //   1:  module_keyword  _module_identifier  (list_of_port_declarations  '('  ')')  •  ';'  …
+    //   2:  module_keyword  _module_identifier  (list_of_ports  '('  ')')  •  ';'  …
+    [$.list_of_ports, $.list_of_port_declarations],
+
+    // module_keyword  _module_identifier  '('  port_direction  •  simple_identifier  …
+    //   1:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction  •  net_port_type1)
+    //   2:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction)  •  simple_identifier  …
+    [$.net_port_header1],
+
   ],
+
 });
 
