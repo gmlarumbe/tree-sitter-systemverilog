@@ -153,7 +153,7 @@ function sepBy(sep, rule) {
 */
 
 const rules = {
-  source_file: $ => repeat($._description),
+  source_file: $ => repeat($._description), // TODO: What about [timeunits_declaration]
 
   // /* 22. Compiler directives */
 
@@ -341,7 +341,7 @@ const rules = {
   // /* A.1.2 SystemVerilog source text */
 
   _description: $ => choice(
-    // $._directives,
+    // $._directives, // TODO: This one is not in the LRM but probably adds support for lots of stuff
     $.module_declaration,
     // TODO: Simplifying debugging
     // $.udp_declaration,
@@ -350,8 +350,8 @@ const rules = {
     // $.package_declaration,
     // seq(repeat($.attribute_instance), $._package_item),
     // seq(repeat($.attribute_instance), $.bind_directive)
-    // End of TODO
     // $.config_declaration,
+    // End of TODO
   ),
 
   // module_nonansi_header: $ =>
@@ -372,47 +372,78 @@ const rules = {
   // | 'extern' module_nonansi_header
   // | 'extern' module_ansi_header
 
-  module_header: $ => seq(
-    // repeat($.attribute_instance),
-    $.module_keyword,
-    optional($.lifetime),
-    $._module_identifier
-  ),
+  // module_header: $ => seq(
+  //   // repeat($.attribute_instance),
+  //   $.module_keyword,
+  //   optional($.lifetime),
+  //   $._module_identifier
+  // ),
 
-  module_nonansi_header: $ => seq(
-    repeat($.package_import_declaration),
-    optional($.parameter_port_list),
-    $.list_of_ports
-  ),
+  // module_nonansi_header: $ => seq(
+  //   repeat($.package_import_declaration),
+  //   optional($.parameter_port_list),
+  //   $.list_of_ports
+  // ),
 
-  module_ansi_header: $ => seq(
-    repeat($.package_import_declaration),
-    choice(
-      seq($.parameter_port_list, optional($.list_of_port_declarations)),
-      $.list_of_port_declarations
-    )
-  ),
+  // module_ansi_header: $ => seq(
+  //   repeat($.package_import_declaration),
+  //   choice(
+  //     seq($.parameter_port_list, optional($.list_of_port_declarations)),
+  //     $.list_of_port_declarations
+  //   )
+  // ),
 
   module_declaration: $ => choice(
     seq(
-      $.module_header,
-      optional(choice(
-        $.module_nonansi_header,
-        $.module_ansi_header,
-        seq('(', '.*', ')')
-      )),
-      ';',
-      // optional($.timeunits_declaration),
+      $.module_nonansi_header,
+      optional($.timeunits_declaration),
       repeat($._module_item),
       'endmodule', optional(seq(':', $._module_identifier))
     ),
-    seq('extern', $.module_header, choice(
-      $.module_nonansi_header,
-      $.module_ansi_header
-    ))
+    seq(
+      $.module_ansi_header,
+      optional($.timeunits_declaration),
+      repeat($._non_port_module_item),
+      'endmodule', optional(seq(':', $._module_identifier))
+    ),
+    seq(
+      repeat($.attribute_instance),
+      $.module_keyword,
+      optional($.lifetime),
+      $._module_identifier,
+      '(', '.*', ')', ';',
+      optional($.timeunits_declaration),
+      repeat($._module_item),
+      'endmodule', optional(seq(':', $._module_identifier))
+    ),
+    seq('extern', $.module_nonansi_header),
+    seq('extern', $.module_ansi_header)
+  ),
+
+  module_nonansi_header: $ => seq(
+    repeat($.attribute_instance),
+    $.module_keyword,
+    optional($.lifetime),
+    $._module_identifier,
+    repeat($.package_import_declaration),
+    optional($.parameter_port_list),
+    $.list_of_ports,
+    ';'
+  ),
+
+  module_ansi_header: $ => seq(
+    repeat($.attribute_instance),
+    $.module_keyword,
+    optional($.lifetime),
+    $._module_identifier,
+    repeat($.package_import_declaration),
+    optional($.parameter_port_list),
+    optional($.list_of_port_declarations),
+    ';'
   ),
 
   module_keyword: $ => choice('module', 'macromodule'),
+
 
   // interface_declaration: $ => choice(
   //   seq(
@@ -572,12 +603,23 @@ const rules = {
   //   'endpackage', optseq(':', $.package_identifier)
   // ),
 
+  // INFO: Original one
   // timeunits_declaration: $ => choice(
   //   prec.left(seq('timeunit', $.time_literal, optseq('/', $.time_literal), ';')),
   //   prec.left(seq('timeprecision', $.time_literal, ';')),
   //   prec.left(seq('timeunit', $.time_literal, ';', 'timeprecision', $.time_literal, ';')),
   //   prec.left(seq('timeprecision', $.time_literal, ';', 'timeunit', $.time_literal, ';'))
   // ),
+  // End of INFO
+
+  // INFO: Larumbe's one
+  timeunits_declaration: $ => choice(
+    seq('timeunit', $.time_literal, optional(seq('/', $.time_literal)), ';'),
+    seq('timeprecision', $.time_literal, ';'),
+    seq('timeunit', $.time_literal, ';', 'timeprecision', $.time_literal, ';'),
+    seq('timeprecision', $.time_literal, ';', 'timeunit', $.time_literal, ';')
+  ),
+  // End of INFO
 
   // /* A.1.3 Module parameters and ports */
 
@@ -605,7 +647,7 @@ const rules = {
 
   parameter_port_declaration: $ => choice(
     $._any_parameter_declaration,
-    // seq($.data_type, $.list_of_param_assignments),
+    seq($.data_type, $.list_of_param_assignments),
     seq('type', $.list_of_type_assignments)
   ),
 
@@ -624,49 +666,45 @@ const rules = {
   // INFO: Larumbe's one
   list_of_ports: $ => seq(
     '(',
-    // optional(sep1(',', seq(
-    //   optional($.line_compiler_directive),
-    //   $.port,
-    //   optional($.line_compiler_directive)
-    // ))),
+    optional(sepBy1(',', $.port1)),
     ')'
   ),
   // End of INFO
 
-  // list_of_port_declarations: $ => seq(
-  //   '(',
-  //   optional(sep1(',', seq(
-  //     repeat($.attribute_instance),
-  //     $.ansi_port_declaration
-  //   ))),
-  //   ')'
-  // ),
+  list_of_port_declarations: $ => seq(
+    '(',
+    optional(sepBy1(',', seq(
+      repeat($.attribute_instance),
+      $.ansi_port_declaration
+    ))),
+    ')'
+  ),
 
-  // port_declaration: $ => seq(
-  //   repeat($.attribute_instance),
-  //   choice(
-  //     $.inout_declaration,
-  //     $.input_declaration,
-  //     $.output_declaration,
-  //     $.ref_declaration,
-  //     $.interface_port_declaration
-  //   )
-  // ),
+  port_declaration: $ => seq(
+    // repeat($.attribute_instance),
+    // choice(
+    //   $.inout_declaration,
+    //   $.input_declaration,
+    //   $.output_declaration,
+    //   $.ref_declaration,
+    //   $.interface_port_declaration
+    // )
+  ),
 
-  // port: $ => choice(
-  //   $._port_expression,
-  //   seq('.', $.port_identifier, '(', optional($._port_expression), ')')
-  // ),
+  port1: $ => choice( // Reordered, not empty
+    $._port_expression,
+    seq('.', $.port_identifier, '(', optional($._port_expression), ')')
+  ),
 
-  // _port_expression: $ => choice(
-  //   $.port_reference,
-  //   seq('{', sep1(',', $.port_reference), '}')
-  // ),
+  _port_expression: $ => choice(
+    $.port_reference,
+    seq('{', sepBy1(',', $.port_reference), '}')
+  ),
 
-  // port_reference: $ => seq(
-  //   $.port_identifier,
-  //   optional($.constant_select1)
-  // ),
+  port_reference: $ => seq(
+    $.port_identifier,
+    // optional($.constant_select1)
+  ),
 
   // port_direction: $ => choice('input', 'output', 'inout', 'ref'),
 
@@ -688,24 +726,24 @@ const rules = {
   //   optseq('.', $.modport_identifier)
   // ),
 
-  // ansi_port_declaration: $ => choice(
-  //   seq(
-  //     optional(choice($.net_port_header1, $.interface_port_header)),
-  //     $.port_identifier,
-  //     repeat($.unpacked_dimension),
-  //     optseq('=', $.constant_expression)
-  //   ),
-  //   seq(
-  //     optional($.variable_port_header),
-  //     $.port_identifier,
-  //     repeat($._variable_dimension),
-  //     optseq('=', $.constant_expression)
-  //   ),
-  //   seq(
-  //     optional($.port_direction), '.', $.port_identifier,
-  //     '(', optional($.expression), ')'
-  //   )
-  // ),
+  ansi_port_declaration: $ => choice(
+    // seq(
+    //   optional(choice($.net_port_header1, $.interface_port_header)),
+    //   $.port_identifier,
+    //   repeat($.unpacked_dimension),
+    //   optseq('=', $.constant_expression)
+    // ),
+    // seq(
+    //   optional($.variable_port_header),
+    //   $.port_identifier,
+    //   repeat($._variable_dimension),
+    //   optseq('=', $.constant_expression)
+    // ),
+    // seq(
+    //   optional($.port_direction), '.', $.port_identifier,
+    //   '(', optional($.expression), ')'
+    // )
+  ),
 
   // /* A.1.4 Module items */
 
@@ -4230,16 +4268,16 @@ const rules = {
   //   $._constant_part_select_range
   // ),
 
-  // _constant_part_select_range: $ => choice(
-  //   $.constant_range,
-  //   $.constant_indexed_range
-  // ),
+  _constant_part_select_range: $ => choice(
+    $.constant_range,
+    $.constant_indexed_range
+  ),
 
   constant_range: $ => seq($.constant_expression, ':', $.constant_expression),
 
-  // constant_indexed_range: $ => seq(
-  //   $.constant_expression, choice('+:', '-:'), $.constant_expression
-  // ),
+  constant_indexed_range: $ => seq(
+    $.constant_expression, choice('+:', '-:'), $.constant_expression
+  ),
 
   // expression: $ => choice(
   //   $.primary,
@@ -4470,36 +4508,22 @@ const rules = {
   //   $.bit_select1
   // ),
 
-  // // constant_bit_select1: $ => repeat1(prec.left(PREC.PARENT, seq( // reordered -> non empty
-  // //   '[', $.constant_expression, ']'
-  // // ))),
-  // constant_bit_select1: $ => repeat1(seq( // reordered -> non empty
-  //   '[', $.constant_expression, ']'
-  // )),
+  constant_bit_select1: $ => repeat1(seq( // reordered -> non empty
+    '[', $.constant_expression, ']'
+  )),
 
-  // constant_select1: $ => choice( // reordered -> non empty
-  //   seq(
-  //     '[',
-  //     // repseq($.constant_expression, ']', '['),
-  //     repeat(seq($.constant_expression, ']', '[')),
-  //     choice($.constant_expression, $._constant_part_select_range),
-  //     ']'
-  //   )
-  // ),
-
-  // // constant_select1: $ => choice( // reordered -> non empty
-  // //   // seq(
-  // //   //   repseq('.', $.member_identifier, optional($.constant_bit_select1))),
-  // //   //   '.', $.member_identifier,
-  // //   //   optional($.constant_bit_select1),
-  // //   //   optseq('[', $._constant_part_select_range, ']')
-  // //   // ),
-  // //   seq(
-  // //     $.constant_bit_select1,
-  // //     optseq('[', $._constant_part_select_range, ']')
-  // //   ),
-  // //   seq('[', $._constant_part_select_range, ']'),
-  // // ),
+  constant_select1: $ => choice( // reordered -> non empty
+    seq(
+      repeat(seq('.', $.member_identifier, optional($.constant_bit_select1))), '.', $.member_identifier,
+      optional($.constant_bit_select1),
+      optional(seq('[', $._constant_part_select_range, ']'))
+    ),
+    seq(
+      $.constant_bit_select1,
+      optional(seq('[', $._constant_part_select_range, ']'))
+    ),
+    seq('[', $._constant_part_select_range, ']'),
+  ),
 
   // constant_cast: $ => seq($.casting_type, '\'', '(', $.constant_expression, ')'),
 
@@ -4642,11 +4666,11 @@ const rules = {
 
   // /* A.9.1 Attributes */
 
-  // attribute_instance: $ => seq('(*', sep1(',', $.attr_spec), '*)'),
+  attribute_instance: $ => seq('(*', sepBy1(',', $.attr_spec), '*)'),
 
-  // attr_spec: $ => seq($._attr_name, optseq('=', $.constant_expression)),
+  attr_spec: $ => seq($._attr_name, optional(seq('=', $.constant_expression))),
 
-  // _attr_name: $ => $._identifier,
+  _attr_name: $ => $._identifier,
 
   // /* A.9.2 Comments */
 
@@ -4724,7 +4748,7 @@ const rules = {
   // input_port_identifier: $ => alias($._identifier, $.input_port_identifier),
   // instance_identifier: $ => alias($._identifier, $.instance_identifier),
   // library_identifier: $ => alias($._identifier, $.library_identifier),
-  // member_identifier: $ => alias($._identifier, $.member_identifier),
+  member_identifier: $ => alias($._identifier, $.member_identifier),
   // method_identifier: $ => alias($._identifier, $.method_identifier),
   // modport_identifier: $ => alias($._identifier, $.modport_identifier),
   _module_identifier: $ => $._identifier,
@@ -4739,7 +4763,7 @@ const rules = {
   // ),
 
   parameter_identifier: $ => alias($._identifier, $.parameter_identifier),
-  // port_identifier: $ => alias($._identifier, $.port_identifier),
+  port_identifier: $ => alias($._identifier, $.port_identifier),
   // production_identifier: $ => alias($._identifier, $.production_identifier),
   // program_identifier: $ => alias($._identifier, $.program_identifier),
   // property_identifier: $ => alias($._identifier, $.property_identifier),
@@ -4895,8 +4919,8 @@ module.exports = grammar({
   //   $._net_identifier,
   //   $.program_identifier,
   //   $.checker_identifier,
-  //   $.member_identifier,
-  //   $.port_identifier,
+    $.member_identifier,
+    $.port_identifier,
   //   $._block_identifier,
   //   $.instance_identifier,
   //   $.property_identifier,
@@ -4913,6 +4937,9 @@ module.exports = grammar({
 
     [$.list_of_param_assignments], // Help differentiate between many parameters and list of parameters
     [$.list_of_type_assignments],  // Help differentiate between many types and list of types
+
+    // TODO: Review after implementing ports! ansi and nonANSI
+    [$.list_of_ports, $.list_of_port_declarations], // empty portlist: list_of_ports for nonANSI vs list_of_port_declarations for ANSI ports
   ],
 });
 
