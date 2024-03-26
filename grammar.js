@@ -755,7 +755,7 @@ const rules = {
   // finish_number: $ => choice('0', '1', '2'),
 
   _module_common_item: $ => choice(
-  //   $._module_or_generate_item_declaration,
+    $._module_or_generate_item_declaration,
   //   $.interface_instantiation,
   //   $.program_instantiation,
   //   $._assertion_item,
@@ -776,7 +776,7 @@ const rules = {
   ),
 
   module_or_generate_item: $ => seq(
-    // repeat($.attribute_instance),
+    repeat($.attribute_instance),
     choice(
       // $.parameter_override,
       // $.gate_instantiation, // TODO: Removed temporarily to simplify parsing
@@ -786,13 +786,13 @@ const rules = {
     )
   ),
 
-  // _module_or_generate_item_declaration: $ => choice(
-  //   $.package_or_generate_item_declaration,
-  //   $.genvar_declaration,
-  //   // $.clocking_declaration,
-  //   seq('default', 'clocking', $.clocking_identifier, ';'),
-  //   seq('default', 'disable', 'iff', $.expression_or_dist, ';')
-  // ),
+  _module_or_generate_item_declaration: $ => choice(
+    $.package_or_generate_item_declaration,
+    // $.genvar_declaration,
+    // $.clocking_declaration,
+    // seq('default', 'clocking', $.clocking_identifier, ';'),
+    // seq('default', 'disable', 'iff', $.expression_or_dist, ';')
+  ),
 
   _non_port_module_item: $ => choice(
     // $._directives,
@@ -1158,24 +1158,24 @@ const rules = {
   //   $.timeunits_declaration
   // ),
 
-  // package_or_generate_item_declaration: $ => choice(
-  //   $.net_declaration,
-  //   $.data_declaration,
-  //   $.task_declaration,
-  //   $.function_declaration,
-  //   $.checker_declaration,
-  //   $.dpi_import_export,
-  //   $.extern_constraint_declaration,
-  //   $.class_declaration,
-  //   $.interface_class_declaration, // not in spec
-  //   $.class_constructor_declaration,
-  //   seq($._any_parameter_declaration, ';'),
-  //   $.covergroup_declaration,
-  //   $.overload_declaration,
-  //   // $._assertion_item_declaration, // TODO: Remove temporarily to avoid some conflicts
-  //   ';',
-  //   // $._directives
-  // ),
+  package_or_generate_item_declaration: $ => choice(
+    $.net_declaration,
+    $.data_declaration,
+    // $.task_declaration,
+    // $.function_declaration,
+    // $.checker_declaration,
+    // $.dpi_import_export,
+    // $.extern_constraint_declaration,
+    // $.class_declaration,
+    // $.interface_class_declaration, // not in spec
+    // $.class_constructor_declaration,
+    // seq($._any_parameter_declaration, ';'),
+    // $.covergroup_declaration,
+    // $.overload_declaration,
+    // $._assertion_item_declaration, // TODO: Remove temporarily to avoid some conflicts
+    ';',
+    // $._directives
+  ),
 
   // anonymous_program: $ => seq(
   //   'program', ';', repeat($.anonymous_program_item), 'endprogram'
@@ -1264,24 +1264,24 @@ const rules = {
 
   // // A.2.1.3 Type declarations
 
-  // data_declaration: $ => choice(
-  //   seq(
-  //     optional('const'),
-  //     // In a data_declaration, it shall be illegal to omit the explicit data_type
-  //     // before a list_of_variable_decl_assignments unless the var keyword is used.
+  data_declaration: $ => choice(
+    seq(
+      optional('const'),
+      // In a data_declaration, it shall be illegal to omit the explicit data_type
+      // before a list_of_variable_decl_assignments unless the var keyword is used.
 
-  //     // TODO: Maybe use $._var_data_type ? And replace it with these contents?
-  //     choice(
-  //       seq('var', optional($.lifetime), optional($.data_type_or_implicit1)),
-  //       seq(optional($.lifetime), $.data_type),
-  //     ),
-  //     $.list_of_variable_decl_assignments,
-  //     ';'
-  //   ),
-  //   $.type_declaration,
-  //   $.package_import_declaration,
-  //   $.net_type_declaration
-  // ),
+      // TODO: Maybe use $._var_data_type ? And replace it with these contents?
+      choice(
+        seq('var', optional($.lifetime), optional($.data_type_or_implicit1)),
+        seq(optional($.lifetime), $.data_type_or_implicit1),
+      ),
+      $.list_of_variable_decl_assignments,
+      ';'
+    ),
+    // $.type_declaration,
+    // $.package_import_declaration,
+    // $.net_type_declaration
+  ),
 
   // INFO: Original one
   // package_import_declaration: $ => seq(
@@ -1309,33 +1309,30 @@ const rules = {
   //   'genvar', $.list_of_genvar_identifiers, ';'
   // ),
 
-  // net_declaration: $ => choice(
-  //   seq(
-  //     $.net_type,
-  //     optional(choice($.drive_strength, $.charge_strength)),
-  //     optional(choice('vectored', 'scalared')),
-  //     // DANGER: Restrict to net_type logic/bit
-  //     optional($.data_type_or_implicit1),
-  //     // optional($.integer_vector_type),
-  //     // End of DANGER
-  //     // optional($.delay3), // TODO: Removed temporarily by Larumbe
-  //     $.list_of_net_decl_assignments,
-  //     ';'
-  //   ),
-  //   seq(
-  //     $._net_type_identifier,
-  //     optional($.delay_control),
-  //     $.list_of_net_decl_assignments,
-  //     ';'
-  //   ),
-  //   seq(
-  //     'interconnect',
-  //     optional($.implicit_data_type1),
-  //     optseq('#', $.delay_value),
-  //     sep1(',', seq($._net_identifier, repeat($.unpacked_dimension))),
-  //     ';'
-  //   )
-  // ),
+  net_declaration: $ => choice(
+    seq(
+      $.net_type,
+      optional(choice($.drive_strength, $.charge_strength)),
+      optional(choice('vectored', 'scalared')),
+      optional($.data_type_or_implicit1),
+      // optional($.delay3), // TODO: Removed temporarily by Larumbe
+      $.list_of_net_decl_assignments,
+      ';'
+    ),
+    seq(
+      $._net_type_identifier,
+      // optional($.delay_control), // TODO: Removed temporarily by Larumbe
+      $.list_of_net_decl_assignments,
+      ';'
+    ),
+    // seq(
+    //   'interconnect',
+    //   optional($.implicit_data_type1),
+    //   optseq('#', $.delay_value),
+    //   sep1(',', seq($._net_identifier, repeat($.unpacked_dimension))),
+    //   ';'
+    // )
+  ),
 
   // type_declaration: $ => seq(
   //   'typedef',
@@ -1548,24 +1545,24 @@ const rules = {
 
   // // A.2.2.2 Strengths
 
-  // drive_strength: $ => seq(
-  //   '(',
-  //   choice(
-  //     seq($.strength0, ',', $.strength1),
-  //     seq($.strength1, ',', $.strength0),
-  //     seq($.strength0, ',', 'highz1'),
-  //     seq($.strength1, ',', 'highz0'),
-  //     seq('highz0', ',', $.strength1),
-  //     seq('highz1', ',', $.strength0)
-  //   ),
-  //   ')'
-  // ),
+  drive_strength: $ => seq(
+    '(',
+    choice(
+      seq($.strength0, ',', $.strength1),
+      seq($.strength1, ',', $.strength0),
+      seq($.strength0, ',', 'highz1'),
+      seq($.strength1, ',', 'highz0'),
+      seq('highz0', ',', $.strength1),
+      seq('highz1', ',', $.strength0)
+    ),
+    ')'
+  ),
 
-  // strength0: $ => choice('supply0', 'strong0', 'pull0', 'weak0'),
+  strength0: $ => choice('supply0', 'strong0', 'pull0', 'weak0'),
 
-  // strength1: $ => choice('supply1', 'strong1', 'pull1', 'weak1'),
+  strength1: $ => choice('supply1', 'strong1', 'pull1', 'weak1'),
 
-  // charge_strength: $ => seq('(', choice('small', 'medium', 'large'), ')'),
+  charge_strength: $ => seq('(', choice('small', 'medium', 'large'), ')'),
 
   // // A.2.2.3 Delays
 
@@ -1604,7 +1601,7 @@ const rules = {
   //   repeat($.unpacked_dimension)
   // )),
 
-  // list_of_net_decl_assignments: $ => sep1(',', $.net_decl_assignment),
+  list_of_net_decl_assignments: $ => sepBy1(',', $.net_decl_assignment),
 
   // list_of_param_assignments: $ => sep1(',', $.param_assignment),
   // list_of_param_assignments: $ => prec.right(sepBy1(',', $.param_assignment)),
@@ -1641,7 +1638,7 @@ const rules = {
   // list_of_type_assignments: $ => prec.left(sepBy1(',', $.type_assignment)),
   list_of_type_assignments: $ => sepBy1(',', $.type_assignment),
 
-  // list_of_variable_decl_assignments: $ => sep1(',', $.variable_decl_assignment),
+  list_of_variable_decl_assignments: $ => sepBy1(',', $.variable_decl_assignment),
 
   list_of_variable_identifiers: $ => prec('list_of_variable_identifiers', sepBy1prec(',', 'list_of_variable_identifiers', seq(
     $._variable_identifier,
@@ -1662,11 +1659,21 @@ const rules = {
   //   $.constant_mintypmax_expression
   // ),
 
+  // INFO: Original by drom
   // net_decl_assignment: $ => prec.left(PREC.ASSIGN, seq(
   //   $._net_identifier,
   //   repeat($.unpacked_dimension),
   //   optseq('=', $.expression)
   // )),
+  // End of INFO
+
+  // INFO: Larumbe's one
+  net_decl_assignment: $ => seq(
+    $._net_identifier,
+    repeat($.unpacked_dimension),
+    optional(seq('=', $.expression))
+  ),
+  // End of INFO
 
   param_assignment: $ => seq(
     $.parameter_identifier,
@@ -1711,23 +1718,23 @@ const rules = {
 
   // limit_value: $ => $.constant_mintypmax_expression,
 
-  // variable_decl_assignment: $ => choice(
-  //   seq(
-  //     $._variable_identifier,
-  //     repeat($._variable_dimension),
-  //     optseq('=', $.expression)
-  //   ),
-  //   seq(
-  //     $.dynamic_array_variable_identifier,
-  //     $.unsized_dimension,
-  //     repeat($._variable_dimension),
-  //     optseq('=', $.dynamic_array_new)
-  //   ),
-  //   seq(
-  //     $.class_variable_identifier,
-  //     optseq('=', $.class_new)
-  //   )
-  // ),
+  variable_decl_assignment: $ => choice(
+    seq(
+      $._variable_identifier,
+      repeat($._variable_dimension),
+      optional(seq('=', $.expression))
+    ),
+    // seq(
+    //   $.dynamic_array_variable_identifier,
+    //   $.unsized_dimension,
+    //   repeat($._variable_dimension),
+    //   optseq('=', $.dynamic_array_new)
+    // ),
+    // seq(
+    //   $.class_variable_identifier,
+    //   optseq('=', $.class_new)
+    // )
+  ),
 
   // class_new: $ => choice(
   //   seq(
@@ -4767,7 +4774,7 @@ const rules = {
   // method_identifier: $ => alias($._identifier, $.method_identifier),
   modport_identifier: $ => alias($._identifier, $.modport_identifier),
   _module_identifier: $ => $._identifier,
-  // _net_identifier: $ => $._identifier,
+  _net_identifier: $ => $._identifier,
   _net_type_identifier: $ => $._identifier,
   // output_port_identifier: $ => alias($._identifier, $.output_port_identifier),
   package_identifier: $ => alias($._identifier, $.package_identifier),
