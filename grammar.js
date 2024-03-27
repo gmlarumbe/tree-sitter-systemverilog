@@ -3158,7 +3158,7 @@ const rules = {
   statement: $ => choice(
     // $.text_macro_usage,
     seq(
-      optional(seq($._block_identifier, ':')),
+      optional(seq(field('block_name', $._block_identifier), ':')),
       repeat($.attribute_instance),
       $.statement_item
     )),
@@ -4426,7 +4426,6 @@ const rules = {
   // // FIXME FIXME FIXME
 
   constant_primary: $ => prec('constant_primary', choice(
-  // constant_primary: $ => choice(
     $.primary_literal,
     seq($.ps_parameter_identifier, optional($.constant_select1)),
     // // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')),
@@ -4442,8 +4441,7 @@ const rules = {
     // // // $.constant_assignment_pattern_expression,
     // $.type_reference,
     // 'null'
-  )
-  ),
+  )),
 
   // module_path_primary: $ => choice(
   //   $._number,
@@ -4794,13 +4792,15 @@ const rules = {
   // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '.'  …
   //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier  _identifier)  •  '.'  …
   //   2:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  •  '.')
-  // hierarchical_identifier: $ => prec.left(seq( // TODO: Not sure if it's prec.left
-  hierarchical_identifier: $ => seq( // TODO: Not sure if it's prec.left
+  // hierarchical_identifier: $ => prec.left('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
+  // hierarchical_identifier: $ => prec.left('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
+  // hierarchical_identifier: $ => prec.right('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
+  // hierarchical_identifier: $ => seq( // TODO: Not sure if it's prec.left
+  hierarchical_identifier: $ => prec('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
     optional(seq('$root', '.')),
     repeat(prec('hierarchical_identifier', seq($._identifier, optional($.constant_bit_select1), '.'))),
     $._identifier
-    // )
-  ),
+  )),
   // INFO: After removin the prec.left it allowed the ['constant_primary', 'primary'] conflict in precedences!!
 
   // _hierarchical_net_identifier: $ => $.hierarchical_identifier,
@@ -4893,7 +4893,6 @@ const rules = {
   // ),
 
   // TODO: Fill and set all the cases
-  // ps_parameter_identifier: $ => choice(
   ps_parameter_identifier: $ => prec('ps_parameter_identifier', choice(
     seq(
       optional(choice(
@@ -4910,8 +4909,7 @@ const rules = {
     //   ),
     //   $.parameter_identifier
     // )
-    )
-  ),
+  )),
 
   // ps_type_identifier: $ => seq(
   //   optional(choice(
@@ -4958,7 +4956,7 @@ module.exports = grammar({
   extras: $ => [/\s/, $.comment],
 
   inline: $ => [
-    $.hierarchical_identifier,
+    // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
   //   $._hierarchical_net_identifier,
     $._hierarchical_variable_identifier,
   //   $._hierarchical_tf_identifier,
@@ -5080,6 +5078,12 @@ module.exports = grammar({
     ['package_scope', 'class_type'],
 
 
+    // TODO: Review this one after deinlining hierarchical_identifier
+    // Set higher precedence to hierarchical_identifier than to select1/constant_select1 since
+    // the latter is optional (according to LRM can match the empty string).
+    // INFO: However, take into account that there should be a conflict below for the case
+    // when there is actually a select1 besides the hierarchical_identifier
+    //
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '.'  •  simple_identifier  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier  '['  _part_select_range  ']')
@@ -5088,7 +5092,8 @@ module.exports = grammar({
     //   5:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier)
     //   6:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier  bit_select1)
     //   7:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier)
-    ['hierarchical_identifier', 'select1'],
+    // ['hierarchical_identifier', 'select1'], // INFO: I think this one is redundant or not needed anymore
+    ['hierarchical_identifier', 'constant_select1'],
 
 
     // TODO: Not sure if this one is correct
@@ -5152,6 +5157,31 @@ module.exports = grammar({
     //   2:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (pattern  constant_expression)  •  ')'  …
     ['pattern', 'constant_mintypmax_expression'],
 
+
+    // For regular identifiers, assume that they are always hierarchical if they have no package scope or hierarchical path
+    //
+    //   module_nonansi_header  'initial'  '@'  _identifier  •  ';'  …
+    //     1:  module_nonansi_header  'initial'  '@'  (hierarchical_identifier  _identifier)  •  ';'  …  (precedence: 'hierarchical_identifier', associativity: Right)
+    //     2:  module_nonansi_header  'initial'  '@'  (ps_identifier  _identifier)  •  ';'  …            (precedence: 'ps_identifier')
+    ['hierarchical_identifier', 'ps_identifier'],
+
+
+    // For this case, in a module header, only the port_reference makes sense:
+    //
+    //   _module_header1  '('  '.'  _identifier  '('  _identifier  •  ')'  …
+    //   1:  _module_header1  '('  '.'  _identifier  '('  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
+    //   2:  _module_header1  '('  '.'  _identifier  '('  (port_reference  _identifier)  •  ')'  …           (precedence: 'port_reference')
+    ['port_reference', 'hierarchical_identifier'],
+
+
+    // TODO: Not sure about this one either.
+    // Set higher precedence on constant_primary than on another hierarchical_identifier for dimension/select expressions of hierarchical identifiers
+    //
+    //   module_nonansi_header  'initial'  hierarchical_identifier  '['  _identifier  •  '/'  …
+    //     1:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (constant_primary  _identifier)  •  '/'  …         (precedence: 'ps_parameter_identifier')
+    //     2:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (hierarchical_identifier  _identifier)  •  '/'  …  (precedence: 'hierarchical_identifier')
+    ['ps_parameter_identifier', 'hierarchical_identifier'],
+
   ],
 
   conflicts: $ => [
@@ -5187,8 +5217,21 @@ module.exports = grammar({
     [$.net_port_header1],
 
 
-    // TODO: Remove/test this one
+    // This one had no option if setting right associativity on conditional_statement to handle recursion
+    //
+    //   module_nonansi_header  'initial'  'if'  '('  cond_predicate  ')'  statement_or_null  'else'  'if'  '('  cond_predicate  ')'  statement_or_null  •  'endmodule'  …
+    //     1:  module_nonansi_header  'initial'  'if'  '('  cond_predicate  ')'  statement_or_null  'else'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null)  •  'endmodule'  …          (precedence: 0, associativity: Right)
+    //     2:  module_nonansi_header  'initial'  'if'  '('  cond_predicate  ')'  statement_or_null  (conditional_statement_repeat1  'else'  'if'  '('  cond_predicate  ')'  statement_or_null)  •  'endmodule'  …
     [$.conditional_statement],
+
+    // This is a real conflict, since it needs more lookeahead to distinguish between a hierarchical identifier
+    // and a select1 construct, that might have some members with non-constant expressions
+    //
+    //   module_nonansi_header  'initial'  _identifier  •  '.'  …
+    //   1:  module_nonansi_header  'initial'  (hierarchical_identifier  _identifier)  •  '.'  …       (precedence: 'hierarchical_identifier')
+    //   2:  module_nonansi_header  'initial'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
+    [$.hierarchical_identifier],
+
   ],
 
 });
