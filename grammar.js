@@ -402,24 +402,23 @@ const rules = {
     seq('extern', $.module_ansi_header)
   ),
 
-  module_nonansi_header: $ => seq(
+  _module_header1: $ => prec.left(seq(
     repeat($.attribute_instance),
     $.module_keyword,
     optional($.lifetime),
-    $._module_identifier,
+    field('name', $._module_identifier),
     repeat($.package_import_declaration),
-    optional($.parameter_port_list),
+    optional($.parameter_port_list)
+  )),
+
+  module_nonansi_header: $ => seq(
+    $._module_header1,
     $.list_of_ports,
     ';'
   ),
 
   module_ansi_header: $ => seq(
-    repeat($.attribute_instance),
-    $.module_keyword,
-    optional($.lifetime),
-    $._module_identifier,
-    repeat($.package_import_declaration),
-    optional($.parameter_port_list),
+    $._module_header1,
     optional($.list_of_port_declarations),
     ';'
   ),
@@ -720,7 +719,6 @@ const rules = {
       optional(choice($.net_port_header1, $.interface_port_header)),
       $.port_identifier,
       repeat(prec('ansi_port_declaration', $.unpacked_dimension)),
-      // repeat($.unpacked_dimension),
       optional(seq('=', $.constant_expression))
     ),
     seq(
@@ -762,7 +760,7 @@ const rules = {
   //   $.bind_directive,
   //   $.continuous_assign,
   //   $.net_alias,
-  //   $.initial_construct,
+    $.initial_construct,
   //   $.final_construct,
     $.always_construct,
   //   $.loop_generate_construct,
@@ -3058,7 +3056,7 @@ const rules = {
 
   // // A.6.2 Procedural blocks and assignments
 
-  // initial_construct: $ => seq('initial', $.statement_or_null),
+  initial_construct: $ => seq('initial', $.statement_or_null),
 
   always_construct: $ => seq($.always_keyword, $.statement),
 
@@ -3075,6 +3073,7 @@ const rules = {
     // prec.left(PREC.ASSIGN, seq(
     //   $.nonrange_variable_lvalue, '=', $.dynamic_array_new
     // )),
+
     // // seq(
     // //   optional(choice(
     // //     seq($.implicit_class_handle, '.'),
@@ -3086,16 +3085,23 @@ const rules = {
     // //   '=',
     // //   $.class_new
     // // ),
-    // $.operator_assignment
+
+    $.operator_assignment,
+
+    // INFO: New in 2023? Not in drom's
+    // $.inc_or_dec_expression,
   ),
 
+  // INFO: Drom's one
   // operator_assignment: $ => prec.left(PREC.ASSIGN,
   //   seq($.variable_lvalue, $.assignment_operator, $.expression)
   // ),
+  // INFO: Mine without prec.left
+  operator_assignment: $ => seq($.variable_lvalue, $.assignment_operator, $.expression),
 
-  // assignment_operator: $ => choice(
-  //   '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='
-  // ),
+  assignment_operator: $ => choice(
+    '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='
+  ),
 
   // nonblocking_assignment: $ => prec.left(PREC.ASSIGN, seq(
   //   $.variable_lvalue,
@@ -3163,7 +3169,7 @@ const rules = {
     // seq($.procedural_continuous_assignment, ';'),
     // seq($.system_tf_call, ';'),
     // $.case_statement,
-    // $.conditional_statement,
+    $.conditional_statement,
     // seq($.inc_or_dec_expression, ';'),
     // // $.subroutine_call_statement,
     // $.disable_statement,
@@ -3285,16 +3291,32 @@ const rules = {
   //   optseq('else', $.statement_or_null)
   // )),
 
-  // unique_priority: $ => choice('unique', 'unique0', 'priority'),
+  // prec.right because of:
+  // module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  'if'  '('  cond_predicate  ')'  statement_or_null  •  'else'  …
+  // 1:  module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null  •  'else'  statement_or_null)
+  // 2:  module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null  •  conditional_statement_repeat1  'else'  statement_or_null)
+  // 3:  module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null  •  conditional_statement_repeat1)
+  // 4:  module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null)  •  'else'  …
+  // Trying to make cond_statement the whole if/else if/else block
+  conditional_statement: $ => prec.right(seq(
+    optional($.unique_priority),
+    'if', '(', $.cond_predicate, ')', $.statement_or_null,
+    repeat(seq('else', 'if', '(', $.cond_predicate, ')', $.statement_or_null)),
+    optional(seq('else', $.statement_or_null))
+  )),
+
+  unique_priority: $ => choice('unique', 'unique0', 'priority'),
 
   // cond_predicate: $ => psep1(PREC.PARENT, '&&&', $._expression_or_cond_pattern), // FIXME precedence
+  cond_predicate: $ => sepBy1('&&&', $._expression_or_cond_pattern),
 
-  // _expression_or_cond_pattern: $ => choice(
-  //   $.expression,
-  //   $.cond_pattern
-  // ),
+  _expression_or_cond_pattern: $ => choice(
+    $.expression,
+    $.cond_pattern
+  ),
 
   // cond_pattern: $ => prec.left(PREC.MATCHES, seq($.expression, 'matches', $.pattern)),
+  cond_pattern: $ => seq($.expression, 'matches', $.pattern),
 
   // // A.6.7 Case statements
 
@@ -3345,14 +3367,16 @@ const rules = {
 
   // // A.6.7.1 Patterns
 
-  // pattern: $ => choice(
-  //   seq('.', $._variable_identifier),
-  //   '.*',
-  //   $.constant_expression,
-  //   seq('tagged', $.member_identifier, optional($.pattern)),
-  //   seq('\'{', sep1(',', $.pattern), '}'),
-  //   seq('\'{', sep1(',', seq($.member_identifier, ':', $.pattern)), '}')
-  // ),
+  // INFO: Modified from Drom's one
+  pattern: $ => prec('pattern', choice(
+    seq('(', $.pattern, ')'),
+    seq('.', $._variable_identifier),
+    '.*',
+    $.constant_expression,
+    seq('tagged', $.member_identifier, optional($.pattern)),
+    seq('\'{', sepBy1(',', $.pattern), '}'),
+    seq('\'{', sepBy1(',', seq($.member_identifier, ':', $.pattern)), '}')
+  )),
 
   // assignment_pattern: $ => seq(
   //   '\'{',
@@ -4275,10 +4299,10 @@ const rules = {
     // ))
   ),
 
-  constant_mintypmax_expression: $ => seq(
+  constant_mintypmax_expression: $ => prec('constant_mintypmax_expression', seq(
     $.constant_expression,
     optional(seq(':', $.constant_expression, ':', $.constant_expression))
-  ),
+  )),
 
   constant_param_expression: $ => choice(
     $.constant_mintypmax_expression,
@@ -4533,9 +4557,9 @@ const rules = {
   // ),
 
   // TODO: Review with bit_select tests
-  constant_bit_select1: $ => prec.left(repeat1(seq( // reordered -> non empty
+  constant_bit_select1: $ => prec.left(repeat1(prec('constant_bit_select1', seq( // reordered -> non empty
     '[', $.constant_expression, ']'
-  ))),
+  )))),
 
   // TODO: Review with range tests
   constant_select1: $ => prec('constant_select1', choice( // reordered -> non empty
@@ -4573,7 +4597,20 @@ const rules = {
 
   // TODO: Compare with original and develop
   variable_lvalue: $ => choice(
-
+    seq(
+      optional(choice(
+        seq($.implicit_class_handle, '.'),
+        $.package_scope
+      )),
+      $._hierarchical_variable_identifier,
+      optional($.select1)
+    ),
+    // prec.left(PREC.CONCAT, seq('{', sep1(',', $.variable_lvalue), '}')),
+    // seq(
+    //   optional($._assignment_pattern_expression_type),
+    //   $.assignment_pattern_variable_lvalue
+    // )),
+    // $.streaming_concatenation
   ),
 
   // variable_lvalue: $ => choice(
@@ -4772,7 +4809,7 @@ const rules = {
   // _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_task_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_tf_identifier: $ => $.hierarchical_identifier,
-  // _hierarchical_variable_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_variable_identifier: $ => $.hierarchical_identifier,
 
   _identifier: $ => choice(
     $.simple_identifier,
@@ -4923,7 +4960,7 @@ module.exports = grammar({
   inline: $ => [
     $.hierarchical_identifier,
   //   $._hierarchical_net_identifier,
-  //   $._hierarchical_variable_identifier,
+    $._hierarchical_variable_identifier,
   //   $._hierarchical_tf_identifier,
   //   $._hierarchical_sequence_identifier,
   //   $._hierarchical_property_identifier,
@@ -4984,11 +5021,13 @@ module.exports = grammar({
     //   2:  module_nonansi_header  'input'  (data_type_or_implicit1  data_type)  •  simple_identifier  …  (precedence: 'data_type_or_implicit1')
     ['_var_data_type', 'data_type_or_implicit1'],
 
+
     // module_nonansi_header  'input'  _identifier  •  ';'  …
     //   1:  module_nonansi_header  'input'  _identifier  (_variable_dimension  unpacked_dimension)  •  ';'  …
     //   2:  module_nonansi_header  'input'  _identifier  (list_of_port_identifiers_repeat1  unpacked_dimension)  •  ';'  …
     // ['list_of_port_identifiers_repeat', '_variable_dimension'],
     ['list_of_port_identifiers', '_variable_dimension'],
+
 
     // LRM 6.10: Implicit declarations:
     //   If an identifier is used in a port expression declaration, then an implicit net
@@ -5003,10 +5042,12 @@ module.exports = grammar({
     //   2:  module_nonansi_header  'output'  (list_of_variable_port_identifiers  _identifier)  •  ';'  …
     ['list_of_port_identifiers', 'list_of_variable_port_identifiers'],
 
+
     // module_keyword  _module_identifier  '('  _identifier  •  ')'  …
     //   1:  module_keyword  _module_identifier  '('  (ansi_port_declaration  _identifier)  •  ')'  …
     //   2:  module_keyword  _module_identifier  '('  (port_reference  _identifier)  •  ')'  …
     ['port_reference', 'ansi_port_declaration'],
+
 
     // For ANSI port declaration, if there is no builtin net type assume it's an interface identifier and not a net
     // module_keyword  _module_identifier  '('  _identifier  •  simple_identifier  …
@@ -5014,11 +5055,13 @@ module.exports = grammar({
     //   2:  module_keyword  _module_identifier  '('  (net_port_type1  _identifier)  •  simple_identifier  …
     ['interface_port_header', 'net_port_type1'],
 
+
     // This one doesn't make much sense, but prioritize ansi_port_declaration
     // module_keyword  _module_identifier  '('  _identifier  unpacked_dimension  •  ')'  …
     //   1:  module_keyword  _module_identifier  '('  _identifier  (_variable_dimension  unpacked_dimension)  •  ')'  …            (precedence: '_variable_dimension')
     //   2:  module_keyword  _module_identifier  '('  _identifier  (ansi_port_declaration_repeat1  unpacked_dimension)  •  ')'  …
     ['ansi_port_declaration', '_variable_dimension'],
+
 
     // This one doesn't seem to make much sense for module declarations, but port1
     // will be used in module instantiation with unconnected ports, so prioritize it.
@@ -5027,13 +5070,15 @@ module.exports = grammar({
     //   2:  module_keyword  _module_identifier  '('  (port1  '.'  _identifier  '('  ')')  •  ')'  …
     ['port1', 'ansi_port_declaration'],
 
+
     // TODO: Not sure about this one, but seems that package scope always comes before class scope
-    // TODO: Could have also been solved with prec.left on $.package_scope rule
+    // INFO: Could have also been solved with prec.left on $.package_scope rule
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '::'  •  simple_identifier  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  (package_scope  _identifier  '::')  •  simple_identifier  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (class_type_repeat1  '::'  •  _identifier  parameter_value_assignment)
     //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (class_type_repeat1  '::'  •  _identifier)
     ['package_scope', 'class_type'],
+
 
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '.'  •  simple_identifier  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …
@@ -5045,103 +5090,105 @@ module.exports = grammar({
     //   7:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier)
     ['hierarchical_identifier', 'select1'],
 
+
     // TODO: Not sure if this one is correct
     // INFO: constant_primary has precedence since it refers to hierarchical_identifier instead of to select1, which in theory should simplify things quite a lot
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  primary_literal  •  '/'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  primary_literal)  •  '/'  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  primary_literal)  •  '/'  …
-    ['constant_primary', 'primary'], // INFO: Actually does something, but only on primary_literal, but not on _identifier!
+    ['constant_primary', 'primary'],
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  •  '/'  …
     // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  _identifier)  •  '/'  …  (precedence: 'ps_parameter_identifier')
     // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  _identifier)  •  '/'  …           (precedence: 'primary')
-    ['ps_parameter_identifier', 'primary'], // INFO: This was the one that worked on identifier!
+    ['ps_parameter_identifier', 'primary'],
 
 
-    // module_keyword  _module_identifier  '('  _identifier  '['  constant_range  •  ']'  …
-    //   1:  module_keyword  _module_identifier  '('  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …
-    //   2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_range  •  ']')
+    // Case 1 is for non-ansi port with constant_part_select.
+    // Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
     //
-    //   Case 1 is for non-ansi port with constant_part_select.
-    //   Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
+    //   module_keyword  _module_identifier  '('  _identifier  '['  constant_range  •  ']'  …
+    //     1:  module_keyword  _module_identifier  '('  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …
+    //     2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_range  •  ']')
     ['unpacked_dimension', '_constant_part_select_range'],
-    // [`unpacked_dimension`],
-    // [`_constant_part_select_range`],
-    // TODO: Remove!?
+    //   module_keyword  _module_identifier  '('  _identifier  '['  constant_expression  ']'  •  ')'  …
+    //     1:  module_keyword  _module_identifier  '('  _identifier  (constant_bit_select1_repeat1  '['  constant_expression  ']')  •  ')'  …
+    //     2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_expression  ']')  •  ')'  …            (precedence: 'unpacked_dimension')
+    ['unpacked_dimension', 'constant_bit_select1'],
 
-    // TODO: This one doesn't work!!
+
     // module_nonansi_header  always_keyword  '@'  _identifier  •  ';'  …
     // 1:  module_nonansi_header  always_keyword  '@'  (ps_identifier  _identifier)  •  ';'  …
     // 2:  module_nonansi_header  always_keyword  (clocking_event  '@'  _identifier)  •  ';'  …  (precedence: 0, associativity: Left)
-    // ['clocking_event', 'ps_identifier'],
-    ['clocking_event'],
-    ['ps_identifier'],
+    ['clocking_event', 'ps_identifier'],
 
-    // TODO: This one doesn't work!!
+
     // module_keyword  _module_identifier  '('  '.'  _identifier  '('  _identifier  •  ')'  …
     //   1:  module_keyword  _module_identifier  '('  '.'  _identifier  '('  (port_reference  _identifier)  •  ')'  …  (precedence: 'port_reference')
     //   2:  module_keyword  _module_identifier  '('  '.'  _identifier  '('  (primary  _identifier)  •  ')'  …         (precedence: 0, associativity: Left)
-    // ['port_reference', 'primary'],
+    ['port_reference', 'primary'],
 
-    // TODO: Doesn't work either!!!
+
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  class_scope  •  simple_identifier  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (class_qualifier  class_scope)  •  simple_identifier  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier  constant_select1)
     //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier)
-    // ['constant_primary', 'class_qualifier'],
-    // ['constant_primary', 'class_qualifier'],
-    // ['constant_primary'],
-    // ['class_qualifier'],
     ['class_qualifier', 'ps_parameter_identifier'],
-    // INFO: Now it works! On the proper rule
+
 
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '.'  _identifier  •  '/'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (constant_select1  '.'  _identifier)  •  '/'  …  (precedence: 'constant_select1')
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (select1  '.'  _identifier)  •  '/'  …           (precedence: 'select1')
     ['constant_select1', 'select1'],
 
+
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  constant_range  •  ']'  …
     // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
     // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  (_part_select_range  constant_range)  •  ']'  …
     ['_constant_part_select_range', '_part_select_range'],
 
+
+    //   module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  constant_expression  •  ')'  …
+    //   1:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (constant_mintypmax_expression  constant_expression)  •  ')'  …
+    //   2:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (pattern  constant_expression)  •  ')'  …
+    ['pattern', 'constant_mintypmax_expression'],
+
   ],
 
   conflicts: $ => [
+    // Help differentiate between many parameters and list of parameters:
+    //
+    //   module_keyword  _module_identifier  '#'  '('  param_assignment  •  ','  …
+    //   1:  module_keyword  _module_identifier  '#'  '('  (list_of_param_assignments  param_assignment  •  list_of_param_assignments_repeat1)
+    //   2:  module_keyword  _module_identifier  '#'  '('  (list_of_param_assignments  param_assignment)  •  ','  …
+    [$.list_of_param_assignments],
 
-    [$.list_of_param_assignments], // Help differentiate between many parameters and list of parameters
-    [$.list_of_type_assignments],  // Help differentiate between many types and list of types
 
-    // module_keyword  _module_identifier  '('  ')'  •  ';'  …
-    //   1:  module_keyword  _module_identifier  (list_of_port_declarations  '('  ')')  •  ';'  …
-    //   2:  module_keyword  _module_identifier  (list_of_ports  '('  ')')  •  ';'  …
+    // Help differentiate between many types and list of types:
+    //
+    //   module_keyword  _module_identifier  '#'  '('  'type'  type_assignment  •  ','  …
+    //   1:  module_keyword  _module_identifier  '#'  '('  'type'  (list_of_type_assignments  type_assignment  •  list_of_type_assignments_repeat1)
+    //   2:  module_keyword  _module_identifier  '#'  '('  'type'  (list_of_type_assignments  type_assignment)  •  ','  …
+    [$.list_of_type_assignments],
+
+
+    // Differentiate between nonANSI/ANSI header for empty port list with parenthesis:
+    //
+    //   module_keyword  _module_identifier  '('  ')'  •  ';'  …
+    //     1:  module_keyword  _module_identifier  (list_of_port_declarations  '('  ')')  •  ';'  …
+    //     2:  module_keyword  _module_identifier  (list_of_ports  '('  ')')  •  ';'  …
     [$.list_of_ports, $.list_of_port_declarations],
 
-    // module_keyword  _module_identifier  '('  port_direction  •  simple_identifier  …
-    //   1:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction  •  net_port_type1)
-    //   2:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction)  •  simple_identifier  …
+
+    // E.g: input wire logic port_name | input port_name
+    //
+    //   module_keyword  _module_identifier  '('  port_direction  •  simple_identifier  …
+    //     1:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction  •  net_port_type1)
+    //     2:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction)  •  simple_identifier  …
     [$.net_port_header1],
 
-    // Case 1 is for first non-ansi port with constant_part_select.
-    // Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
-    //   module_keyword  _module_identifier  '('  _identifier  '['  constant_range  •  ']'  …
-    //     1:  module_keyword  _module_identifier  '('  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …
-    //     2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_range  •  ']')
-    //
-    // [$.unpacked_dimension, $._constant_part_select_range],
 
-    // Case 1 is for first non-ansi port with constant_part_select.
-    // Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
-    //   module_keyword  _module_identifier  '('  _identifier  '['  constant_expression  ']'  •  ')'  …
-    //     1:  module_keyword  _module_identifier  '('  _identifier  (constant_bit_select1_repeat1  '['  constant_expression  ']')  •  ')'  …
-    //     2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_expression  ']')  •  ')'  …            (precedence: 'unpacked_dimension')
-    [$.unpacked_dimension, $.constant_bit_select1],
-
-
-    // TODO: This one wasn't fixed by precedences() array!
-    [$.clocking_event, $.ps_identifier],
-    [$.port_reference, $.primary],
-
-    // [$._constant_part_select_range, $._part_select_range],
+    // TODO: Remove/test this one
+    [$.conditional_statement],
   ],
 
 });
