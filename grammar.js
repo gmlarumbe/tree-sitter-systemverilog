@@ -351,7 +351,7 @@ const rules = {
     // $.interface_declaration,
     // $.program_declaration,
     // $.package_declaration,
-    // seq(repeat($.attribute_instance), $._package_item),
+    seq(repeat($.attribute_instance), $._package_item),
     // seq(repeat($.attribute_instance), $.bind_directive)
     // $.config_declaration,
     // End of TODO
@@ -779,7 +779,7 @@ const rules = {
       // $.parameter_override,
       // $.gate_instantiation, // TODO: Removed temporarily to simplify parsing
       // $.udp_instantiation, // TODO: Removed temporarily to simplify parsing
-      // $.module_instantiation,
+      $.module_instantiation,
       $._module_common_item
     )
   ),
@@ -1149,12 +1149,12 @@ const rules = {
 
   // /* A.1.11 Package items */
 
-  // _package_item: $ => choice(
-  //   $.package_or_generate_item_declaration,
-  //   $.anonymous_program,
-  //   $.package_export_declaration,
-  //   $.timeunits_declaration
-  // ),
+  _package_item: $ => choice(
+    $.package_or_generate_item_declaration,
+    // $.anonymous_program,
+    // $.package_export_declaration,
+    // $.timeunits_declaration
+  ),
 
   package_or_generate_item_declaration: $ => choice(
     $.net_declaration,
@@ -1167,7 +1167,7 @@ const rules = {
     // $.class_declaration,
     // $.interface_class_declaration, // not in spec
     // $.class_constructor_declaration,
-    // seq($._any_parameter_declaration, ';'),
+    seq($._any_parameter_declaration, ';'),
     // $.covergroup_declaration,
     // $.overload_declaration,
     // $._assertion_item_declaration, // TODO: Remove temporarily to avoid some conflicts
@@ -2707,12 +2707,12 @@ const rules = {
 
   // // A.4.1.1 Module instantiation
 
-  // module_instantiation: $ => seq(
-  //   $._module_identifier,
-  //   optional($.parameter_value_assignment),
-  //   sep1(',', $.hierarchical_instance),
-  //   ';'
-  // ),
+  module_instantiation: $ => seq(
+    $._module_identifier,
+    optional($.parameter_value_assignment),
+    sepBy1(',', $.hierarchical_instance),
+    ';'
+  ),
 
   parameter_value_assignment: $ => seq(
     '#', '(', optional($.list_of_parameter_value_assignments), ')'
@@ -2729,40 +2729,36 @@ const rules = {
     '.', $.parameter_identifier, '(', optional($.param_expression), ')'
   ),
 
-  // hierarchical_instance: $ => seq(
-  //   $.name_of_instance, '(', optional($.list_of_port_connections), ')'
-  // ),
+  hierarchical_instance: $ => seq(
+    $.name_of_instance, '(', optional($.list_of_port_connections), ')'
+  ),
 
-  // name_of_instance: $ => seq(
-  //   $.instance_identifier, repeat($.unpacked_dimension)
-  // ),
+  name_of_instance: $ => seq(
+    $.instance_identifier, repeat($.unpacked_dimension)
+  ),
 
-  // // Reordered
+  // Reordered
+  list_of_port_connections: $ => choice(
+    sepBy1(',', $.ordered_port_connection),
+    sepBy1(',', $.named_port_connection)
+  ),
 
-  // list_of_port_connections: $ => choice(
-  //   sep1(',', $.named_port_connection),
-  //   sep1(',', $.ordered_port_connection)
-  // ),
+  ordered_port_connection: $ => seq(
+    repeat($.attribute_instance),
+    $.expression // INFO: Removed the optional so that it doesn't match the empty string
+  ),
 
-  // ordered_port_connection: $ => seq(
-  //   repeat($.attribute_instance),
-  //   $.expression
-  // ),
-
-  // // from spec:
-  // // named_port_connection: $ =>
-  // //   { attribute_instance } . port_identifier [ ( [ expression ] ) ]
-  // // | { attribute_instance } .*
-
-  // named_port_connection: $ => seq(
-  //   repeat($.attribute_instance),
-  //   choice(
-  //     seq('.', $.port_identifier, optseq(
-  //       '(', optional($.expression), ')'
-  //     )),
-  //     '.*'
-  //   )
-  // ),
+  // from spec:
+  // named_port_connection: $ =>
+  //   { attribute_instance } . port_identifier [ ( [ expression ] ) ]
+  // | { attribute_instance } .*
+  named_port_connection: $ => seq(
+    repeat($.attribute_instance),
+    choice(
+      seq('.', $.port_identifier, optional(seq('(', optional($.expression), ')'))),
+      '.*'
+    )
+  ),
 
   // /* A.4.1.2 Interface instantiation */
 
@@ -4843,7 +4839,7 @@ const rules = {
   // interface_instance_identifier: $ => alias($._identifier, $.interface_instance_identifier),
   // inout_port_identifier: $ => alias($._identifier, $.inout_port_identifier),
   // input_port_identifier: $ => alias($._identifier, $.input_port_identifier),
-  // instance_identifier: $ => alias($._identifier, $.instance_identifier),
+  instance_identifier: $ => alias($._identifier, $.instance_identifier),
   // library_identifier: $ => alias($._identifier, $.library_identifier),
   member_identifier: $ => alias($._identifier, $.member_identifier),
   // method_identifier: $ => alias($._identifier, $.method_identifier),
@@ -5019,7 +5015,7 @@ module.exports = grammar({
   //   $.class_variable_identifier,
   //   $.interface_instance_identifier,
     $.interface_identifier,
-  //   $._module_identifier,
+    $._module_identifier,
   //   $.let_identifier,
   //   $.sequence_identifier,
     $._net_identifier,
@@ -5028,7 +5024,7 @@ module.exports = grammar({
     $.member_identifier,
     $.port_identifier,
     $._block_identifier,
-  //   $.instance_identifier,
+    $.instance_identifier,
   //   $.property_identifier,
   //   // $.input_port_identifier,
   //   // $.output_port_identifier,
