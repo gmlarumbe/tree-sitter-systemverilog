@@ -3237,7 +3237,7 @@ const rules = {
   // ),
 
   // INFO: Changed quite a lot from what Drom did
-  event_expression: $ => prec.left(choice(
+  event_expression: $ => prec.left('event_expression', choice(
     seq(optional($.edge_identifier), $.expression, optional(seq('iff', $.expression))),
     // seq($.sequence_instance, optional(seq('iff', $.expression))),
     seq($.event_expression, 'or', $.event_expression),
@@ -3313,16 +3313,18 @@ const rules = {
 
   unique_priority: $ => choice('unique', 'unique0', 'priority'),
 
-  // cond_predicate: $ => psep1(PREC.PARENT, '&&&', $._expression_or_cond_pattern), // FIXME precedence
-  cond_predicate: $ => sepBy1('&&&', $._expression_or_cond_pattern),
+  cond_predicate: $ => prec(PREC.CONDITIONAL, sepBy1('&&&', $._expression_or_cond_pattern)),
 
   _expression_or_cond_pattern: $ => choice(
     $.expression,
     $.cond_pattern
   ),
 
-  // cond_pattern: $ => prec.left(PREC.MATCHES, seq($.expression, 'matches', $.pattern)),
-  cond_pattern: $ => seq($.expression, 'matches', $.pattern),
+  cond_pattern: $ => seq(
+    $.expression,
+    'matches',
+    $.pattern
+  ),
 
   // // A.6.7 Case statements
 
@@ -4104,6 +4106,7 @@ const rules = {
   // concatenation: $ => seq(
   //   '{', psep1(PREC.CONCAT, ',', $.expression), '}'
   // ),
+  concatenation: $ => seq('{', sepBy1(',', $.expression), '}'),
 
   // constant_concatenation: $ => seq(
   //   '{', psep1(PREC.CONCAT, ',', $.constant_expression), '}'
@@ -4262,46 +4265,47 @@ const rules = {
 
   // // A.8.3 Expressions
 
-  // inc_or_dec_expression: $ => choice(
-  //   seq($.inc_or_dec_operator, repeat($.attribute_instance), $.variable_lvalue),
-  //   seq($.variable_lvalue, repeat($.attribute_instance), $.inc_or_dec_operator)
-  // ),
+  inc_or_dec_expression: $ => choice(
+    seq($.inc_or_dec_operator, repeat($.attribute_instance), $.variable_lvalue),
+    seq($.variable_lvalue, repeat($.attribute_instance), $.inc_or_dec_operator)
+  ),
 
-  // conditional_expression: $ => prec.right(PREC.CONDITIONAL, seq(
-  //   $.cond_predicate,
-  //   '?',
-  //   repeat($.attribute_instance), $.expression,
-  //   ':',
-  //   $.expression
-  // )),
+  conditional_expression: $ => prec.right(PREC.CONDITIONAL, seq(
+    $.cond_predicate,
+    '?',
+    repeat($.attribute_instance), $.expression,
+    ':',
+    $.expression
+  )),
 
   constant_expression: $ => choice(
     $.constant_primary,
 
-    // prec.left(PREC.UNARY, seq(
-    //   $.unary_operator, repeat($.attribute_instance), $.constant_primary
-    // )),
+    prec.left(PREC.UNARY, seq(
+      $.unary_operator, repeat($.attribute_instance), $.constant_primary
+    )),
 
+    // TODO: Review these expressions and precedences
     constExprOp($, PREC.ADD, choice('+', '-')),
     constExprOp($, PREC.MUL, choice('*', '/', '%')),
-    // constExprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
-    // constExprOp($, PREC.LOGICAL_AND, '&&'),
-    // constExprOp($, PREC.LOGICAL_OR, '||'),
-    // constExprOp($, PREC.POW, '**'),
-    // constExprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
-    // constExprOp($, PREC.AND, '&'),
-    // constExprOp($, PREC.OR, '|'),
-    // constExprOp($, PREC.XOR, choice('^', '^~', '~^')),
-    // constExprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
-    // constExprOp($, PREC.IMPLICATION, choice('->', '<->')),
+    constExprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
+    constExprOp($, PREC.LOGICAL_AND, '&&'),
+    constExprOp($, PREC.LOGICAL_OR, '||'),
+    constExprOp($, PREC.POW, '**'),
+    constExprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
+    constExprOp($, PREC.AND, '&'),
+    constExprOp($, PREC.OR, '|'),
+    constExprOp($, PREC.XOR, choice('^', '^~', '~^')),
+    constExprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
+    constExprOp($, PREC.IMPLICATION, choice('->', '<->')),
 
-    // prec.right(PREC.CONDITIONAL, seq(
-    //   $.constant_expression,
-    //   '?',
-    //   repeat($.attribute_instance), $.constant_expression,
-    //   ':',
-    //   $.constant_expression
-    // ))
+    prec.right(PREC.CONDITIONAL, seq(
+      $.constant_expression,
+      '?',
+      repeat($.attribute_instance), $.constant_expression,
+      ':',
+      $.constant_expression
+    ))
   ),
 
   constant_mintypmax_expression: $ => prec('constant_mintypmax_expression', seq(
@@ -4341,11 +4345,11 @@ const rules = {
   expression: $ => choice(
     $.primary,
 
-    // prec.left(PREC.UNARY, seq(
-    //   $.unary_operator, repeat($.attribute_instance), $.primary
-    // )),
-    // prec.left(PREC.UNARY, $.inc_or_dec_expression),
-    // prec.left(PREC.PARENT, seq('(', $.operator_assignment, ')')),
+    prec.left(PREC.UNARY, seq(
+      $.unary_operator, repeat($.attribute_instance), $.primary
+    )),
+    prec.left(PREC.UNARY, $.inc_or_dec_expression),
+    prec.left(PREC.PARENT, seq('(', $.operator_assignment, ')')),
 
     // TODO: Review precedences and operators, but they look good overall
     exprOp($, PREC.ADD, choice('+', '-')),
@@ -4361,7 +4365,7 @@ const rules = {
     exprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
     exprOp($, PREC.IMPLICATION, choice('->', '<->')),
 
-    // $.conditional_expression,
+    $.conditional_expression,
     // $.inside_expression,
     // $.tagged_union_expression
   ),
@@ -4381,10 +4385,10 @@ const rules = {
   //   seq('[', $.expression, ':', $.expression, ']')
   // ),
 
-  mintypmax_expression: $ => seq(
+  mintypmax_expression: $ => prec('mintypmax_expression', seq(
     $.expression,
     optional(seq(':', $.expression, ':', $.expression))
-  ),
+  )),
 
   // module_path_conditional_expression: $ => seq(
   //   $.module_path_expression,
@@ -4466,11 +4470,11 @@ const rules = {
       optional($.select1)
     ),
     // $.empty_unpacked_array_concatenation,
-    // seq($.concatenation, optseq('[', $.range_expression, ']')),
+    seq($.concatenation, optional(seq('[', $.range_expression, ']'))),
     // seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
     // $.function_subroutine_call,
     // // $.let_expression, // TODO: Remove temporarily to narrow conflicts
-    // seq('(', $.mintypmax_expression, ')'),
+    seq('(', $.mintypmax_expression, ')'),
     // // $.cast, // TODO: Remove temporarily to narrow conflicts
     // $.assignment_pattern_expression,
     // $.streaming_concatenation,
@@ -4487,11 +4491,10 @@ const rules = {
       $.class_scope
     ))),
 
-  // range_expression: $ => choice(
-  //   $.expression,
-  //   $._part_select_range
-  // ),
-  // //
+  range_expression: $ => choice(
+    $.expression,
+    $._part_select_range
+  ),
 
   primary_literal: $ => choice(
     $._number,
@@ -4613,7 +4616,7 @@ const rules = {
   ),
 
   // TODO: Compare with original and develop
-  variable_lvalue: $ => choice(
+  variable_lvalue: $ => prec('variable_lvalue', choice(
     seq(
       optional(choice(
         seq($.implicit_class_handle, '.'),
@@ -4628,7 +4631,7 @@ const rules = {
     //   $.assignment_pattern_variable_lvalue
     // )),
     // $.streaming_concatenation
-  ),
+  )),
 
   // variable_lvalue: $ => choice(
   //   prec.left(PREC.PARENT, seq(
@@ -4658,11 +4661,11 @@ const rules = {
 
   // // A.8.6 Operators
 
-  // unary_operator: $ => choice(
-  //   '+', '-', '!', '~', '&', '~&', '|', '~|', '^', '~^', '^~'
-  // ),
+  unary_operator: $ => choice(
+    '+', '-', '!', '~', '&', '~&', '|', '~|', '^', '~^', '^~'
+  ),
 
-  // inc_or_dec_operator: $ => choice('++', '--'),
+  inc_or_dec_operator: $ => choice('++', '--'),
 
   // // unary_module_path_operator = '~&' /
   // //   '~|' /
@@ -5034,6 +5037,8 @@ module.exports = grammar({
   //   // $.output_identifier,
   //   $.cover_point_identifier,
   //   $.cross_identifier
+
+    $._expression_or_cond_pattern,
   ],
 
   precedences: () => [
@@ -5205,6 +5210,21 @@ module.exports = grammar({
     //     2:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (hierarchical_identifier  _identifier)  •  '/'  …  (precedence: 'hierarchical_identifier')
     ['ps_parameter_identifier', 'hierarchical_identifier'],
 
+
+    // module_nonansi_header  'initial'  '@'  '('  '('  expression  •  ')'  …
+    // 1:  module_nonansi_header  'initial'  '@'  '('  '('  (event_expression  expression)  •  ')'  …      (precedence: 'event_expression', associativity: Left)
+    // 2:  module_nonansi_header  'initial'  '@'  '('  '('  (mintypmax_expression  expression)  •  ')'  …  (precedence: 'mintypmax_expression')
+    ['event_expression', 'mintypmax_expression'],
+
+
+    // First one doesn't really make much sense:
+    //
+    //   module_nonansi_header  'var'  _identifier  '='  implicit_class_handle  '.'  •  '$root'  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  (class_qualifier  implicit_class_handle  '.')  •  '$root'  …                        (precedence: 'class_qualifier')
+    //   2:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier  select1)  (precedence: 'variable_lvalue')
+    //   3:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier)           (precedence: 'variable_lvalue')
+    ['variable_lvalue', 'class_qualifier'],
+
   ],
 
   conflicts: $ => [
@@ -5247,6 +5267,7 @@ module.exports = grammar({
     //     2:  module_nonansi_header  'initial'  'if'  '('  cond_predicate  ')'  statement_or_null  (conditional_statement_repeat1  'else'  'if'  '('  cond_predicate  ')'  statement_or_null)  •  'endmodule'  …
     [$.conditional_statement],
 
+
     // This is a real conflict, since it needs more lookeahead to distinguish between a hierarchical identifier
     // and a select1 construct, that might have some members with non-constant expressions
     //
@@ -5263,6 +5284,7 @@ module.exports = grammar({
     // 2:  module_nonansi_header  'assign'  (variable_lvalue  hierarchical_identifier  •  select1)
     [$.variable_lvalue, $.ps_or_hierarchical_net_identifier],
 
+
     // This one doesn't seem very important, since it should only refer to identifiers
     // when hierarchical only have 1 level of nesting
     //
@@ -5271,7 +5293,25 @@ module.exports = grammar({
     //     2:  module_nonansi_header  'assign'  (hierarchical_identifier_repeat1  _identifier  •  '.')       (precedence: 'hierarchical_identifier')
     //     3:  module_nonansi_header  'assign'  (ps_or_hierarchical_net_identifier  _identifier)  •  '.'  …
     [$.hierarchical_identifier, $.ps_or_hierarchical_net_identifier],
-  ],
+
+
+    // No way to fix this conflict in the precedences array since the constant_expression has numeric precedence,
+    // and the pattern one has a string precedence. It should occur rarely in the language.
+    //
+    // module_nonansi_header  'var'  _identifier  '='  expression  'matches'  constant_expression  •  '?'  …
+    // 1:  module_nonansi_header  'var'  _identifier  '='  expression  'matches'  (constant_expression  constant_expression  •  '?'  constant_expression  ':'  constant_expression)                              (precedence: 23, associativity: Right)
+    // 2:  module_nonansi_header  'var'  _identifier  '='  expression  'matches'  (constant_expression  constant_expression  •  '?'  module_declaration_repeat3  constant_expression  ':'  constant_expression)  (precedence: 23, associativity: Right)
+    // 3:  module_nonansi_header  'var'  _identifier  '='  expression  'matches'  (pattern  constant_expression)  •  '?'  …                                                                                      (precedence: 'pattern')
+    [$.pattern, $.constant_expression],
+
+    // Don't really understand this one well but it's a consequence of having PREC.CONDITIONAL on both
+    // $.cond_predicate and $.conditional_expression, and seems needed to make nested conditional expressions work well
+    //
+    //   module_nonansi_header  'var'  _identifier  '='  cond_predicate  '?'  expression  ':'  expression  •  '?'  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  (conditional_expression  cond_predicate  '?'  expression  ':'  expression)  •  '?'  …  (precedence: 23, associativity: Right)
+    //   2:  module_nonansi_header  'var'  _identifier  '='  cond_predicate  '?'  expression  ':'  (cond_predicate  expression)  •  '?'  …          (precedence: 23)
+    [$.cond_predicate, $.conditional_expression],
+],
 
 });
 
