@@ -758,7 +758,7 @@ const rules = {
   //   $.program_instantiation,
   //   $._assertion_item,
   //   $.bind_directive,
-  //   $.continuous_assign,
+    $.continuous_assign,
   //   $.net_alias,
     $.initial_construct,
   //   $.final_construct,
@@ -3026,33 +3026,36 @@ const rules = {
 
   // // A.6.1 Continuous assignment and net alias statements
 
-  // continuous_assign: $ => seq(
-  //   'assign',
-  //   choice(
-  //     seq(
-  //       optional($.drive_strength),
-  //       // optional($.delay3), // TODO: Remove to make things simpler
-  //       $.list_of_net_assignments
-  //     ),
-  //     seq(
-  //       optional($.delay_control),
-  //       $.list_of_variable_assignments
-  //     )
-  //   ),
-  //   ';'
-  // ),
+  continuous_assign: $ => seq(
+    'assign',
+    choice(
+      seq(
+        optional($.drive_strength),
+        // optional($.delay3), // TODO: Add in the future
+        $.list_of_net_assignments
+      ),
+      seq(
+        optional($.delay_control),
+        $.list_of_variable_assignments
+      )
+    ),
+    ';'
+  ),
 
-  // list_of_net_assignments: $ => sep1(',', $.net_assignment),
+  list_of_net_assignments: $ => sepBy1(',', $.net_assignment),
 
-  // list_of_variable_assignments: $ => sep1(',', $.variable_assignment),
+  list_of_variable_assignments: $ => sepBy1(',', $.variable_assignment),
 
   // net_alias: $ => prec.left(PREC.ASSIGN, seq(
   //   'alias', $.net_lvalue, '=', sep1(',', seq('=', $.net_lvalue)), ';'
   // )),
 
+  // INFO: Drom's one
   // net_assignment: $ => prec.left(PREC.ASSIGN,
   //   seq($.net_lvalue, '=', $.expression)
   // ),
+  // INFO: Mine without prec.left
+  net_assignment: $ => seq($.net_lvalue, '=', $.expression),
 
   // // A.6.2 Procedural blocks and assignments
 
@@ -3119,11 +3122,14 @@ const rules = {
   //   seq('release', $.net_lvalue)
   // ),
 
+  // INFO: drom's one
   // variable_assignment: $ => prec.left(PREC.ASSIGN, seq(
   //   $.variable_lvalue,
   //   '=',
   //   $.expression
   // )),
+  // INFO: Mine
+  variable_assignment: $ => seq($.variable_lvalue, '=', $.expression),
 
   // // A.6.3 Parallel and sequential blocks
 
@@ -3408,18 +3414,17 @@ const rules = {
   //   optional($._assignment_pattern_expression_type), $.assignment_pattern
   // ),
 
+  // TODO: Fill with the proper ones
   // _assignment_pattern_expression_type: $ => choice(
   //   $.ps_type_identifier,
-  //   // $.ps_parameter_identifier,
+  //   $.ps_parameter_identifier,
   //   $.integer_atom_type,
-  //   $.type_reference
+  //   // $.type_reference
   // ),
 
   // constant_assignment_pattern_expression: $ => $.assignment_pattern_expression,
 
-  // assignment_pattern_net_lvalue: $ => seq(
-  //   '\'{', sep1(',', $.net_lvalue), '}'
-  // ),
+  assignment_pattern_net_lvalue: $ => seq('\'{', sepBy1(',', $.net_lvalue), '}'),
 
   // assignment_pattern_variable_lvalue: $ => seq(
   //   '\'{', sep1(',', $.variable_lvalue), '}'
@@ -4342,18 +4347,19 @@ const rules = {
     // prec.left(PREC.UNARY, $.inc_or_dec_expression),
     // prec.left(PREC.PARENT, seq('(', $.operator_assignment, ')')),
 
+    // TODO: Review precedences and operators, but they look good overall
     exprOp($, PREC.ADD, choice('+', '-')),
     exprOp($, PREC.MUL, choice('*', '/', '%')),
-    // exprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
-    // exprOp($, PREC.LOGICAL_AND, '&&'),
-    // exprOp($, PREC.LOGICAL_OR, '||'),
-    // exprOp($, PREC.POW, '**'),
-    // exprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
-    // exprOp($, PREC.AND, '&'),
-    // exprOp($, PREC.OR, '|'),
-    // exprOp($, PREC.XOR, choice('^', '^~', '~^')),
-    // exprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
-    // exprOp($, PREC.IMPLICATION, choice('->', '<->')),
+    exprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
+    exprOp($, PREC.LOGICAL_AND, '&&'),
+    exprOp($, PREC.LOGICAL_OR, '||'),
+    exprOp($, PREC.POW, '**'),
+    exprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
+    exprOp($, PREC.AND, '&'),
+    exprOp($, PREC.OR, '|'),
+    exprOp($, PREC.XOR, choice('^', '^~', '~^')),
+    exprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
+    exprOp($, PREC.IMPLICATION, choice('->', '<->')),
 
     // $.conditional_expression,
     // $.inside_expression,
@@ -4581,6 +4587,7 @@ const rules = {
 
   // // A.8.5 Expression left-side values
 
+  // INFO: drom's one
   // net_lvalue: $ => choice(
   //   seq(
   //     $.ps_or_hierarchical_net_identifier,
@@ -4592,6 +4599,18 @@ const rules = {
   //     $.assignment_pattern_net_lvalue
   //   )
   // ),
+  // INFO: Mine
+  net_lvalue: $ => choice(
+    seq(
+      $.ps_or_hierarchical_net_identifier,
+      optional($.constant_select1)
+    ),
+    seq('{', sepBy1(',', $.net_lvalue), '}'),
+    // seq(
+    //   optional($._assignment_pattern_expression_type),
+    //   $.assignment_pattern_net_lvalue
+    // )
+  ),
 
   // TODO: Compare with original and develop
   variable_lvalue: $ => choice(
@@ -4803,7 +4822,7 @@ const rules = {
   )),
   // INFO: After removin the prec.left it allowed the ['constant_primary', 'primary'] conflict in precedences!!
 
-  // _hierarchical_net_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_net_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_property_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
@@ -4876,6 +4895,10 @@ const rules = {
   //   prec.left(PREC.PARENT, seq(optional($.package_scope), $._net_identifier)),
   //   $._hierarchical_net_identifier
   // ),
+  ps_or_hierarchical_net_identifier: $ => choice(
+    seq(optional($.package_scope), $._net_identifier),
+    $._hierarchical_net_identifier
+  ),
 
   // ps_or_hierarchical_property_identifier: $ => choice(
   //   seq(optional($.package_scope), $.property_identifier),
@@ -4911,14 +4934,14 @@ const rules = {
     // )
   )),
 
-  // ps_type_identifier: $ => seq(
-  //   optional(choice(
-  //     seq('local', '::'),
-  //     $.package_scope,
-  //     $.class_scope
-  //   )),
-  //   $._type_identifier
-  // ),
+  ps_type_identifier: $ => seq(
+    optional(choice(
+      seq('local', '::'),
+      $.package_scope,
+      $.class_scope
+    )),
+    $._type_identifier
+  ),
 
   // _sequence_identifier: $ => $._identifier,
 
@@ -4957,7 +4980,7 @@ module.exports = grammar({
 
   inline: $ => [
     // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
-  //   $._hierarchical_net_identifier,
+    $._hierarchical_net_identifier,
     $._hierarchical_variable_identifier,
   //   $._hierarchical_tf_identifier,
   //   $._hierarchical_sequence_identifier,
@@ -4984,7 +5007,7 @@ module.exports = grammar({
   //   $.genvar_identifier,
   //   $.specparam_identifier,
   //   $.tf_identifier,
-  //   $._type_identifier,
+    $._type_identifier,
     $._net_type_identifier,
     $._variable_identifier,
   //   $._udp_identifier,
@@ -4996,7 +5019,7 @@ module.exports = grammar({
   //   $._module_identifier,
   //   $.let_identifier,
   //   $.sequence_identifier,
-  //   $._net_identifier,
+    $._net_identifier,
   //   $.program_identifier,
   //   $.checker_identifier,
     $.member_identifier,
@@ -5232,6 +5255,22 @@ module.exports = grammar({
     //   2:  module_nonansi_header  'initial'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
     [$.hierarchical_identifier],
 
+
+    // SystemVerilog allows continuous assignment both to nets and logic variables:
+    //
+    // module_nonansi_header  'assign'  hierarchical_identifier  •  '.'  …
+    // 1:  module_nonansi_header  'assign'  (ps_or_hierarchical_net_identifier  hierarchical_identifier)  •  '.'  …
+    // 2:  module_nonansi_header  'assign'  (variable_lvalue  hierarchical_identifier  •  select1)
+    [$.variable_lvalue, $.ps_or_hierarchical_net_identifier],
+
+    // This one doesn't seem very important, since it should only refer to identifiers
+    // when hierarchical only have 1 level of nesting
+    //
+    //   module_nonansi_header  'assign'  _identifier  •  '.'  …
+    //     1:  module_nonansi_header  'assign'  (hierarchical_identifier  _identifier)  •  '.'  …            (precedence: 'hierarchical_identifier')
+    //     2:  module_nonansi_header  'assign'  (hierarchical_identifier_repeat1  _identifier  •  '.')       (precedence: 'hierarchical_identifier')
+    //     3:  module_nonansi_header  'assign'  (ps_or_hierarchical_net_identifier  _identifier)  •  '.'  …
+    [$.hierarchical_identifier, $.ps_or_hierarchical_net_identifier],
   ],
 
 });
