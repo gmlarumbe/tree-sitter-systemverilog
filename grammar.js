@@ -685,7 +685,7 @@ const rules = {
 
   port_reference: $ => prec('port_reference', seq(
     $.port_identifier,
-    // optional($.constant_select1)
+    optional($.constant_select1)
   )),
 
   port_direction: $ => choice('input', 'output', 'inout', 'ref'),
@@ -764,7 +764,7 @@ const rules = {
   //   $.net_alias,
   //   $.initial_construct,
   //   $.final_construct,
-  //   $.always_construct,
+    $.always_construct,
   //   $.loop_generate_construct,
   //   $._conditional_generate_construct,
   //   $.elaboration_system_task
@@ -1454,17 +1454,17 @@ const rules = {
   //   optseq('=', $.constant_expression)
   // ),
 
-  // class_scope: $ => seq($.class_type, '::'),
+  class_scope: $ => seq($.class_type, '::'),
 
-  // class_type: $ => seq(
-  //   $.ps_class_identifier,
-  //   optional($.parameter_value_assignment),
-  //   repseq(
-  //     '::',
-  //     $.class_identifier,
-  //     optional($.parameter_value_assignment)
-  //   )
-  // ),
+  // prec.right because of:
+  // module_nonansi_header  'var'  _identifier  '='  _identifier  parameter_value_assignment  •  '::'  …
+  //   1:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment  •  class_type_repeat1)
+  //   2:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment)  •  '::'  …
+  class_type: $ => prec.right(seq(
+    $.ps_class_identifier,
+    optional($.parameter_value_assignment),
+    repeat(prec('class_type', seq('::', $.class_identifier, optional($.parameter_value_assignment))))
+  )),
 
   // _integer_type: $ => choice(
   //   $.integer_vector_type,
@@ -1582,13 +1582,13 @@ const rules = {
   //   seq('(', $.mintypmax_expression, optional($.mintypmax_expression), ')')
   // )),
 
-  // delay_value: $ => choice(
-  //   $.unsigned_number,
-  //   $.real_number,
-  //   $.ps_identifier,
-  //   $.time_literal,
-  //   '1step'
-  // ),
+  delay_value: $ => choice(
+    $.unsigned_number,
+    $.real_number,
+    $.ps_identifier,
+    $.time_literal,
+    '1step'
+  ),
 
   // /* A.2.3 Declaration lists */
 
@@ -1749,14 +1749,14 @@ const rules = {
 
   // // A.2.5 Declaration ranges
 
-  unpacked_dimension: $ => seq(
+  unpacked_dimension: $ => prec('unpacked_dimension', seq(
     '[',
     choice(
       $.constant_range,
       $.constant_expression
     ),
     ']'
-  ),
+  )),
 
   packed_dimension: $ => choice(
     seq('[', $.constant_range, ']'),
@@ -1950,15 +1950,15 @@ const rules = {
 
   // // A.2.8 Block item declarations
 
-  // block_item_declaration: $ => seq(
-  //   repeat($.attribute_instance),
-  //   choice(
-  //     $.data_declaration,
-  //     seq($._any_parameter_declaration, ';'),
-  //     $.overload_declaration,
-  //     $.let_declaration
-  //   )
-  // ),
+  block_item_declaration: $ => seq(
+    repeat($.attribute_instance),
+    choice(
+      $.data_declaration,
+      seq($._any_parameter_declaration, ';'),
+      // $.overload_declaration,   // INFO: Removed from 1800-2023
+      // $.let_declaration // TODO: Come back when implemented
+    )
+  ),
 
   // overload_declaration: $ => seq(
   //   'bind',
@@ -2716,20 +2716,20 @@ const rules = {
   //   ';'
   // ),
 
-  // parameter_value_assignment: $ => seq(
-  //   '#', '(', optional($.list_of_parameter_assignments), ')'
-  // ),
+  parameter_value_assignment: $ => seq(
+    '#', '(', optional($.list_of_parameter_value_assignments), ')'
+  ),
 
-  // list_of_parameter_assignments: $ => choice(
-  //   sep1(',', $.ordered_parameter_assignment),
-  //   sep1(',', $.named_parameter_assignment)
-  // ),
+  list_of_parameter_value_assignments: $ => choice(
+    sepBy1(',', $.ordered_parameter_assignment),
+    sepBy1(',', $.named_parameter_assignment)
+  ),
 
-  // ordered_parameter_assignment: $ => alias($.param_expression, $._ordered_parameter_assignment),
+  ordered_parameter_assignment: $ => alias($.param_expression, $._ordered_parameter_assignment),
 
-  // named_parameter_assignment: $ => seq(
-  //   '.', $.parameter_identifier, '(', optional($.param_expression), ')'
-  // ),
+  named_parameter_assignment: $ => seq(
+    '.', $.parameter_identifier, '(', optional($.param_expression), ')'
+  ),
 
   // hierarchical_instance: $ => seq(
   //   $.name_of_instance, '(', optional($.list_of_port_connections), ')'
@@ -3060,34 +3060,34 @@ const rules = {
 
   // initial_construct: $ => seq('initial', $.statement_or_null),
 
-  // always_construct: $ => seq($.always_keyword, $.statement),
+  always_construct: $ => seq($.always_keyword, $.statement),
 
-  // always_keyword: $ => choice(
-  //   'always', 'always_comb', 'always_latch', 'always_ff'
-  // ),
+  always_keyword: $ => choice(
+    'always', 'always_comb', 'always_latch', 'always_ff'
+  ),
 
   // final_construct: $ => seq('final', $.function_statement),
 
-  // blocking_assignment: $ => choice(
-  //   prec.left(PREC.ASSIGN, seq(
-  //     $.variable_lvalue, '=', $.delay_or_event_control, $.expression
-  //   )),
-  //   prec.left(PREC.ASSIGN, seq(
-  //     $.nonrange_variable_lvalue, '=', $.dynamic_array_new
-  //   )),
-  //   // seq(
-  //   //   optional(choice(
-  //   //     seq($.implicit_class_handle, '.'),
-  //   //     $.class_scope,
-  //   //     $.package_scope
-  //   //   )),
-  //   //   $._hierarchical_variable_identifier
-  //   //   $.select,
-  //   //   '=',
-  //   //   $.class_new
-  //   // ),
-  //   $.operator_assignment
-  // ),
+  // TODO: Review, removed the prec.left(PREC.ASSIGN from choices
+  blocking_assignment: $ => choice(
+    seq($.variable_lvalue, '=', $.delay_or_event_control, $.expression),
+
+    // prec.left(PREC.ASSIGN, seq(
+    //   $.nonrange_variable_lvalue, '=', $.dynamic_array_new
+    // )),
+    // // seq(
+    // //   optional(choice(
+    // //     seq($.implicit_class_handle, '.'),
+    // //     $.class_scope,
+    // //     $.package_scope
+    // //   )),
+    // //   $._hierarchical_variable_identifier
+    // //   $.select,
+    // //   '=',
+    // //   $.class_new
+    // // ),
+    // $.operator_assignment
+  ),
 
   // operator_assignment: $ => prec.left(PREC.ASSIGN,
   //   seq($.variable_lvalue, $.assignment_operator, $.expression)
@@ -3126,12 +3126,12 @@ const rules = {
   //   seq(optional($.statement), 'else', $.statement_or_null)
   // ),
 
-  // seq_block: $ => seq(
-  //   'begin', optseq(':', $._block_identifier),
-  //   repeat($.block_item_declaration),
-  //   repeat($.statement_or_null),
-  //   'end', optseq(':', $._block_identifier)
-  // ),
+  seq_block: $ => seq(
+    'begin', optional(seq(':', $._block_identifier)),
+    repeat($.block_item_declaration),
+    repeat($.statement_or_null),
+    'end', optional(seq(':', $._block_identifier))
+  ),
 
   // par_block: $ => seq(
   //   'fork', optseq(':', $._block_identifier),
@@ -3144,42 +3144,42 @@ const rules = {
 
   // // A.6.4 Statements
 
-  // statement_or_null: $ => choice(
-  //   $.statement,
-  //   seq(repeat($.attribute_instance), ';')
-  // ),
+  statement_or_null: $ => choice(
+    $.statement,
+    seq(repeat($.attribute_instance), ';')
+  ),
 
-  // statement: $ => choice(
-  //   $.text_macro_usage,
-  //   seq(
-  //     optseq($._block_identifier, ':'),
-  //     repeat($.attribute_instance),
-  //     $.statement_item)
-  // ),
+  statement: $ => choice(
+    // $.text_macro_usage,
+    seq(
+      optional(seq($._block_identifier, ':')),
+      repeat($.attribute_instance),
+      $.statement_item
+    )),
 
-  // statement_item: $ => choice(
-  //   seq($.blocking_assignment, ';'),
-  //   seq($.nonblocking_assignment, ';'),
-  //   seq($.procedural_continuous_assignment, ';'),
-  //   seq($.system_tf_call, ';'),
-  //   $.case_statement,
-  //   $.conditional_statement,
-  //   seq($.inc_or_dec_expression, ';'),
-  //   // $.subroutine_call_statement,
-  //   $.disable_statement,
-  //   $.event_trigger,
-  //   $.loop_statement,
-  //   $.jump_statement,
-  //   $.par_block,
-  //   $.seq_block,
-  //   $.procedural_timing_control_statement,
-  //   $.wait_statement,
-  //   $._procedural_assertion_statement,
-  //   // seq($.clocking_drive, ';'),
-  //   // $.randsequence_statement,
-  //   // $.randcase_statement,
-  //   $.expect_property_statement
-  // ),
+  statement_item: $ => choice(
+    seq($.blocking_assignment, ';'),
+    // seq($.nonblocking_assignment, ';'),
+    // seq($.procedural_continuous_assignment, ';'),
+    // seq($.system_tf_call, ';'),
+    // $.case_statement,
+    // $.conditional_statement,
+    // seq($.inc_or_dec_expression, ';'),
+    // // $.subroutine_call_statement,
+    // $.disable_statement,
+    // $.event_trigger,
+    // $.loop_statement,
+    // $.jump_statement,
+    // $.par_block,
+    $.seq_block,
+    $.procedural_timing_control_statement,
+    // $.wait_statement,
+    // $._procedural_assertion_statement,
+    // // seq($.clocking_drive, ';'),
+    // // $.randsequence_statement,
+    // // $.randcase_statement,
+    // $.expect_property_statement
+  ),
 
   // function_statement: $ => $.statement,
 
@@ -3193,21 +3193,29 @@ const rules = {
 
   // // A.6.5 Timing control statements
 
-  // procedural_timing_control_statement: $ => seq(
-  //   $._procedural_timing_control, $.statement_or_null // statement_or_null1
-  // ),
+  procedural_timing_control_statement: $ => seq(
+    $._procedural_timing_control,
+    $.statement_or_null
+  ),
 
-  // delay_or_event_control: $ => choice(
-  //   $.delay_control,
-  //   $.event_control,
-  //   seq('repeat', '(', $.expression, ')', $.event_control)
-  // ),
+  delay_or_event_control: $ => choice(
+    $.delay_control,
+    $.event_control,
+    seq('repeat', '(', $.expression, ')', $.event_control)
+  ),
 
-  // delay_control: $ => seq('#', choice(
-  //   $.delay_value,
-  //   seq('(', $.mintypmax_expression, ')')
-  // )),
+  delay_control: $ => seq('#', choice(
+    $.delay_value,
+    seq('(', $.mintypmax_expression, ')')
+  )),
 
+  // TODO: Seems very different from the one by drom, probably
+  // because of 2023 standard
+  event_control: $ => choice(
+    $.clocking_event,
+    seq('@', '*'),
+    seq('@', '(', '*', ")")
+  ),
   // event_control: $ => choice(
   //   seq('@', $._hierarchical_event_identifier),
   //   seq('@', '(', $.event_expression, ')'),
@@ -3216,24 +3224,14 @@ const rules = {
   //   seq('@', $.ps_or_hierarchical_sequence_identifier)
   // ),
 
-  // event_expression: $ => choice( // reordered : brake recursion
-  //   prec.left(seq($.event_expression, 'or', $.event_expression)),
-  //   prec.left(seq($.event_expression, ',', $.event_expression)),
-  //   seq(
-  //     optional($.edge_identifier),
-  //     $.expression
-  //   ) // reordered : help parser
-  //   // seq(
-  //   //   optional($.edge_identifier),
-  //   //   $.expression,
-  //   //   optseq('iff', $.expression)
-  //   // ),
-  //   // seq(
-  //   //   $.sequence_instance,
-  //   //   optseq('iff', $.expression)
-  //   // ),
-  //   // seq('(', $.event_expression, ')')
-  // ),
+  // INFO: Changed quite a lot from what Drom did
+  event_expression: $ => prec.left(choice(
+    seq(optional($.edge_identifier), $.expression, optional(seq('iff', $.expression))),
+    // seq($.sequence_instance, optional(seq('iff', $.expression))),
+    seq($.event_expression, 'or', $.event_expression),
+    seq($.event_expression, ',', $.event_expression),
+    seq('(', $.event_expression, ')')
+  )),
 
   // // event_expression_2: $ => choice( // reordered : help parser
   // //   seq($.edge_identifier, $.expression), // reordered : help parser
@@ -3249,11 +3247,11 @@ const rules = {
   // //   seq('(', $.event_expression, ')')
   // // ),
 
-  // _procedural_timing_control: $ => choice(
-  //   $.delay_control,
-  //   $.event_control,
-  //   $.cycle_delay
-  // ),
+  _procedural_timing_control: $ => choice(
+    $.delay_control,
+    $.event_control,
+    $.cycle_delay
+  ),
 
   // jump_statement: $ => choice(
   //   seq('return', optional($.expression), ';'),
@@ -3544,10 +3542,12 @@ const rules = {
   //   )
   // ),
 
-  // clocking_event: $ => seq('@', choice(
-  //   $._identifier,
-  //   seq('(', $.event_expression, ')')
-  // )),
+  // INFO: Changed substantially from Drom's implementation, adapted more to 1800-2023
+  clocking_event: $ => prec('clocking_event', seq('@', choice(
+    $.ps_identifier,
+    $.hierarchical_identifier,
+    seq('(', $.event_expression, ')')
+  ))),
 
   // clocking_item: $ => choice(
   //   seq('default', $.default_skew, ';'),
@@ -3581,11 +3581,21 @@ const rules = {
   //   seq($.clockvar_expression, '<=', optional($.cycle_delay), $.expression)
   // ),
 
+  // INFO: Original by drom
   // cycle_delay: $ => prec.left(seq('##', choice(
   //   $.integral_number,
   //   $._identifier,
   //   seq('(', $.expression, ')')
   // ))),
+  // End of INFO
+
+  // INFO: By Larumbe
+  cycle_delay: $ => seq('##', choice(
+    $.integral_number,
+    $._identifier,
+    seq('(', $.expression, ')')
+  )),
+  // End of INFO
 
   // clockvar: $ => $.hierarchical_identifier,
 
@@ -3807,7 +3817,7 @@ const rules = {
 
   // data_source_expression: $ => $.expression,
 
-  // edge_identifier: $ => choice('posedge', 'negedge', 'edge'),
+  edge_identifier: $ => choice('posedge', 'negedge', 'edge'),
 
   // state_dependent_path_declaration: $ => choice(
   //   seq('if', '(', $.module_path_expression, ')', $.simple_path_declaration),
@@ -4267,7 +4277,7 @@ const rules = {
 
   constant_mintypmax_expression: $ => seq(
     $.constant_expression,
-    // optseq(':', $.constant_expression, ':', $.constant_expression)
+    optional(seq(':', $.constant_expression, ':', $.constant_expression))
   ),
 
   constant_param_expression: $ => choice(
@@ -4276,21 +4286,21 @@ const rules = {
     '$'
   ),
 
-  // param_expression: $ => choice(
-  //   $.mintypmax_expression,
-  //   $.data_type,
-  //   '$'
-  // ),
+  param_expression: $ => choice(
+    $.mintypmax_expression,
+    $.data_type,
+    '$'
+  ),
 
   // _constant_range_expression: $ => choice(
   //   $.constant_expression,
   //   $._constant_part_select_range
   // ),
 
-  _constant_part_select_range: $ => choice(
+  _constant_part_select_range: $ => prec('_constant_part_select_range', choice(
     $.constant_range,
     $.constant_indexed_range
-  ),
+  )),
 
   constant_range: $ => seq($.constant_expression, ':', $.constant_expression),
 
@@ -4300,7 +4310,7 @@ const rules = {
 
   // TODO: Review precedences, and exprOp function, all this section in general
   expression: $ => choice(
-    // $.primary,
+    $.primary,
 
     // prec.left(PREC.UNARY, seq(
     //   $.unary_operator, repeat($.attribute_instance), $.primary
@@ -4341,10 +4351,10 @@ const rules = {
   //   seq('[', $.expression, ':', $.expression, ']')
   // ),
 
-  // mintypmax_expression: $ => seq(
-  //   $.expression,
-  //   optseq(':', $.expression, ':', $.expression)
-  // ),
+  mintypmax_expression: $ => seq(
+    $.expression,
+    optional(seq(':', $.expression, ':', $.expression))
+  ),
 
   // module_path_conditional_expression: $ => seq(
   //   $.module_path_expression,
@@ -4374,14 +4384,14 @@ const rules = {
   //   )
   // ),
 
-  // _part_select_range: $ => choice(
-  //   $.constant_range,
-  //   $.indexed_range
-  // ),
+  _part_select_range: $ => prec('_part_select_range', choice(
+    $.constant_range,
+    $.indexed_range
+  )),
 
-  // indexed_range: $ => seq(
-  //   $.expression, choice('+:', '-:'), $.constant_expression
-  // ),
+  indexed_range: $ => seq(
+    $.expression, choice('+:', '-:'), $.constant_expression
+  ),
 
   // _genvar_expression: $ => $.constant_expression,
 
@@ -4391,7 +4401,8 @@ const rules = {
 
   // // FIXME FIXME FIXME
 
-  constant_primary: $ => choice(
+  constant_primary: $ => prec('constant_primary', choice(
+  // constant_primary: $ => choice(
     $.primary_literal,
     seq($.ps_parameter_identifier, optional($.constant_select1)),
     // // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')),
@@ -4407,6 +4418,7 @@ const rules = {
     // // // $.constant_assignment_pattern_expression,
     // $.type_reference,
     // 'null'
+  )
   ),
 
   // module_path_primary: $ => choice(
@@ -4418,44 +4430,34 @@ const rules = {
   //   seq('(', $.module_path_mintypmax_expression, ')')
   // ),
 
-  // primary: $ => choice(
-  //   $.primary_literal,
-  //   seq(
-  //     optional(choice($.class_qualifier, $.package_scope)),
-  //     $.hierarchical_identifier,
-  //     optional($.select1)
-  //   ),
-  //   $.empty_unpacked_array_concatenation,
-  //   seq($.concatenation, optseq('[', $.range_expression, ']')),
-  //   seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
-  //   $.function_subroutine_call,
-  //   // $.let_expression, // TODO: Remove temporarily to narrow conflicts
-  //   seq('(', $.mintypmax_expression, ')'),
-  //   // $.cast, // TODO: Remove temporarily to narrow conflicts
-  //   $.assignment_pattern_expression,
-  //   $.streaming_concatenation,
-  //   // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
-  //   'this',
-  //   '$',
-  //   'null'
-  // ),
+  primary: $ => prec('primary', choice(
+    $.primary_literal,
+    seq(
+      optional(choice($.class_qualifier, $.package_scope)),
+      $.hierarchical_identifier,
+      optional($.select1)
+    ),
+    // $.empty_unpacked_array_concatenation,
+    // seq($.concatenation, optseq('[', $.range_expression, ']')),
+    // seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
+    // $.function_subroutine_call,
+    // // $.let_expression, // TODO: Remove temporarily to narrow conflicts
+    // seq('(', $.mintypmax_expression, ')'),
+    // // $.cast, // TODO: Remove temporarily to narrow conflicts
+    // $.assignment_pattern_expression,
+    // $.streaming_concatenation,
+    // // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
+    // 'this',
+    // '$',
+    // 'null'
+  )),
 
-  // // class_qualifier: $ => seq(
-  // //   optseq('local', '::'),
-  // //   choice( // TODO optional?
-  // //     seq($.implicit_class_handle, '.'),
-  // //     $.class_scope
-  // //   )
-  // // ),
-  // class_qualifier: $ => prec.right(seq(
-  //   optseq('local', '::'),
-  //   choice( // TODO optional?
-  //     seq($.implicit_class_handle, '.'),
-  //     $.class_scope
-  //   )
-  // )
-  // ),
-
+  class_qualifier: $ => prec('class_qualifier', seq(
+    optional(seq('local', '::')),
+    choice( // TODO optional?
+      seq($.implicit_class_handle, '.'),
+      $.class_scope
+    ))),
 
   // range_expression: $ => choice(
   //   $.expression,
@@ -4489,36 +4491,38 @@ const rules = {
     '"'
   ),
 
-  // implicit_class_handle: $ => choice(
-  //   prec.left(seq('this', optseq('.', 'super'))),
-  //   'super'
-  // ),
+  implicit_class_handle: $ => choice(
+    prec.right(seq('this', optional(seq('.', 'super')))), // TODO: Is this fine? Or should be a conflict because of 1 token lookahead
+    'super'
+  ),
 
-  // bit_select1: $ => repeat1(seq( // reordered -> non empty
-  //   '[', $.expression, ']')
-  // ),
+  // Set prec.left because of:
+  // module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  bit_select1_repeat1  •  '['  …
+  //   1:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1  bit_select1_repeat1)  •  '['  …
+  //   2:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1_repeat1  bit_select1_repeat1  •  bit_select1_repeat1)
+  bit_select1: $ => prec.left(repeat1( // reordered -> non empty
+    seq('[', $.expression, ']')
+  )),
 
-  // // select1: $ => prec.right(PREC.PARENT, choice( // reordered -> non empty
-  // select1: $ => prec.right(choice( // reordered -> non empty
-  // // select1: $ => choice( // reordered -> non empty
-  //   seq( // 1xx
-  //     // repseq('.', $.member_identifier, optional($.bit_select1)), '.', $.member_identifier,
-  //     seq('.', $.member_identifier, optional($.bit_select1)), '.', $.member_identifier,
-  //     optional($.bit_select1),
-  //     optional(seq('[', $._part_select_range, ']'))
-  //   ),
-  //   seq( // 01x
-  //     //
-  //     $.bit_select1,
-  //     optional(seq('[', $._part_select_range, ']'))
-  //   ),
-  //   seq( // 001
-  //     //
-  //     //
-  //     seq('[', $._part_select_range, ']')
-  //   )
-  // ),
-  //                         ),
+  // TODO: Review
+  select1: $ => prec('select1', choice( // reordered -> non empty
+    seq( // 1xx
+      // INFO: First line overlaps a lot with $.hierarchical_identifier, but that one uses constant_bit_select
+      repeat(prec('select1', seq('.', $.member_identifier, optional($.bit_select1)))), '.', $.member_identifier,
+      optional($.bit_select1),
+      optional(seq('[', $._part_select_range, ']'))
+    ),
+    seq( // 01x
+      //
+      $.bit_select1,
+      optional(seq('[', $._part_select_range, ']'))
+    ),
+    seq( // 001
+      //
+      //
+      seq('[', $._part_select_range, ']')
+    )
+  )),
 
   // nonrange_select1: $ => choice( // reordered -> non empty
   //   prec.left(PREC.PARENT, seq( // 1x
@@ -4534,9 +4538,9 @@ const rules = {
   ))),
 
   // TODO: Review with range tests
-  constant_select1: $ => choice( // reordered -> non empty
+  constant_select1: $ => prec('constant_select1', choice( // reordered -> non empty
     seq(
-      repeat(seq('.', $.member_identifier, optional($.constant_bit_select1))), '.', $.member_identifier,
+      repeat(prec('constant_select1', seq('.', $.member_identifier, optional($.constant_bit_select1)))), '.', $.member_identifier,
       optional($.constant_bit_select1),
       optional(seq('[', $._constant_part_select_range, ']'))
     ),
@@ -4545,7 +4549,7 @@ const rules = {
       optional(seq('[', $._constant_part_select_range, ']'))
     ),
     seq('[', $._constant_part_select_range, ']'),
-  ),
+  )),
 
   // constant_cast: $ => seq($.casting_type, '\'', '(', $.constant_expression, ')'),
 
@@ -4566,6 +4570,11 @@ const rules = {
   //     $.assignment_pattern_net_lvalue
   //   )
   // ),
+
+  // TODO: Compare with original and develop
+  variable_lvalue: $ => choice(
+
+  ),
 
   // variable_lvalue: $ => choice(
   //   prec.left(PREC.PARENT, seq(
@@ -4715,12 +4724,12 @@ const rules = {
   // /* A.9.3 Identifiers */
 
   // _array_identifier: $ => $._identifier,
-  // _block_identifier: $ => $._identifier,
+  _block_identifier: $ => $._identifier,
   // _bin_identifier: $ => $._identifier,
   // c_identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
   // cell_identifier: $ => alias($._identifier, $.cell_identifier),
   // checker_identifier: $ => alias($._identifier, $.checker_identifier),
-  // class_identifier: $ => alias($._identifier, $.class_identifier),
+  class_identifier: $ => alias($._identifier, $.class_identifier),
   // class_variable_identifier: $ => $._variable_identifier,
   // clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
   // config_identifier: $ => alias($._identifier, $.config_identifier),
@@ -4744,11 +4753,18 @@ const rules = {
   // _hierarchical_block_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_event_identifier: $ => $.hierarchical_identifier,
 
-  // hierarchical_identifier: $ => prec.left(seq(
-  //   optseq('$root', '.'),
-  //   repseq($._identifier, optional($.constant_bit_select1), '.'),
-  //   $._identifier
-  // )),
+  // prec.left because of:
+  // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '.'  …
+  //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier  _identifier)  •  '.'  …
+  //   2:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  •  '.')
+  // hierarchical_identifier: $ => prec.left(seq( // TODO: Not sure if it's prec.left
+  hierarchical_identifier: $ => seq( // TODO: Not sure if it's prec.left
+    optional(seq('$root', '.')),
+    repeat(prec('hierarchical_identifier', seq($._identifier, optional($.constant_bit_select1), '.'))),
+    $._identifier
+    // )
+  ),
+  // INFO: After removin the prec.left it allowed the ['constant_primary', 'primary'] conflict in precedences!!
 
   // _hierarchical_net_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
@@ -4779,10 +4795,10 @@ const rules = {
   // output_port_identifier: $ => alias($._identifier, $.output_port_identifier),
   package_identifier: $ => alias($._identifier, $.package_identifier),
 
-  // package_scope: $ => choice(
-  //   seq($.package_identifier, '::'),
-  //   seq('$unit', '::')
-  // ),
+  package_scope: $ => prec('package_scope', choice(
+    seq($.package_identifier, '::'),
+    seq('$unit', '::')
+  )),
 
   parameter_identifier: $ => alias($._identifier, $.parameter_identifier),
   port_identifier: $ => alias($._identifier, $.port_identifier),
@@ -4790,9 +4806,13 @@ const rules = {
   // program_identifier: $ => alias($._identifier, $.program_identifier),
   // property_identifier: $ => alias($._identifier, $.property_identifier),
 
-  // ps_class_identifier: $ => seq(
-  //   optional($.package_scope), $.class_identifier
-  // ),
+  // Set prec.left because of:
+  // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '::'  …
+  //   1:  module_nonansi_header  'var'  _identifier  '='  (package_scope  _identifier  •  '::')
+  //   2:  module_nonansi_header  'var'  _identifier  '='  (ps_class_identifier  _identifier)  •  '::'  …
+  ps_class_identifier: $ => prec.left(seq(
+    optional($.package_scope), $.class_identifier
+  )),
 
   // ps_covergroup_identifier: $ => seq(
   //   optional($.package_scope), $.covergroup_identifier
@@ -4802,9 +4822,9 @@ const rules = {
   //   optional($.package_scope), $.checker_identifier
   // ),
 
-  // ps_identifier: $ => seq(
-  //   optional($.package_scope), $._identifier
-  // ),
+  ps_identifier: $ => prec('ps_identifier', seq(
+    optional($.package_scope), $._identifier
+  )),
 
   // ps_or_hierarchical_array_identifier: $ => seq(
   //   optional(choice(
@@ -4836,12 +4856,13 @@ const rules = {
   // ),
 
   // TODO: Fill and set all the cases
-  ps_parameter_identifier: $ => choice(
+  // ps_parameter_identifier: $ => choice(
+  ps_parameter_identifier: $ => prec('ps_parameter_identifier', choice(
     seq(
-      // optional(choice(
-      //   $.package_scope,
-      //   $.class_scope
-      // )),
+      optional(choice(
+        $.package_scope,
+        $.class_scope
+      )),
       $.parameter_identifier
     ),
     // seq(
@@ -4852,6 +4873,7 @@ const rules = {
     //   ),
     //   $.parameter_identifier
     // )
+    )
   ),
 
   // ps_type_identifier: $ => seq(
@@ -4899,7 +4921,7 @@ module.exports = grammar({
   extras: $ => [/\s/, $.comment],
 
   inline: $ => [
-  //   $.hierarchical_identifier,
+    $.hierarchical_identifier,
   //   $._hierarchical_net_identifier,
   //   $._hierarchical_variable_identifier,
   //   $._hierarchical_tf_identifier,
@@ -4913,14 +4935,14 @@ module.exports = grammar({
   //   $.ps_or_hierarchical_sequence_identifier,
   //   $.ps_or_hierarchical_property_identifier,
 
-  //   $.ps_class_identifier,
+    $.ps_class_identifier,
   //   $.ps_covergroup_identifier,
     $.ps_parameter_identifier,
   //   $.ps_type_identifier,
   //   $.ps_checker_identifier,
 
     $.parameter_identifier,
-  //   $.class_identifier,
+    $.class_identifier,
   //   $.covergroup_identifier,
   //   $.enum_identifier,
   //   $.formal_port_identifier,
@@ -4944,7 +4966,7 @@ module.exports = grammar({
   //   $.checker_identifier,
     $.member_identifier,
     $.port_identifier,
-  //   $._block_identifier,
+    $._block_identifier,
   //   $.instance_identifier,
   //   $.property_identifier,
   //   // $.input_port_identifier,
@@ -4985,7 +5007,6 @@ module.exports = grammar({
     //   1:  module_keyword  _module_identifier  '('  (ansi_port_declaration  _identifier)  •  ')'  …
     //   2:  module_keyword  _module_identifier  '('  (port_reference  _identifier)  •  ')'  …
     ['port_reference', 'ansi_port_declaration'],
-    // ['port_reference'],
 
     // For ANSI port declaration, if there is no builtin net type assume it's an interface identifier and not a net
     // module_keyword  _module_identifier  '('  _identifier  •  simple_identifier  …
@@ -5006,6 +5027,83 @@ module.exports = grammar({
     //   2:  module_keyword  _module_identifier  '('  (port1  '.'  _identifier  '('  ')')  •  ')'  …
     ['port1', 'ansi_port_declaration'],
 
+    // TODO: Not sure about this one, but seems that package scope always comes before class scope
+    // TODO: Could have also been solved with prec.left on $.package_scope rule
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  '::'  •  simple_identifier  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  (package_scope  _identifier  '::')  •  simple_identifier  …
+    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (class_type_repeat1  '::'  •  _identifier  parameter_value_assignment)
+    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (class_type_repeat1  '::'  •  _identifier)
+    ['package_scope', 'class_type'],
+
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  '.'  •  simple_identifier  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …
+    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier  '['  _part_select_range  ']')
+    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier  bit_select1  '['  _part_select_range  ']')
+    //   4:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier  bit_select1)
+    //   5:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier)
+    //   6:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier  bit_select1)
+    //   7:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier)
+    ['hierarchical_identifier', 'select1'],
+
+    // TODO: Not sure if this one is correct
+    // INFO: constant_primary has precedence since it refers to hierarchical_identifier instead of to select1, which in theory should simplify things quite a lot
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  primary_literal  •  '/'  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  primary_literal)  •  '/'  …
+    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  primary_literal)  •  '/'  …
+    ['constant_primary', 'primary'], // INFO: Actually does something, but only on primary_literal, but not on _identifier!
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  •  '/'  …
+    // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  _identifier)  •  '/'  …  (precedence: 'ps_parameter_identifier')
+    // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  _identifier)  •  '/'  …           (precedence: 'primary')
+    ['ps_parameter_identifier', 'primary'], // INFO: This was the one that worked on identifier!
+
+
+    // module_keyword  _module_identifier  '('  _identifier  '['  constant_range  •  ']'  …
+    //   1:  module_keyword  _module_identifier  '('  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …
+    //   2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_range  •  ']')
+    //
+    //   Case 1 is for non-ansi port with constant_part_select.
+    //   Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
+    ['unpacked_dimension', '_constant_part_select_range'],
+    // [`unpacked_dimension`],
+    // [`_constant_part_select_range`],
+    // TODO: Remove!?
+
+    // TODO: This one doesn't work!!
+    // module_nonansi_header  always_keyword  '@'  _identifier  •  ';'  …
+    // 1:  module_nonansi_header  always_keyword  '@'  (ps_identifier  _identifier)  •  ';'  …
+    // 2:  module_nonansi_header  always_keyword  (clocking_event  '@'  _identifier)  •  ';'  …  (precedence: 0, associativity: Left)
+    // ['clocking_event', 'ps_identifier'],
+    ['clocking_event'],
+    ['ps_identifier'],
+
+    // TODO: This one doesn't work!!
+    // module_keyword  _module_identifier  '('  '.'  _identifier  '('  _identifier  •  ')'  …
+    //   1:  module_keyword  _module_identifier  '('  '.'  _identifier  '('  (port_reference  _identifier)  •  ')'  …  (precedence: 'port_reference')
+    //   2:  module_keyword  _module_identifier  '('  '.'  _identifier  '('  (primary  _identifier)  •  ')'  …         (precedence: 0, associativity: Left)
+    // ['port_reference', 'primary'],
+
+    // TODO: Doesn't work either!!!
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  class_scope  •  simple_identifier  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (class_qualifier  class_scope)  •  simple_identifier  …
+    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier  constant_select1)
+    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier)
+    // ['constant_primary', 'class_qualifier'],
+    // ['constant_primary', 'class_qualifier'],
+    // ['constant_primary'],
+    // ['class_qualifier'],
+    ['class_qualifier', 'ps_parameter_identifier'],
+    // INFO: Now it works! On the proper rule
+
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '.'  _identifier  •  '/'  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (constant_select1  '.'  _identifier)  •  '/'  …  (precedence: 'constant_select1')
+    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (select1  '.'  _identifier)  •  '/'  …           (precedence: 'select1')
+    ['constant_select1', 'select1'],
+
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  constant_range  •  ']'  …
+    // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
+    // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  (_part_select_range  constant_range)  •  ']'  …
+    ['_constant_part_select_range', '_part_select_range'],
+
   ],
 
   conflicts: $ => [
@@ -5023,6 +5121,27 @@ module.exports = grammar({
     //   2:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction)  •  simple_identifier  …
     [$.net_port_header1],
 
+    // Case 1 is for first non-ansi port with constant_part_select.
+    // Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
+    //   module_keyword  _module_identifier  '('  _identifier  '['  constant_range  •  ']'  …
+    //     1:  module_keyword  _module_identifier  '('  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …
+    //     2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_range  •  ']')
+    //
+    // [$.unpacked_dimension, $._constant_part_select_range],
+
+    // Case 1 is for first non-ansi port with constant_part_select.
+    // Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
+    //   module_keyword  _module_identifier  '('  _identifier  '['  constant_expression  ']'  •  ')'  …
+    //     1:  module_keyword  _module_identifier  '('  _identifier  (constant_bit_select1_repeat1  '['  constant_expression  ']')  •  ')'  …
+    //     2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_expression  ']')  •  ')'  …            (precedence: 'unpacked_dimension')
+    [$.unpacked_dimension, $.constant_bit_select1],
+
+
+    // TODO: This one wasn't fixed by precedences() array!
+    [$.clocking_event, $.ps_identifier],
+    [$.port_reference, $.primary],
+
+    // [$._constant_part_select_range, $._part_select_range],
   ],
 
 });
