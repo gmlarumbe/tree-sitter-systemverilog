@@ -3136,6 +3136,12 @@ const rules = {
   //   optional($.delay_or_event_control),
   //   $.expression
   // )),
+  nonblocking_assignment: $ => seq(
+    $.variable_lvalue,
+    '<=',
+    optional($.delay_or_event_control),
+    $.expression
+  ),
 
   // procedural_continuous_assignment: $ => choice(
   //   seq('assign', $.variable_assignment),
@@ -3195,10 +3201,10 @@ const rules = {
 
   statement_item: $ => choice(
     seq($.blocking_assignment, ';'),
-    // seq($.nonblocking_assignment, ';'),
+    seq($.nonblocking_assignment, ';'),
     // seq($.procedural_continuous_assignment, ';'),
     // seq($.system_tf_call, ';'),// DANGER: Should be only in subroutine call according to 1800-2023
-    // $.case_statement,
+    $.case_statement,
     $.conditional_statement,
     // seq($.inc_or_dec_expression, ';'),
     // $.subroutine_call_statement,
@@ -3366,26 +3372,47 @@ const rules = {
   //   'endcase'
   // ),
 
-  // case_keyword: $ => choice('case', 'casez', 'casex'),
+  case_statement: $ => seq(
+    optional($.unique_priority),
+    choice(
+      seq(
+        $.case_keyword,
+        '(', $.case_expression, ')',
+        choice(
+          repeat1($.case_item),
+          seq('matches', repeat1($.case_pattern_item))
+        )
+      ),
+      seq(
+        'case',
+        '(', $.case_expression, ')',
+        'inside',
+        repeat1($.case_inside_item)
+      )
+    ),
+    'endcase'
+  ),
 
-  // case_expression: $ => $.expression,
+  case_keyword: $ => choice('case', 'casez', 'casex'),
 
-  // case_item: $ => choice(
-  //   seq(sep1(',', $.case_item_expression), ':', $.statement_or_null),
-  //   seq('default', optional(':'), $.statement_or_null)
-  // ),
+  case_expression: $ => $.expression,
 
-  // case_pattern_item: $ => choice(
-  //   seq($.pattern, optseq('&&&', $.expression), ':', $.statement_or_null),
-  //   seq('default', optional(':'), $.statement_or_null)
-  // ),
+  case_item: $ => choice(
+    seq(sepBy1(',', $.case_item_expression), ':', $.statement_or_null),
+    seq('default', optional(':'), $.statement_or_null)
+  ),
 
-  // case_inside_item: $ => choice(
-  //   seq($.open_range_list, ':', $.statement_or_null),
-  //   seq('default', optional(':'), $.statement_or_null)
-  // ),
+  case_pattern_item: $ => choice(
+    seq($.pattern, optional(seq('&&&', $.expression)), ':', $.statement_or_null),
+    seq('default', optional(':'), $.statement_or_null)
+  ),
 
-  // case_item_expression: $ => $.expression,
+  case_inside_item: $ => choice(
+    seq($.range_list, ':', $.statement_or_null),
+    seq('default', optional(':'), $.statement_or_null)
+  ),
+
+  case_item_expression: $ => $.expression,
 
   // randcase_statement: $ => seq(
   //   'randcase', $.randcase_item, repeat($.randcase_item), 'endcase'
@@ -3394,8 +3421,10 @@ const rules = {
   // randcase_item: $ => seq($.expression, ':', $.statement_or_null),
 
   // open_range_list: $ => sep1(',', $.open_value_range),
+  range_list: $ => sepBy1(',', $.value_range),
 
   // open_value_range: $ => $.value_range,
+  value_range: $ => $.value_range,
 
   // // A.6.7.1 Patterns
 
@@ -4404,10 +4433,14 @@ const rules = {
   //   $.expression, 'inside', '{', $.open_range_list, '}'
   // )),
 
-  // value_range: $ => choice(
-  //   $.expression,
-  //   seq('[', $.expression, ':', $.expression, ']')
-  // ),
+  value_range: $ => choice(
+    $.expression,
+    seq('[', $.expression, ':', $.expression, ']'),
+    seq('[', '$', ':', $.expression, ']'),
+    seq('[', $.expression, ':', '$', ']'),
+    seq('[', $.expression, '+', '/', '-', $.expression, ']'),
+    seq('[', $.expression, '+', '%', '-', $.expression, ']'),
+  ),
 
   mintypmax_expression: $ => prec('mintypmax_expression', seq(
     $.expression,
@@ -5493,6 +5526,13 @@ module.exports = grammar({
     //   2:  'function'  function_identifier  '('  (data_type  class_scope  _identifier)  •  '['  …             (precedence: 'data_type')
     [$.data_type],
 
+
+    // case inside does not accept casex/casez expressions
+    //
+    // module_nonansi_header  'initial'  'case'  •  '('  …
+    // 1:  module_nonansi_header  'initial'  (case_keyword  'case')  •  '('  …
+    // 2:  module_nonansi_header  'initial'  (case_statement  'case'  •  '('  case_expression  ')'  'inside'  case_statement_repeat3  'endcase')
+    [$.case_statement, $.case_keyword],
 ],
 
 });
