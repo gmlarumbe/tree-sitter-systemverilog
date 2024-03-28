@@ -690,10 +690,10 @@ const rules = {
   port_direction: $ => prec('port_direction', choice('input', 'output', 'inout', 'ref')),
 
   // INFO: Drom's one
-  net_port_header1: $ => choice(
+  net_port_header1: $ => prec('net_port_header1', choice(
     seq(optional($.port_direction), $.net_port_type1),
     $.port_direction
-  ),
+  )),
   // End of INFO
 
   // INFO: Mine, adapted to 1800-2023
@@ -702,7 +702,7 @@ const rules = {
   // net_port_header1: $ => seq(optional($.port_direction), $.net_port_type1),
   // End of INFO
 
-  variable_port_header: $ => seq(optional($.port_direction), $._variable_port_type),
+  variable_port_header: $ => prec('variable_port_header', seq(optional($.port_direction), $._variable_port_type)),
 
   // INFO: Drom's one
   interface_port_header: $ => prec('interface_port_header', seq(
@@ -1157,8 +1157,10 @@ const rules = {
   ),
 
   package_or_generate_item_declaration: $ => choice(
-    $.net_declaration,
-    $.data_declaration,
+    // $.net_declaration,
+    // $.data_declaration,
+    prec.dynamic(0, $.net_declaration),
+    prec.dynamic(1, $.data_declaration),
     // $.task_declaration,
     $.function_declaration,
     // $.checker_declaration,
@@ -1269,6 +1271,8 @@ const rules = {
       // before a list_of_variable_decl_assignments unless the var keyword is used.
 
       // TODO: Maybe use $._var_data_type ? And replace it with these contents?
+      // INFO: I think it's not an option because _var_data_type doesn't have
+      // the automatic/static lifetime into account
       choice(
         seq('var', optional($.lifetime), optional($.data_type_or_implicit1)),
         seq(optional($.lifetime), $.data_type_or_implicit1),
@@ -1756,10 +1760,10 @@ const rules = {
     ']'
   )),
 
-  packed_dimension: $ => choice(
+  packed_dimension: $ => prec('packed_dimension', choice(
     seq('[', $.constant_range, ']'),
     $.unsized_dimension
-  ),
+  )),
 
   associative_dimension: $ => seq(
     '[', choice($.data_type, '*'), ']'
@@ -1921,7 +1925,7 @@ const rules = {
   //   )
   // ),
   // INFO: My rewriting/refactoring
-  tf_port_item1: $ => seq(
+  tf_port_item1: $ => prec('tf_port_item1', seq(
     repeat($.attribute_instance),
     optional($.tf_port_direction),
     optional('var'),
@@ -1931,7 +1935,7 @@ const rules = {
     ),
     repeat($._variable_dimension),
     optional(seq('=', $.expression))
-  ),
+  )),
 
   tf_port_direction: $ => prec('tf_port_direction', choice(
     $.port_direction,
@@ -5248,10 +5252,72 @@ module.exports = grammar({
     ['tf_port_direction', 'port_direction'],
 
 
-    // TODO: Review all these conflicts after function implementation
-    ['data_type'],
-    ['module_instantiation'],
+    // First option follows the path: data_type_or_implicit1 -> data_type -> seq($._type_identifier, repeat($.packed_dimension))
+    // Second option follows the path: data_type_or_implicit1 -> implicit_data_type1 -> repeat1($.packed_dimension)
+    // In theory this is not a legal case since a packed array should be set for vector types, like bit/logic, not for the
+    // implicit one (which is int). Set to the first one for potential future conflicts and because it is not 'completely implicit'
+    // if setting the packed dimension.
+    //
+    //
+    //   'localparam'  _identifier  unsized_dimension  •  '['  …
+    //   1:  'localparam'  _identifier  (_variable_dimension  unsized_dimension)  •  '['  …  (precedence: '_variable_dimension')
+    //   2:  'localparam'  _identifier  (packed_dimension  unsized_dimension)  •  '['  …
+    ['_variable_dimension', 'packed_dimension'],
+
+
+    // Set higher precedence on data_types (variables) than on interfaces or user defined nets, since it would be necessary
+    // to parse other files/units to know exactly what they are, and this simplifies the parser.
+    // TODO: Can be moved together with another up very similar upwards!
+    //
+    //   _module_header1  '('  _identifier  •  simple_identifier  …
+    //   1:  _module_header1  '('  (data_type  _identifier)  •  simple_identifier  …              (precedence: 'data_type')
+    //   2:  _module_header1  '('  (interface_port_header  _identifier)  •  simple_identifier  …  (precedence: 'interface_port_header')
+    //   3:  _module_header1  '('  (net_port_type1  _identifier)  •  simple_identifier  …         (precedence: 'net_port_type1')
+    ['data_type', 'interface_port_header', 'net_port_type1'],
+
+
+    // Identify as a constant_mintypmax_expression -> constant_expression on the RHS instead of a data_type (since it's a declaration)
+    //
+    //   'localparam'  _identifier  '='  _identifier  •  ';'  …
+    //   1:  'localparam'  _identifier  '='  (constant_primary  _identifier)  •  ';'  …  (precedence: 'ps_parameter_identifier')
+    //   2:  'localparam'  _identifier  '='  (data_type  _identifier)  •  ';'  …         (precedence: 'data_type')
+    ['ps_parameter_identifier', 'data_type'],
+
+
+    // tf_port_item1 seems more generic, so resolve it to this node for this particular case
+    //
+    //   'function'  function_identifier  '('  _identifier  •  ')'  …
+    //   1:  'function'  function_identifier  '('  (data_type  _identifier)  •  ')'  …      (precedence: 'data_type')
+    //   2:  'function'  function_identifier  '('  (tf_port_item1  _identifier)  •  ')'  …n
+    ['tf_port_item1', 'data_type'],
+
+
+    // Even though the class_scope is implicitly a data_type, it should not be needed to set it as a node
+    //
+    //   _identifier  '#'  '('  class_scope  •  simple_identifier  …
+    //   1:  _identifier  '#'  '('  (class_qualifier  class_scope)  •  simple_identifier  …      (precedence: 'class_qualifier')
+    //   2:  _identifier  '#'  '('  (data_type  class_scope  •  _identifier  data_type_repeat1)  (precedence: 'data_type')
+    //   3:  _identifier  '#'  '('  (data_type  class_scope  •  _identifier)                     (precedence: 'data_type')
+    ['class_qualifier', 'data_type'],
+
+
+    // Since it's a declaration, it's not a part select but a packed dimension for a localparam
+    //
+    //   'localparam'  _identifier  '='  _identifier  '['  constant_range  •  ']'  …
+    //   1:  'localparam'  _identifier  '='  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
+    //   2:  'localparam'  _identifier  '='  _identifier  (packed_dimension  '['  constant_range  •  ']')                (precedence: 'packed_dimension')
+    ['packed_dimension', '_constant_part_select_range'],
+
+
+
+    ///////////////////////////////////////////////////
+    ///////////////////////////////////////////////////
+    ['net_port_header1'],
+    ['variable_port_header'],
     ['net_declaration'],
+    ['module_instantiation'],
+    ///////////////////////////////////////////////////
+    ///////////////////////////////////////////////////
   ],
 
   conflicts: $ => [
@@ -5277,14 +5343,6 @@ module.exports = grammar({
     //     1:  module_keyword  _module_identifier  (list_of_port_declarations  '('  ')')  •  ';'  …
     //     2:  module_keyword  _module_identifier  (list_of_ports  '('  ')')  •  ';'  …
     [$.list_of_ports, $.list_of_port_declarations],
-
-
-    // E.g: input wire logic port_name | input port_name
-    //
-    //   module_keyword  _module_identifier  '('  port_direction  •  simple_identifier  …
-    //     1:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction  •  net_port_type1)
-    //     2:  module_keyword  _module_identifier  '('  (net_port_header1  port_direction)  •  simple_identifier  …
-    [$.net_port_header1],
 
 
     // This one had no option if setting right associativity on conditional_statement to handle recursion
@@ -5363,21 +5421,77 @@ module.exports = grammar({
     [$.constant_bit_select1],
 
 
-    // TODO: Review all these conflicts after function implementation
+    // Parser needs more information to know which of these possibiliies is the correct one:
+    //   1) Variable (or user defined) type declaration
+    //   2, 3) Module instantiation
+    //   4) User defined nettype assignments (less likely) but still possible
+    // INFO: This one is settled with dynamic precedences for data_type vs net_declaration
+    //
+    //   module_nonansi_header  _identifier  •  simple_identifier  …
+    //     1:  module_nonansi_header  (data_type  _identifier)  •  simple_identifier  …                                                 (precedence: 'data_type')
+    //     2:  module_nonansi_header  (module_instantiation  _identifier  •  hierarchical_instance  ';')                                (precedence: 'module_instantiation')
+    //     3:  module_nonansi_header  (module_instantiation  _identifier  •  hierarchical_instance  module_instantiation_repeat1  ';')  (precedence: 'module_instantiation')
+    //     4:  module_nonansi_header  (net_declaration  _identifier  •  list_of_net_decl_assignments  ';')                              (precedence: 'net_declaration')
     [$.net_declaration, $.data_type, $.module_instantiation],
-    [$.packed_dimension, $._variable_dimension],
+
+
+    // This is derived from the LRM:
+    // In a data_declaration, it shall be illegal to omit the explicit data_type
+    // before a list_of_variable_decl_assignments unless the var keyword is used.
+    //
+    //   _module_header1  '('  'var'  •  simple_identifier  …
+    //   1:  _module_header1  '('  (_var_data_type  'var'  •  data_type_or_implicit1)  (precedence: '_var_data_type')
+    //   2:  _module_header1  '('  (_var_data_type  'var')  •  simple_identifier  …    (precedence: '_var_data_type')
     [$._var_data_type],
+
+
+    // Examples:
+    //   input my_custom_nettype_identifier ... my_signal (user defined net)
+    //   input my_signal ... (net)
+    //   input my_type_t ... my_signal (variable)
+    //
+    // Even though we do not aim to support user defined nets (example 1), there is a conflict between examples 2 and 3
+    //
+    //   _module_header1  '('  port_direction  •  simple_identifier  …
+    //   1:  _module_header1  '('  (net_port_header1  port_direction  •  net_port_type1)           (precedence: 'net_port_header1')
+    //   2:  _module_header1  '('  (net_port_header1  port_direction)  •  simple_identifier  …     (precedence: 'net_port_header1')
+    //   3:  _module_header1  '('  (variable_port_header  port_direction  •  _variable_port_type)  (precedence: 'variable_port_header')
     [$.net_port_header1, $.variable_port_header],
+
+
+    // It seems the more general option 1 would be the correct, but adding associativity would probably cause some
+    // errors in the parsing of some file, so set as a conflict to increase lookahead 1 token
+    //
+    //   _module_header1  '('  net_type  •  simple_identifier  …
+    //   1:  _module_header1  '('  (net_port_type1  net_type  •  data_type_or_implicit1)  (precedence: 'net_port_type1')
+    //   2:  _module_header1  '('  (net_port_type1  net_type)  •  simple_identifier  …    (precedence: 'net_port_type1')
     [$.net_port_type1],
-    [$.interface_port_header, $.data_type, $.net_port_type1],
-    [$.data_type, $.net_port_type1],
-    [$.data_type, $.constant_primary],
-    [$.data_type, $.tf_port_item1],
+
+
+    // This is not that obvious, and seems better to create a conflict since bit_select and brackets are involved
+    //
+    //   'function'  function_identifier  ';'  _identifier  •  '['  …
+    //   1:  'function'  function_identifier  ';'  (data_type  _identifier  •  data_type_repeat1)                                (precedence: 'data_type')
+    //   2:  'function'  function_identifier  ';'  (hierarchical_identifier  _identifier)  •  '['  …                             (precedence: 'hierarchical_identifier')
+    //   3:  'function'  function_identifier  ';'  (hierarchical_identifier_repeat1  _identifier  •  constant_bit_select1  '.')  (precedence: 'hierarchical_identifier')
     [$.data_type, $.hierarchical_identifier],
-    [$.data_type, $.class_qualifier],
+
+
+    // INFO: Even though localparams set only constants for vector types, and it would need to be packed,
+    // specify a conflict for some other potential cases where the parser cannot differentiate between these two
+    //
+    //   'localparam'  _identifier  '['  constant_range  ']'  •  '['  …
+    //   1:  'localparam'  _identifier  (packed_dimension  '['  constant_range  ']')  •  '['  …    (precedence: 'packed_dimension')
+    //   2:  'localparam'  _identifier  (unpacked_dimension  '['  constant_range  ']')  •  '['  …  (precedence: 'unpacked_dimension')
     [$.unpacked_dimension, $.packed_dimension],
+
+
+    // Avoid adding right associativity in data_type so that it can differentiate between data_types/net_types
+    //
+    //   'function'  function_identifier  '('  class_scope  _identifier  •  '['  …
+    //   1:  'function'  function_identifier  '('  (data_type  class_scope  _identifier  •  data_type_repeat1)  (precedence: 'data_type')
+    //   2:  'function'  function_identifier  '('  (data_type  class_scope  _identifier)  •  '['  …             (precedence: 'data_type')
     [$.data_type],
-    [$.packed_dimension, $._constant_part_select_range],
 
 ],
 
