@@ -687,7 +687,7 @@ const rules = {
     optional($.constant_select1)
   )),
 
-  port_direction: $ => choice('input', 'output', 'inout', 'ref'),
+  port_direction: $ => prec('port_direction', choice('input', 'output', 'inout', 'ref')),
 
   // INFO: Drom's one
   net_port_header1: $ => choice(
@@ -1160,7 +1160,7 @@ const rules = {
     $.net_declaration,
     $.data_declaration,
     // $.task_declaration,
-    // $.function_declaration,
+    $.function_declaration,
     // $.checker_declaration,
     // $.dpi_import_export,
     // $.extern_constraint_declaration,
@@ -1307,7 +1307,7 @@ const rules = {
   //   'genvar', $.list_of_genvar_identifiers, ';'
   // ),
 
-  net_declaration: $ => choice(
+  net_declaration: $ => prec('net_declaration', choice(
     seq(
       $.net_type,
       optional(choice($.drive_strength, $.charge_strength)),
@@ -1330,7 +1330,7 @@ const rules = {
     //   sep1(',', seq($._net_identifier, repeat($.unpacked_dimension))),
     //   ';'
     // )
-  ),
+  )),
 
   // type_declaration: $ => seq(
   //   'typedef',
@@ -1386,8 +1386,8 @@ const rules = {
   //   'const'
   // ),
 
-  data_type: $ => choice(
-    seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension)),
+  data_type: $ => prec('data_type', choice(
+    prec.right(seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension))),
     seq($.integer_atom_type, optional($._signing)),
     $.non_integer_type,
     // seq(
@@ -1401,24 +1401,24 @@ const rules = {
     //   '{', sep1(',', $.enum_name_declaration), '}',
     //   repeat($.packed_dimension)
     // ),
-    // 'string',
-    // 'chandle',
+    'string',
+    'chandle',
     // prec.left(seq(
     //   'virtual', optional('interface'),
     //   $.interface_identifier,
     //   optional($.parameter_value_assignment),
     //   optseq('.', $.modport_identifier)
     // )),
-    // seq(
-    //   optional(choice($.class_scope, $.package_scope)),
-    //   $._type_identifier,
-    //   repeat($.packed_dimension)
-    // ),
+    seq(
+      optional(choice($.class_scope, $.package_scope)),
+      $._type_identifier,
+      repeat($.packed_dimension)
+    ),
     // $.class_type,
     // 'event',
     // $.ps_covergroup_identifier,
     // $.type_reference
-  ),
+  )),
 
   data_type_or_implicit1: $ => prec('data_type_or_implicit1', choice(
     $.data_type,
@@ -1426,10 +1426,10 @@ const rules = {
   )),
 
   // INFO: Original by Drom, changed from standard to avoid matching the empty string
-  implicit_data_type1: $ => choice( // reordered : repeat -> repeat1
+  implicit_data_type1: $ => prec.right(choice( // reordered : repeat -> repeat1
     seq($._signing, repeat($.packed_dimension)),
     repeat1($.packed_dimension)
-  ),
+  )),
   // End of INFO
 
   // enum_base_type: $ => choice(
@@ -1522,10 +1522,10 @@ const rules = {
   //   ';'
   // ),
 
-  // data_type_or_void: $ => choice(
-  //   $.data_type,
-  //   'void'
-  // ),
+  data_type_or_void: $ => choice(
+    $.data_type,
+    'void'
+  ),
 
   // struct_union: $ => choice(
   //   'struct',
@@ -1625,11 +1625,11 @@ const rules = {
 
   // list_of_specparam_assignments: $ => sep1(',', $.specparam_assignment),
 
-  // list_of_tf_variable_identifiers: $ => sep1(',', seq(
-  //   $.port_identifier,
-  //   repeat($._variable_dimension),
-  //   optseq('=', $.expression)
-  // )),
+  list_of_tf_variable_identifiers: $ => sepBy1(',', seq(
+    $.port_identifier,
+    repeat($._variable_dimension),
+    optional(seq('=', $.expression))
+  )),
 
   // list_of_type_assignments: $ => sep1(',', $.type_assignment),
   // list_of_type_assignments: $ => prec.right(sepBy1(',', $.type_assignment)),
@@ -1780,38 +1780,33 @@ const rules = {
 
   // // A.2.6 Function declarations
 
-  // function_data_type_or_implicit1: $ => choice(
-  //   $.data_type_or_void,
-  //   $.implicit_data_type1
-  // ),
+  function_data_type_or_implicit1: $ => choice(
+    $.data_type_or_void,
+    $.implicit_data_type1
+  ),
 
-  // function_declaration: $ => seq(
-  //   'function',
-  //   optional($.lifetime),
-  //   $.function_body_declaration
-  // ),
+  function_declaration: $ => seq(
+    'function',
+    optional($.dynamic_override_specifiers),
+    optional($.lifetime),
+    $.function_body_declaration
+  ),
 
-  // function_body_declaration: $ => seq(
-  //   optional($.function_data_type_or_implicit1),
-  //   optional(choice(
-  //     seq($.interface_identifier, '.'),
-  //     $.class_scope
-  //   )),
-  //   $.function_identifier,
-  //   choice(
-  //     seq(
-  //       ';',
-  //       repeat($.tf_item_declaration)
-  //     ),
-  //     seq(
-  //       '(', optional($.tf_port_list), ')', ';',
-  //       repeat($.block_item_declaration)
-  //     )
-  //   ),
-  //   repeat($.function_statement_or_null),
-  //   'endfunction',
-  //   optseq(':', $.function_identifier)
-  // ),
+  function_body_declaration: $ => seq(
+    optional($.function_data_type_or_implicit1),
+    optional(choice(
+      seq($.interface_identifier, '.'),
+      $.class_scope
+    )),
+    $.function_identifier,
+    choice(
+      seq(';', repeat($.tf_item_declaration)),
+      seq('(', optional($.tf_port_list), ')', ';', repeat($.block_item_declaration))
+    ),
+    repeat($.function_statement_or_null),
+    'endfunction',
+    optional(seq(':', $.function_identifier))
+  ),
 
   // function_prototype: $ => seq(
   //   'function',
@@ -1897,13 +1892,14 @@ const rules = {
   //   optseq(':', $.task_identifier)
   // ),
 
-  // tf_item_declaration: $ => choice(
-  //   $.block_item_declaration,
-  //   $.tf_port_declaration
-  // ),
+  tf_item_declaration: $ => choice(
+    $.block_item_declaration,
+    $.tf_port_declaration
+  ),
 
-  // tf_port_list: $ => sep1(',', $.tf_port_item1),
+  tf_port_list: $ => sepBy1(',', $.tf_port_item1),
 
+  // INFO: drom's writing
   // tf_port_item1: $ => seq(
   //   repeat($.attribute_instance),
   //   optional($.tf_port_direction),
@@ -1924,26 +1920,53 @@ const rules = {
   //     )
   //   )
   // ),
+  // INFO: My rewriting/refactoring
+  tf_port_item1: $ => seq(
+    repeat($.attribute_instance),
+    optional($.tf_port_direction),
+    optional('var'),
+    choice(
+      seq($.data_type_or_implicit1, optional($.port_identifier)),
+      $.port_identifier,
+    ),
+    repeat($._variable_dimension),
+    optional(seq('=', $.expression))
+  ),
 
-  // tf_port_direction: $ => choice(
-  //   $.port_direction,
-  //   seq('const', 'ref')
-  // ),
+  tf_port_direction: $ => prec('tf_port_direction', choice(
+    $.port_direction,
+    seq(optional('const'), 'ref', optional('static'))
+  )),
 
-  // tf_port_declaration: $ => seq(
-  //   repeat($.attribute_instance),
-  //   $.tf_port_direction,
-  //   optional('var'),
-  //   optional($.data_type_or_implicit1),
-  //   $.list_of_tf_variable_identifiers,
-  //   ';'
-  // ),
+  tf_port_declaration: $ => seq(
+    repeat($.attribute_instance),
+    $.tf_port_direction,
+    optional('var'),
+    optional($.data_type_or_implicit1),
+    $.list_of_tf_variable_identifiers,
+    ';'
+  ),
 
   // task_prototype: $ => seq(
   //   'task',
   //   $.task_identifier,
   //   optseq('(', optional($.tf_port_list), ')')
   // ),
+
+  // INFO: These were not present on drom's 2017 grammar
+  // dynamic_override_specifiers ::= [ initial_or_extends_specifier ] [ final_specifier ]
+  dynamic_override_specifiers: $ => choice( // Reorder to avoid matching the empty string
+    seq($.initial_or_extends_specifier, optional($.final_specifier)),
+    $.final_specifier
+  ),
+
+  // initial_or_extends_specifier ::=
+  //   : initial
+  //   | : extends
+  initial_or_extends_specifier: $ => seq(':', choice('initial', 'extends')),
+
+  // final_specifier ::= : final
+  final_specifier: $ => seq(':', 'final'),
 
 
   // // A.2.8 Block item declarations
@@ -2707,12 +2730,12 @@ const rules = {
 
   // // A.4.1.1 Module instantiation
 
-  module_instantiation: $ => seq(
-    $._module_identifier,
+  module_instantiation: $ => prec('module_instantiation', seq(
+    field('instance_type', $._module_identifier),
     optional($.parameter_value_assignment),
     sepBy1(',', $.hierarchical_instance),
     ';'
-  ),
+  )),
 
   parameter_value_assignment: $ => seq(
     '#', '(', optional($.list_of_parameter_value_assignments), ')'
@@ -2734,7 +2757,8 @@ const rules = {
   ),
 
   name_of_instance: $ => seq(
-    $.instance_identifier, repeat($.unpacked_dimension)
+    field('instance_name', $.instance_identifier),
+    repeat($.unpacked_dimension)
   ),
 
   // Reordered
@@ -3169,11 +3193,11 @@ const rules = {
     seq($.blocking_assignment, ';'),
     // seq($.nonblocking_assignment, ';'),
     // seq($.procedural_continuous_assignment, ';'),
-    // seq($.system_tf_call, ';'),
+    // seq($.system_tf_call, ';'),// DANGER: Should be only in subroutine call according to 1800-2023
     // $.case_statement,
     $.conditional_statement,
     // seq($.inc_or_dec_expression, ';'),
-    // // $.subroutine_call_statement,
+    // $.subroutine_call_statement,
     // $.disable_statement,
     // $.event_trigger,
     // $.loop_statement,
@@ -3189,12 +3213,12 @@ const rules = {
     // $.expect_property_statement
   ),
 
-  // function_statement: $ => $.statement,
+  function_statement: $ => $.statement,
 
-  // function_statement_or_null: $ => choice(
-  //   $.function_statement,
-  //   seq(repeat($.attribute_instance), ';')
-  // ),
+  function_statement_or_null: $ => choice(
+    $.function_statement,
+    seq(repeat($.attribute_instance), ';')
+  ),
 
   // variable_identifier_list: $ => sep1(',', $._variable_identifier),
 
@@ -4523,13 +4547,9 @@ const rules = {
     'super'
   ),
 
-  // Set prec.left because of:
-  // module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  bit_select1_repeat1  •  '['  …
-  //   1:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1  bit_select1_repeat1)  •  '['  …
-  //   2:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1_repeat1  bit_select1_repeat1  •  bit_select1_repeat1)
-  bit_select1: $ => prec.left(repeat1( // reordered -> non empty
+  bit_select1: $ => repeat1( // reordered -> non empty
     seq('[', $.expression, ']')
-  )),
+  ),
 
   // TODO: Review
   select1: $ => prec('select1', choice( // reordered -> non empty
@@ -4559,10 +4579,9 @@ const rules = {
   //   $.bit_select1
   // ),
 
-  // TODO: Review with bit_select tests
-  constant_bit_select1: $ => prec.left(repeat1(prec('constant_bit_select1', seq( // reordered -> non empty
+  constant_bit_select1: $ => repeat1(prec('constant_bit_select1', seq( // reordered -> non empty
     '[', $.constant_expression, ']'
-  )))),
+  ))),
 
   // TODO: Review with range tests
   constant_select1: $ => prec('constant_select1', choice( // reordered -> non empty
@@ -4799,7 +4818,7 @@ const rules = {
   // escaped_identifier: $ => seq('\\', /[^\s]*/),
   // formal_identifier: $ => alias($._identifier, $.formal_identifier),
   // formal_port_identifier: $ => alias($._identifier, $.formal_port_identifier),
-  // function_identifier: $ => alias($._identifier, $.function_identifier),
+  function_identifier: $ => alias($._identifier, $.function_identifier),
   // generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
   // genvar_identifier: $ => alias($._identifier, $.genvar_identifier),
   // _hierarchical_array_identifier: $ => $.hierarchical_identifier,
@@ -5221,6 +5240,18 @@ module.exports = grammar({
     //   3:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier)           (precedence: 'variable_lvalue')
     ['variable_lvalue', 'class_qualifier'],
 
+    // tf_port_direction is in a higher level in the tree, for the 'ref' conflict
+    //
+    //   'function'  function_identifier  '('  'ref'  •  'var'  …
+    //   1:  'function'  function_identifier  '('  (port_direction  'ref')  •  'var'  …
+    //   2:  'function'  function_identifier  '('  (tf_port_direction  'ref')  •  'var'  …
+    ['tf_port_direction', 'port_direction'],
+
+
+    // TODO: Review all these conflicts after function implementation
+    ['data_type'],
+    ['module_instantiation'],
+    ['net_declaration'],
   ],
 
   conflicts: $ => [
@@ -5300,6 +5331,7 @@ module.exports = grammar({
     // 3:  module_nonansi_header  'var'  _identifier  '='  expression  'matches'  (pattern  constant_expression)  •  '?'  …                                                                                      (precedence: 'pattern')
     [$.pattern, $.constant_expression],
 
+
     // Don't really understand this one well but it's a consequence of having PREC.CONDITIONAL on both
     // $.cond_predicate and $.conditional_expression, and seems needed to make nested conditional expressions work well
     //
@@ -5307,6 +5339,46 @@ module.exports = grammar({
     //   1:  module_nonansi_header  'var'  _identifier  '='  (conditional_expression  cond_predicate  '?'  expression  ':'  expression)  •  '?'  …  (precedence: 23, associativity: Right)
     //   2:  module_nonansi_header  'var'  _identifier  '='  cond_predicate  '?'  expression  ':'  (cond_predicate  expression)  •  '?'  …          (precedence: 23)
     [$.cond_predicate, $.conditional_expression],
+
+
+    //  Declaration of net/type in the unit scope, true conflict
+    //
+    //   _identifier  •  simple_identifier  …
+    //   1:  (data_type  _identifier)  •  simple_identifier  …
+    //   2:  (net_declaration  _identifier  •  list_of_net_decl_assignments  ';')
+    [$.net_declaration, $.data_type],
+
+
+    // Setting prec.left prevented having more than 1 bit_select dimension:
+    //
+    // module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  bit_select1_repeat1  •  '['  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1  bit_select1_repeat1)  •  '['  …
+    //   2:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1_repeat1  bit_select1_repeat1  •  bit_select1_repeat1)
+    [$.bit_select1],
+    // Same case below
+    //
+    //   '['  _identifier  constant_bit_select1_repeat1  •  '['  …
+    //   1:  '['  _identifier  (constant_bit_select1  constant_bit_select1_repeat1)  •  '['  …
+    //   2:  '['  _identifier  (constant_bit_select1_repeat1  constant_bit_select1_repeat1  •  constant_bit_select1_repeat1)
+    [$.constant_bit_select1],
+
+
+    // TODO: Review all these conflicts after function implementation
+    [$.net_declaration, $.data_type, $.module_instantiation],
+    [$.packed_dimension, $._variable_dimension],
+    [$._var_data_type],
+    [$.net_port_header1, $.variable_port_header],
+    [$.net_port_type1],
+    [$.interface_port_header, $.data_type, $.net_port_type1],
+    [$.data_type, $.net_port_type1],
+    [$.data_type, $.constant_primary],
+    [$.data_type, $.tf_port_item1],
+    [$.data_type, $.hierarchical_identifier],
+    [$.data_type, $.class_qualifier],
+    [$.unpacked_dimension, $.packed_dimension],
+    [$.data_type],
+    [$.packed_dimension, $._constant_part_select_range],
+
 ],
 
 });
