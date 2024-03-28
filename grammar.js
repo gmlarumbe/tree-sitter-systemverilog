@@ -3209,7 +3209,7 @@ const rules = {
     $.case_statement,
     $.conditional_statement,
     // seq($.inc_or_dec_expression, ';'),
-    // $.subroutine_call_statement,
+    $.subroutine_call_statement,
     // $.disable_statement,
     // $.event_trigger,
     // $.loop_statement,
@@ -3540,10 +3540,10 @@ const rules = {
 
   // // A.6.9 Subroutine call statements
 
-  // subroutine_call_statement: $ => choice(
-  //   seq($.subroutine_call, ';'),
-  //   seq('void\'', '(', $.function_subroutine_call, ')', ';')
-  // ),
+  subroutine_call_statement: $ => choice(
+    seq($.subroutine_call, ';'),
+    seq('void\'', '(', $.function_subroutine_call, ')', ';')
+  ),
 
   // // A.6.10 Assertion statements
 
@@ -4218,6 +4218,11 @@ const rules = {
   //   repeat($.attribute_instance),
   //   optional($.list_of_arguments_parent)
   // )),
+  tf_call: $ => seq(
+    $.ps_or_hierarchical_tf_identifier,
+    repeat($.attribute_instance),
+    optional($.list_of_arguments)
+  ),
 
   // system_tf_call: $ => prec.left(seq(
   //   $.system_tf_identifier,
@@ -4236,15 +4241,26 @@ const rules = {
   //     )
   //   ))
   // )),
+  system_tf_call: $ => seq(
+    $.system_tf_identifier,
+    choice(
+      optional(seq('(', $.list_of_arguments, ')')),
+      seq('(',
+          choice(
+            seq($.data_type, optional(seq(',', $.expression))),
+            seq(sepBy1(',', $.expression), optional(seq(',', $.clocking_event))),
+          ),
+          ')')
+    )),
 
-  // subroutine_call: $ => choice(
-  //   $.tf_call,
-  //   $.system_tf_call,
-  //   $.method_call,
-  //   seq(optseq('std', '::'), $.randomize_call)
-  // ),
+  subroutine_call: $ => choice(
+    // $.tf_call,
+    $.system_tf_call,
+    // $.method_call,
+    // seq(optseq('std', '::'), $.randomize_call)
+  ),
 
-  // function_subroutine_call: $ => $.subroutine_call,
+  function_subroutine_call: $ => $.subroutine_call,
 
   // list_of_arguments: $ => choice(
   //   // seq(
@@ -4253,6 +4269,27 @@ const rules = {
   //   // ),
   //   sep1(',', seq('.', $._identifier, '(', optional($.expression), ')'))
   // ),
+
+  list_of_arguments: $ => choice(  // Reordered to avoid matching empty string
+    // First case: mixing positional and named arguments
+    seq(
+      $.expression,
+      repeat(seq(',', optional($.expression))),
+      repeat(seq(',', '.', $._identifier, '(', optional($.expression), ')'))
+    ),
+    seq(
+      optional($.expression),
+      repeat1(seq(',', optional($.expression))),
+      repeat(seq(',', '.', $._identifier, '(', optional($.expression), ')'))
+    ),
+    seq(
+      optional($.expression),
+      repeat(seq(',', optional($.expression))),
+      repeat1(seq(',', '.', $._identifier, '(', optional($.expression), ')'))
+    ),
+    // Second case: using only named arguments
+    sepBy1(',', seq('.', $._identifier, '(', optional($.expression), ')'))
+  ),
 
   // list_of_arguments_parent: $ => seq(
   //   '(',
@@ -4531,7 +4568,7 @@ const rules = {
     // $.empty_unpacked_array_concatenation,
     seq($.concatenation, optional(seq('[', $.range_expression, ']'))),
     // seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
-    // $.function_subroutine_call,
+    $.function_subroutine_call,
     // // $.let_expression, // TODO: Remove temporarily to narrow conflicts
     seq('(', $.mintypmax_expression, ')'),
     // // $.cast, // TODO: Remove temporarily to narrow conflicts
@@ -4884,7 +4921,7 @@ const rules = {
   // _hierarchical_property_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_task_identifier: $ => $.hierarchical_identifier,
-  // _hierarchical_tf_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_tf_identifier: $ => $.hierarchical_identifier,
   _hierarchical_variable_identifier: $ => $.hierarchical_identifier,
 
   _identifier: $ => choice(
@@ -4967,10 +5004,10 @@ const rules = {
   //   $._hierarchical_sequence_identifier
   // ),
 
-  // ps_or_hierarchical_tf_identifier: $ => choice(
-  //   seq(optional($.package_scope), $.tf_identifier),
-  //   $._hierarchical_tf_identifier
-  // ),
+  ps_or_hierarchical_tf_identifier: $ => choice(
+    seq(optional($.package_scope), $.tf_identifier),
+    $._hierarchical_tf_identifier
+  ),
 
   // TODO: Fill and set all the cases
   ps_parameter_identifier: $ => prec('ps_parameter_identifier', choice(
@@ -5013,10 +5050,10 @@ const rules = {
 
   // // The $ character in a system_tf_identifier shall
   // // not be followed by white_space. A system_tf_identifier shall not be escaped.
-  // system_tf_identifier: $ => /\$[a-zA-Z0-9_$]+/,
+  system_tf_identifier: $ => /\$[a-zA-Z0-9_$]+/,
 
   task_identifier: $ => alias($._identifier, $.task_identifier),
-  // tf_identifier: $ => alias($._identifier, $.tf_identifier),
+  tf_identifier: $ => alias($._identifier, $.tf_identifier),
   // terminal_identifier: $ => alias($._identifier, $.terminal_identifier),
   // topmodule_identifier: $ => alias($._identifier, $.topmodule_identifier),
   _type_identifier: $ => $._identifier,
@@ -5039,7 +5076,7 @@ module.exports = grammar({
     // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
     $._hierarchical_net_identifier,
     $._hierarchical_variable_identifier,
-  //   $._hierarchical_tf_identifier,
+    $._hierarchical_tf_identifier,
   //   $._hierarchical_sequence_identifier,
   //   $._hierarchical_property_identifier,
   //   $._hierarchical_block_identifier,
@@ -5063,7 +5100,7 @@ module.exports = grammar({
   //   $.formal_port_identifier,
   //   $.genvar_identifier,
   //   $.specparam_identifier,
-  //   $.tf_identifier,
+    $.tf_identifier,
     $._type_identifier,
     $._net_type_identifier,
     $._variable_identifier,
@@ -5535,6 +5572,27 @@ module.exports = grammar({
     // 1:  module_nonansi_header  'initial'  (case_keyword  'case')  •  '('  …
     // 2:  module_nonansi_header  'initial'  (case_statement  'case'  •  '('  case_expression  ')'  'inside'  case_statement_repeat3  'endcase')
     [$.case_statement, $.case_keyword],
+
+
+    // 2nd option is for the case when there is a clocking event, so it needs to check further.
+    //
+    //   module_nonansi_header  'initial'  system_tf_identifier  '('  expression  •  ')'  …
+    //   1:  module_nonansi_header  'initial'  (system_tf_call  system_tf_identifier  '('  expression  •  ')')
+    //   2:  module_nonansi_header  'initial'  system_tf_identifier  '('  (list_of_arguments  expression)  •  ')'  …
+    [$.system_tf_call, $.list_of_arguments],
+
+
+    // TODO: Conflicts for tf_call
+    // [$.variable_lvalue, $.ps_or_hierarchical_tf_identifier],
+    // [$.hierarchical_identifier, $.ps_or_hierarchical_tf_identifier],
+    // [$.primary, $.ps_or_hierarchical_tf_identifier],
+    // [$.primary, $.variable_lvalue, $.ps_or_hierarchical_tf_identifier],
+    // [$.data_type, $.hierarchical_identifier, $.ps_or_hierarchical_tf_identifier],
+    // [$.list_of_arguments],
+    // [$.cond_pattern, $.list_of_arguments],
+    // [$.data_type, $.ps_or_hierarchical_tf_identifier],
+    // [$.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_tf_identifier],
+    // [$.port_reference, $.hierarchical_identifier, $.ps_or_hierarchical_tf_identifier],
 ],
 
 });
