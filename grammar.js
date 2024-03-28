@@ -1161,7 +1161,7 @@ const rules = {
     // $.data_declaration,
     prec.dynamic(0, $.net_declaration),
     prec.dynamic(1, $.data_declaration),
-    // $.task_declaration,
+    $.task_declaration,
     $.function_declaration,
     // $.checker_declaration,
     // $.dpi_import_export,
@@ -1869,32 +1869,34 @@ const rules = {
 
   // // A.2.7 Task declarations
 
-  // task_declaration: $ => seq(
-  //   'task',
-  //   optional($.lifetime),
-  //   $.task_body_declaration
-  // ),
+  task_declaration: $ => seq(
+    'task',
+    optional($.dynamic_override_specifiers),
+    optional($.lifetime),
+    $.task_body_declaration
+  ),
 
-  // task_body_declaration: $ => seq(
-  //   optional(choice(
-  //     seq($.interface_identifier, '.'),
-  //     $.class_scope
-  //   )),
-  //   $.task_identifier,
-  //   choice(
-  //     seq(
-  //       ';',
-  //       repeat($.tf_item_declaration)
-  //     ),
-  //     seq(
-  //       '(', optional($.tf_port_list), ')', ';',
-  //       repeat($.block_item_declaration)
-  //     )
-  //   ),
-  //   repeat($.statement_or_null),
-  //   'endtask',
-  //   optseq(':', $.task_identifier)
-  // ),
+  task_body_declaration: $ => seq(
+    optional(choice(
+      seq($.interface_identifier, '.'),
+      $.class_scope
+    )),
+    $.task_identifier,
+    choice(
+      seq(
+        ';',
+        repeat($.tf_item_declaration)
+      ),
+      seq(
+        '(', optional($.tf_port_list), ')', ';',
+        repeat($.block_item_declaration)
+      )
+    ),
+    repeat($.statement_or_null),
+    'endtask',
+    optional(seq(':', $.task_identifier))
+  ),
+
 
   tf_item_declaration: $ => choice(
     $.block_item_declaration,
@@ -5013,7 +5015,7 @@ const rules = {
   // // not be followed by white_space. A system_tf_identifier shall not be escaped.
   // system_tf_identifier: $ => /\$[a-zA-Z0-9_$]+/,
 
-  // task_identifier: $ => alias($._identifier, $.task_identifier),
+  task_identifier: $ => alias($._identifier, $.task_identifier),
   // tf_identifier: $ => alias($._identifier, $.tf_identifier),
   // terminal_identifier: $ => alias($._identifier, $.terminal_identifier),
   // topmodule_identifier: $ => alias($._identifier, $.topmodule_identifier),
