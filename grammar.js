@@ -534,27 +534,27 @@ const rules = {
   //   'endchecker', optseq(':', $.checker_identifier)
   // ),
 
-  // class_declaration: $ => seq(
-  //   optional('virtual'),
-  //   'class',
-  //   optional($.lifetime),
-  //   $.class_identifier,
-  //   optional($.parameter_port_list),
-  //   optseq(
-  //     'extends', $.class_type, optional($.list_of_arguments_parent)
-  //   ),
-  //   optseq(
-  //     'implements', sep1(',', $.interface_class_type)
-  //   ),
-  //   ';',
-  //   repeat($.class_item),
-  //   'endclass', optseq(':', $.class_identifier)
-  // ),
+  class_declaration: $ => seq(
+    optional('virtual'),
+    'class',
+    optional($.final_specifier),
+    $.class_identifier,
+    optional($.parameter_port_list),
+    optional(seq(
+      'extends',
+      $.class_type,
+      optional(seq('(', choice(optional($.list_of_arguments), 'default'), ')'))
+    )),
+    optional(seq('implements', sepBy1(',', $.interface_class_type))),
+    ';',
+    repeat($.class_item),
+    'endclass', optional(seq(':', $.class_identifier))
+  ),
 
-  // interface_class_type: $ => seq(
-  //   $.ps_class_identifier,
-  //   optional($.parameter_value_assignment)
-  // ),
+  interface_class_type: $ => seq(
+    $.ps_class_identifier,
+    optional($.parameter_value_assignment)
+  ),
 
   // interface_class_declaration: $ => seq(
   //   'interface', 'class',
@@ -990,81 +990,85 @@ const rules = {
 
   // /* A.1.9 Class items */
 
-  // class_item: $ => choice(
-  //   $._directives,
-  //   seq(repeat($.attribute_instance), $.class_property),
-  //   seq(repeat($.attribute_instance), $.class_method),
-  //   seq(repeat($.attribute_instance), $._class_constraint),
-  //   seq(repeat($.attribute_instance), $.class_declaration),
-  //   seq(repeat($.attribute_instance), $.covergroup_declaration),
-  //   seq($._any_parameter_declaration, ';'),
-  //   ';'
-  // ),
+  class_item: $ => choice(
+    // $._directives, // TODO: Still not in the LRM but will probably come back here
+    seq(repeat($.attribute_instance), $.class_property),
+    seq(repeat($.attribute_instance), $.class_method),
+    // seq(repeat($.attribute_instance), $._class_constraint),
+    // seq(repeat($.attribute_instance), $.class_declaration),
+    // seq(repeat($.attribute_instance), $.interface_class_declaration),
+    // seq(repeat($.attribute_instance), $.covergroup_declaration),
+    seq($._any_parameter_declaration, ';'),
+    ';'
+  ),
 
-  // class_property: $ => choice(
-  //   seq(repeat($._property_qualifier), $.data_declaration),
-  //   seq(
-  //     'const',
-  //     repeat($.class_item_qualifier),
-  //     $.data_type,
-  //     $.const_identifier,
-  //     optseq('=', $.constant_expression),
-  //     ';'
-  //   )
-  // ),
+  class_property: $ => prec('class_property', choice(
+    seq(repeat($._property_qualifier), $.data_declaration),
+    seq(
+      'const',
+      repeat($.class_item_qualifier),
+      $.data_type,
+      $.const_identifier,
+      optional(seq('=', $.constant_expression)),
+      ';'
+    )
+  )),
 
-  // class_method: $ => choice(
-  //   seq(repeat($.method_qualifier), $.task_declaration),
-  //   seq(repeat($.method_qualifier), $.function_declaration),
-  //   seq('pure', 'virtual', repeat($.class_item_qualifier), $._method_prototype, ';'),
-  //   seq('extern', repeat($.method_qualifier), $._method_prototype, ';'),
-  //   seq(repeat($.method_qualifier), $.class_constructor_declaration),
-  //   seq('extern', repeat($.method_qualifier), $.class_constructor_prototype)
-  // ),
+  class_method: $ => prec('class_method', choice(
+    seq(repeat($.method_qualifier), $.task_declaration),
+    seq(repeat($.method_qualifier), $.function_declaration),
+    seq('pure', 'virtual', repeat($.class_item_qualifier), $._method_prototype, ';'),
+    seq('extern', repeat($.method_qualifier), $._method_prototype, ';'),
+    seq(repeat($.method_qualifier), $.class_constructor_declaration),
+    seq('extern', repeat($.method_qualifier), $.class_constructor_prototype)
+  )),
 
-  // class_constructor_prototype: $ => seq(
-  //   'function', 'new', optseq('(', optional($.tf_port_list), ')'), ';'
-  // ),
+  class_constructor_prototype: $ => seq(
+    'function',
+    'new',
+    optional(seq('(', optional($.class_constructor_arg_list), ')')),
+    ';'
+  ),
+
+  class_constructor_arg_list: $ => sepBy1(',', $.class_constructor_arg),
+
+  class_constructor_arg: $ => choice($.tf_port_item1, 'default'),
 
   // _class_constraint: $ => choice(
   //   $.constraint_prototype,
   //   $.constraint_declaration
   // ),
 
-  // class_item_qualifier: $ => choice('static', 'protected', 'local'),
+  class_item_qualifier: $ => prec('class_item_qualifier', choice('static', 'protected', 'local')),
 
-  // _property_qualifier: $ => choice(
-  //   $.random_qualifier,
-  //   $.class_item_qualifier
-  // ),
+  _property_qualifier: $ => choice(
+    $.random_qualifier,
+    $.class_item_qualifier
+  ),
 
-  // random_qualifier: $ => choice('rand', 'randc'),
+  random_qualifier: $ => choice('rand', 'randc'),
 
-  // method_qualifier: $ => choice(
-  //   seq(optional('pure'), 'virtual'),
-  //   $.class_item_qualifier
-  // ),
+  method_qualifier: $ => prec('method_qualifier', choice(
+    seq(optional('pure'), 'virtual'),
+    $.class_item_qualifier
+  )),
 
-  // _method_prototype: $ => choice(
-  //   $.task_prototype,
-  //   $.function_prototype
-  // ),
+  _method_prototype: $ => choice(
+    $.task_prototype,
+    $.function_prototype
+  ),
 
-  // class_constructor_declaration: $ => seq(
-  //   'function',
-  //   optional($.class_scope),
-  //   'new',
-  //   optseq('(', optional($.tf_port_list), ')'),
-  //   ';',
-  //   repeat($.block_item_declaration),
-  //   optseq(
-  //     'super', '.', 'new',
-  //     optional($.list_of_arguments_parent),
-  //     ';'
-  //   ),
-  //   repeat($.function_statement_or_null),
-  //   'endfunction', optseq(':', 'new')
-  // ),
+  class_constructor_declaration: $ => prec('class_constructor_declaration', seq(
+    'function',
+    optional($.class_scope),
+    'new',
+    optional(seq('(', optional($.class_constructor_arg_list), ')')),
+    ';',
+    repeat($.block_item_declaration),
+    optional(seq('super', '.', 'new', optional(seq('(', $.list_of_arguments, ')')), ';')),
+    repeat($.function_statement_or_null),
+    'endfunction', optional(seq(':', 'new'))
+  )),
 
   // /* A.1.10 Constraints */
 
@@ -1157,8 +1161,6 @@ const rules = {
   ),
 
   package_or_generate_item_declaration: $ => choice(
-    // $.net_declaration,
-    // $.data_declaration,
     prec.dynamic(0, $.net_declaration),
     prec.dynamic(1, $.data_declaration),
     $.task_declaration,
@@ -1166,9 +1168,9 @@ const rules = {
     // $.checker_declaration,
     // $.dpi_import_export,
     // $.extern_constraint_declaration,
-    // $.class_declaration,
+    $.class_declaration,
     // $.interface_class_declaration, // not in spec
-    // $.class_constructor_declaration,
+    $.class_constructor_declaration,
     seq($._any_parameter_declaration, ';'),
     // $.covergroup_declaration,
     // $.overload_declaration,
@@ -1375,7 +1377,7 @@ const rules = {
   //   ';'
   // ),
 
-  lifetime: $ => choice('static', 'automatic'),
+  lifetime: $ => prec('lifetime', choice('static', 'automatic')),
 
 
   // /* A.2.2 Declaration data types */
@@ -1812,14 +1814,13 @@ const rules = {
     optional(seq(':', $.function_identifier))
   ),
 
-  // function_prototype: $ => seq(
-  //   'function',
-  //   $.data_type_or_void,
-  //   $.function_identifier,
-  //   optseq(
-  //     '(', optional($.tf_port_list), ')'
-  //   )
-  // ),
+  function_prototype: $ => seq(
+    'function',
+    optional($.dynamic_override_specifiers),
+    $.data_type_or_void,
+    $.function_identifier,
+    optional(seq('(', optional($.tf_port_list), ')'))
+  ),
 
   // dpi_import_export: $ => choice(
   //   seq(
@@ -1953,11 +1954,12 @@ const rules = {
     ';'
   ),
 
-  // task_prototype: $ => seq(
-  //   'task',
-  //   $.task_identifier,
-  //   optseq('(', optional($.tf_port_list), ')')
-  // ),
+  task_prototype: $ => seq(
+    'task',
+    optional($.dynamic_override_specifiers),
+    $.task_identifier,
+    optional(seq('(', optional($.tf_port_list), ')'))
+  ),
 
   // INFO: These were not present on drom's 2017 grammar
   // dynamic_override_specifiers ::= [ initial_or_extends_specifier ] [ final_specifier ]
@@ -4628,10 +4630,10 @@ const rules = {
     '"'
   ),
 
-  implicit_class_handle: $ => choice(
+  implicit_class_handle: $ => prec('implicit_class_handle', choice(
     prec.right(seq('this', optional(seq('.', 'super')))), // TODO: Is this fine? Or should be a conflict because of 1 token lookahead
     'super'
-  ),
+  )),
 
   bit_select1: $ => repeat1( // reordered -> non empty
     seq('[', $.expression, ']')
@@ -4891,7 +4893,7 @@ const rules = {
   // class_variable_identifier: $ => $._variable_identifier,
   // clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
   // config_identifier: $ => alias($._identifier, $.config_identifier),
-  // const_identifier: $ => alias($._identifier, $.const_identifier),
+  const_identifier: $ => alias($._identifier, $.const_identifier),
   // constraint_identifier: $ => alias($._identifier, $.constraint_identifier),
 
   // covergroup_identifier: $ => alias($._identifier, $.covergroup_identifier),
@@ -5429,6 +5431,45 @@ module.exports = grammar({
     // ['hierarchical_identifier', 'list_of_arguments'],
 
 
+    // If it's inside a class, consider it a class_item_qualifier since it seems more generic
+    //
+    //   'class'  _identifier  ';'  'static'  •  'string'  …
+    //   1:  'class'  _identifier  ';'  (class_item_qualifier  'static')  •  'string'  …  (precedence: 'class_item_qualifier')
+    //   2:  'class'  _identifier  ';'  (lifetime  'static')  •  'string'  …              (precedence: 'lifetime')
+    ['class_item_qualifier', 'lifetime'],
+
+
+    // Consider the super.new after declaration as part of the declaration and not as a statement:
+    //
+    // 'function'  'new'  ';'  'super'  •  '.'  …
+    // 1:  'function'  'new'  ';'  (implicit_class_handle  'super')  •  '.'  …                                                                                                                  (precedence: 'implicit_class_handle')
+    // 2:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  'endfunction'  ':'  'new')                                         (precedence: 'class_constructor_declaration')
+    // 3:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  'endfunction')                                                     (precedence: 'class_constructor_declaration')
+    // 4:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  class_constructor_declaration_repeat2  'endfunction'  ':'  'new')  (precedence: 'class_constructor_declaration')
+    // 5:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  class_constructor_declaration_repeat2  'endfunction')              (precedence: 'class_constructor_declaration')
+    // 6:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  'endfunction'  ':'  'new')                                                                      (precedence: 'class_constructor_declaration')
+    // 7:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  'endfunction')                                                                                  (precedence: 'class_constructor_declaration')
+    // 8:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  class_constructor_declaration_repeat2  'endfunction'  ':'  'new')                               (precedence: 'class_constructor_declaration')
+    // 9:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  class_constructor_declaration_repeat2  'endfunction')                                           (precedence: 'class_constructor_declaration')
+    ['class_constructor_declaration', 'implicit_class_handle'],
+
+
+    // Since it comes after a class declaration, consider it a class property
+    //
+    //   'class'  _identifier  ';'  'const'  data_type  •  simple_identifier  …
+    //   1:  'class'  _identifier  ';'  'const'  (data_type_or_implicit1  data_type)  •  simple_identifier  …                     (precedence: 'data_type_or_implicit1')
+    //   2:  'class'  _identifier  ';'  (class_property  'const'  data_type  •  const_identifier  ';')                            (precedence: 'class_property')
+    //   3:  'class'  _identifier  ';'  (class_property  'const'  data_type  •  const_identifier  '='  constant_expression  ';')  (precedence: 'class_property')
+    ['class_property', 'data_type_or_implicit1'],
+
+
+    // pure virtual function will always be a function prototype overriden in the extended class
+    //
+    // 'class'  _identifier  ';'  'pure'  'virtual'  •  'function'  …
+    // 1:  'class'  _identifier  ';'  (class_method  'pure'  'virtual'  •  _method_prototype  ';')
+    // 2:  'class'  _identifier  ';'  (method_qualifier  'pure'  'virtual')  •  'function'  …
+    ['class_method', 'method_qualifier'],
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5438,6 +5479,11 @@ module.exports = grammar({
     ['module_instantiation'],
     ['tf_call'],
     ['list_of_arguments'],
+    ['lifetime'],
+    ['class_item_qualifier'],
+    ['class_constructor_declaration'],
+    ['implicit_class_handle'],
+    ['class_property'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5640,6 +5686,14 @@ module.exports = grammar({
     //   3:  _identifier  '#'  '('  package_scope  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
     // ['data_type', 'hierarchical_identifier', 'tf_call'],
     [$.data_type, $.tf_call, $.hierarchical_identifier],
+
+
+    // It's not possible to know after 'local static' (e.g) if it's a property or a method:
+    //
+    //   'class'  _identifier  ';'  class_item_qualifier  •  'static'  …
+    //   1:  'class'  _identifier  ';'  (_property_qualifier  class_item_qualifier)  •  'static'  …
+    //   2:  'class'  _identifier  ';'  (method_qualifier  class_item_qualifier)  •  'static'  …
+    [$._property_qualifier, $.method_qualifier],
 ],
 
 });

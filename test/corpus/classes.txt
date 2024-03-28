@@ -1,0 +1,259 @@
+============================================
+base/classes - simple no args
+============================================
+
+class foo;
+endclass
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (class_declaration
+          (class_identifier
+            (simple_identifier)))))
+
+============================================
+base/classes - with parameters
+============================================
+
+class foo #(int N=1, int P=2);
+endclass
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (class_declaration
+          (class_identifier
+            (simple_identifier))
+          (parameter_port_list
+            (parameter_port_declaration
+              (data_type
+                (integer_atom_type))
+              (list_of_param_assignments
+                (param_assignment
+                  (parameter_identifier
+                    (simple_identifier))
+                  (constant_param_expression
+                    (constant_mintypmax_expression
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number)))))))))))
+            (parameter_port_declaration
+              (data_type
+                (integer_atom_type))
+              (list_of_param_assignments
+                (param_assignment
+                  (parameter_identifier
+                    (simple_identifier))
+                  (constant_param_expression
+                    (constant_mintypmax_expression
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number)))))))))))))))
+
+============================================
+base/classes - extends
+============================================
+
+class foo extends base_class #(base_type);
+endclass
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (class_declaration
+          (class_identifier
+            (simple_identifier))
+          (class_type
+            (class_identifier
+              (simple_identifier))
+            (parameter_value_assignment
+              (list_of_parameter_value_assignments
+                (ordered_parameter_assignment
+                  (_ordered_parameter_assignment
+                    (mintypmax_expression
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier)))))))))))))
+
+============================================
+base/classes - constructor
+============================================
+
+class foo;
+    function new ();
+    endfunction : new
+endclass
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (class_declaration
+          (class_identifier
+            (simple_identifier))
+          (class_item
+            (class_method
+              (class_constructor_declaration))))))
+
+============================================
+base/classes - properties
+============================================
+
+class foo;
+    rand int a = 0;
+    randc int b = 1;
+endclass
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (class_declaration
+          (class_identifier
+            (simple_identifier))
+          (class_item
+            (class_property
+              (random_qualifier)
+              (data_declaration
+                (data_type_or_implicit1
+                  (data_type
+                    (integer_atom_type)))
+                (list_of_variable_decl_assignments
+                  (variable_decl_assignment
+                    (simple_identifier)
+                    (expression
+                      (primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number)))))))))))
+          (class_item
+            (class_property
+              (random_qualifier)
+              (data_declaration
+                (data_type_or_implicit1
+                  (data_type
+                    (integer_atom_type)))
+                (list_of_variable_decl_assignments
+                  (variable_decl_assignment
+                    (simple_identifier)
+                    (expression
+                      (primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number))))))))))))))
+
+
+============================================
+base/classes - methods
+============================================
+
+class foo;
+
+    function void foo;
+    endfunction
+
+    task foo;
+    endtask
+
+endclass
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (class_declaration
+          (class_identifier
+            (simple_identifier))
+          (class_item
+            (class_method
+              (function_declaration
+                (function_body_declaration
+                  (function_data_type_or_implicit1
+                    (data_type_or_void))
+                  (function_identifier
+                    (function_identifier
+                      (simple_identifier)))))))
+          (class_item
+            (class_method
+              (task_declaration
+                (task_body_declaration
+                  (task_identifier
+                    (task_identifier
+                      (simple_identifier))))))))))
+
+============================================
+base/classes - prototypes
+============================================
+
+class foo;
+
+    extern function void foo;
+    extern task  foo2;
+
+endclass
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (class_declaration
+          (class_identifier
+            (simple_identifier))
+          (class_item
+            (class_method
+              (function_prototype
+                (data_type_or_void)
+                (function_identifier
+                  (function_identifier
+                    (simple_identifier))))))
+          (class_item
+            (class_method
+              (task_prototype
+                (task_identifier
+                  (task_identifier
+                    (simple_identifier)))))))))
+
+============================================
+base/classes - virtual
+============================================
+
+virtual class foo;
+
+    virtual function void foo;
+    endfunction
+
+endclass
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (class_declaration
+          (class_identifier
+            (simple_identifier))
+          (class_item
+            (class_method
+              (method_qualifier)
+              (function_declaration
+                (function_body_declaration
+                  (function_data_type_or_implicit1
+                    (data_type_or_void))
+                  (function_identifier
+                    (function_identifier
+                      (simple_identifier))))))))))
+
+
+
