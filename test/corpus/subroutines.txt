@@ -1,0 +1,442 @@
+============================================
+base/subroutines - simple
+============================================
+
+function void foo();
+    init;
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (subroutine_call_statement
+                      (subroutine_call
+                        (tf_call
+                          (hierarchical_identifier
+                            (simple_identifier)))))))))))))
+
+============================================
+base/subroutines - parenthesis
+============================================
+
+function void foo();
+    init();
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (subroutine_call_statement
+                      (subroutine_call
+                        (tf_call
+                          (hierarchical_identifier
+                            (simple_identifier)))))))))))))
+
+============================================
+base/subroutines - positional arguments
+============================================
+
+function void foo();
+    init(arg1, arg2);
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (subroutine_call_statement
+                      (subroutine_call
+                        (tf_call
+                          (hierarchical_identifier
+                            (simple_identifier))
+                          (list_of_arguments
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))))))
+
+============================================
+base/subroutines - named arguments
+============================================
+
+function void foo();
+    init(.arg1(arg1), .arg2(arg2));
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (subroutine_call_statement
+                      (subroutine_call
+                        (tf_call
+                          (hierarchical_identifier
+                            (simple_identifier))
+                          (list_of_arguments
+                            (simple_identifier)
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))
+                            (simple_identifier)
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))))))
+
+============================================
+base/subroutines - inside method
+============================================
+
+class asdf;
+
+    static function void turn_on_tracing();
+        init;
+        init();
+
+        if (!ready)
+           init();
+
+        tracing = 1;
+    endfunction
+
+endclass
+
+----
+
+(source_file
+  (package_or_generate_item_declaration
+    (class_declaration
+      (class_identifier
+        (simple_identifier))
+      (class_item
+        (class_method
+          (method_qualifier
+            (class_item_qualifier))
+          (function_declaration
+            (function_body_declaration
+              (function_data_type_or_implicit1
+                (data_type_or_void))
+              (function_identifier
+                (function_identifier
+                  (simple_identifier)))
+              (function_statement_or_null
+                (function_statement
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (subroutine_call
+                          (tf_call
+                            (simple_identifier))))))))
+              (function_statement_or_null
+                (function_statement
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (subroutine_call
+                          (tf_call
+                            (simple_identifier)
+                            (list_of_arguments_parent))))))))
+              (function_statement_or_null
+                (function_statement
+                  (statement
+                    (statement_item
+                      (conditional_statement
+                        (cond_predicate
+                          (expression
+                            (unary_operator)
+                            (primary
+                              (simple_identifier))))
+                        (statement_or_null
+                          (statement
+                            (statement_item
+                              (subroutine_call_statement
+                                (subroutine_call
+                                  (tf_call
+                                    (simple_identifier)
+                                    (list_of_arguments_parent))))))))))))
+              (function_statement_or_null
+                (function_statement
+                  (statement
+                    (statement_item
+                      (blocking_assignment
+                        (operator_assignment
+                          (variable_lvalue
+                            (simple_identifier))
+                          (assignment_operator)
+                          (expression
+                            (primary
+                              (primary_literal
+                                (integral_number
+                                  (decimal_number
+                                    (unsigned_number)))))))))))))))))))
+
+
+============================================
+base/subroutines - static method
+============================================
+
+function void foo;
+    class_type::method();
+endfunction
+
+----
+
+(source_file
+  (package_or_generate_item_declaration
+    (function_declaration
+      (function_body_declaration
+        (function_data_type_or_implicit1
+          (data_type_or_void))
+        (function_identifier
+          (function_identifier
+            (simple_identifier)))
+        (function_statement_or_null
+          (function_statement
+            (statement
+              (statement_item
+                (subroutine_call_statement
+                  (class_scope
+                    (class_type
+                      (class_identifier
+                        (simple_identifier))))
+                  (tf_call
+                    (simple_identifier)
+                    (list_of_arguments_parent)))))))))))
+
+
+============================================
+base/subroutines - call super method
+============================================
+
+function void foo();
+    super.new();
+endfunction
+
+----
+
+(source_file
+  (package_or_generate_item_declaration
+    (function_declaration
+      (function_body_declaration
+        (function_data_type_or_implicit1
+          (data_type_or_void))
+        (function_identifier
+          (function_identifier
+            (simple_identifier)))
+        (function_statement_or_null
+          (function_statement
+            (statement
+              (statement_item
+                (subroutine_call_statement
+                  (method_call
+                    (implicit_class_handle)
+                    (method_call_body
+                      (method_identifier
+                        (method_identifier
+                          (simple_identifier)))
+                      (list_of_arguments_parent))))))))))))
+
+
+============================================
+base/subroutines - call this method
+============================================
+
+function void foo();
+    this.fun();
+endfunction
+
+----
+
+(source_file
+  (package_or_generate_item_declaration
+    (function_declaration
+      (function_body_declaration
+        (function_data_type_or_implicit1
+          (data_type_or_void))
+        (function_identifier
+          (function_identifier
+            (simple_identifier)))
+        (function_statement_or_null
+          (function_statement
+            (statement
+              (statement_item
+                (subroutine_call_statement
+                  (method_call
+                    (implicit_class_handle)
+                    (method_call_body
+                      (method_identifier
+                        (method_identifier
+                          (simple_identifier)))
+                      (list_of_arguments_parent))))))))))))
+
+
+============================================
+base/subroutines - call method
+============================================
+
+function void foo();
+    obj.method();
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (subroutine_call_statement
+                      (subroutine_call
+                        (tf_call
+                          (hierarchical_identifier
+                            (simple_identifier)
+                            (simple_identifier)))))))))))))
+
+============================================
+base/subroutines - call method in conditional expr
+============================================
+
+function void foo();
+    if (callbacks.size()) begin
+        return;
+    end
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (conditional_statement
+                      (cond_predicate
+                        (expression
+                          (primary
+                            (function_subroutine_call
+                              (subroutine_call
+                                (tf_call
+                                  (hierarchical_identifier
+                                    (simple_identifier)
+                                    (simple_identifier))))))))
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (seq_block
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (jump_statement)))))))))))))))))
+
+============================================
+base/subroutines - randomize conditional expr
+============================================
+
+function void foo();
+    if(!this.randomize()) begin
+        null;
+    end
+endfunction
+
+----
+
+(source_file
+  (package_or_generate_item_declaration
+    (function_declaration
+      (function_body_declaration
+        (function_data_type_or_implicit1
+          (data_type_or_void))
+        (function_identifier
+          (function_identifier
+            (simple_identifier)))
+        (function_statement_or_null
+          (function_statement
+            (statement
+              (statement_item
+                (conditional_statement
+                  (cond_predicate
+                    (expression
+                      (unary_operator)
+                      (primary
+                        (method_call
+                          (implicit_class_handle)
+                          (method_call_body
+                            (randomize_call))))))
+                  (statement_or_null
+                    (statement
+                      (statement_item
+                        (seq_block
+                          (statement_or_null
+                            (statement
+                              (statement_item
+                                (subroutine_call_statement
+                                  (subroutine_call
+                                    (tf_call
+                                      (simple_identifier))))))))))))))))))))

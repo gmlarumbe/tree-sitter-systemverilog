@@ -3205,7 +3205,6 @@ const rules = {
     seq($.blocking_assignment, ';'),
     seq($.nonblocking_assignment, ';'),
     // seq($.procedural_continuous_assignment, ';'),
-    // seq($.system_tf_call, ';'),// DANGER: Should be only in subroutine call according to 1800-2023
     $.case_statement,
     $.conditional_statement,
     // seq($.inc_or_dec_expression, ';'),
@@ -3213,7 +3212,7 @@ const rules = {
     // $.disable_statement,
     // $.event_trigger,
     // $.loop_statement,
-    // $.jump_statement,
+    $.jump_statement,
     // $.par_block,
     $.seq_block,
     $.procedural_timing_control_statement,
@@ -3297,11 +3296,14 @@ const rules = {
     $.cycle_delay
   ),
 
-  // jump_statement: $ => choice(
-  //   seq('return', optional($.expression), ';'),
-  //   seq('break', ';'),
-  //   seq('continue', ';')
-  // ),
+  jump_statement: $ => seq(
+    choice(
+      seq('return', optional($.expression)),
+      'break',
+      'continue',
+    ),
+    ';'
+  ),
 
   // wait_statement: $ => choice(
   //   seq('wait', '(', $.expression, ')', $.statement_or_null),
@@ -4225,11 +4227,11 @@ const rules = {
   //   repeat($.attribute_instance),
   //   optional($.list_of_arguments_parent)
   // )),
-  tf_call: $ => seq(
+  tf_call: $ => prec('tf_call', seq(
     $.ps_or_hierarchical_tf_identifier,
     repeat($.attribute_instance),
-    optional($.list_of_arguments)
-  ),
+    optional(seq('(', optional($.list_of_arguments), ')'))
+  )),
 
   // system_tf_call: $ => prec.left(seq(
   //   $.system_tf_identifier,
@@ -4251,7 +4253,7 @@ const rules = {
   system_tf_call: $ => seq(
     $.system_tf_identifier,
     choice(
-      optional(seq('(', $.list_of_arguments, ')')),
+      optional(seq('(', optional($.list_of_arguments), ')')),
       seq('(',
           choice(
             seq($.data_type, optional(seq(',', $.expression))),
@@ -4261,7 +4263,7 @@ const rules = {
     )),
 
   subroutine_call: $ => choice(
-    // $.tf_call,
+    $.tf_call,
     $.system_tf_call,
     // $.method_call,
     // seq(optseq('std', '::'), $.randomize_call)
@@ -4277,7 +4279,8 @@ const rules = {
   //   sep1(',', seq('.', $._identifier, '(', optional($.expression), ')'))
   // ),
 
-  list_of_arguments: $ => choice(  // Reordered to avoid matching empty string
+  // list_of_arguments: $ => prec('list_of_arguments', choice(  // Reordered to avoid matching empty string
+  list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
     // First case: mixing positional and named arguments
     seq(
       $.expression,
@@ -4296,7 +4299,7 @@ const rules = {
     ),
     // Second case: using only named arguments
     sepBy1(',', seq('.', $._identifier, '(', optional($.expression), ')'))
-  ),
+  )),
 
   // list_of_arguments_parent: $ => seq(
   //   '(',
@@ -5090,7 +5093,7 @@ module.exports = grammar({
   //   $._hierarchical_task_identifier,
 
   //   $.ps_or_hierarchical_net_identifier,
-  //   $.ps_or_hierarchical_tf_identifier,
+    $.ps_or_hierarchical_tf_identifier,
   //   $.ps_or_hierarchical_sequence_identifier,
   //   $.ps_or_hierarchical_property_identifier,
 
@@ -5388,6 +5391,44 @@ module.exports = grammar({
     ['packed_dimension', '_constant_part_select_range'],
 
 
+    // If there is only one identifier, without package scope, consider it a hierarchical identifier with one level of nesting
+    //
+    //   module_nonansi_header  'initial'  _identifier  •  '('  …
+    //   1:  module_nonansi_header  'initial'  (hierarchical_identifier  _identifier)  •  '('  …  (precedence: 'hierarchical_identifier')
+    //   2:  module_nonansi_header  'initial'  (tf_call  _identifier  •  list_of_arguments)       (precedence: 'tf_call')
+    ['hierarchical_identifier', 'tf_call'],
+
+
+    // If there are no parenthesis prioritize the hierarchical identifier
+    //
+    //   'var'  _identifier  '='  hierarchical_identifier  •  ';'  …
+    //   1:  'var'  _identifier  '='  (primary  hierarchical_identifier)  •  ';'  …  (precedence: 'primary')
+    //   2:  'var'  _identifier  '='  (tf_call  hierarchical_identifier)  •  ';'  …  (precedence: 'tf_call')
+    ['primary', 'tf_call'],
+    //   'var'  _identifier  '='  hierarchical_identifier  •  '++'  …
+    //   1:  'var'  _identifier  '='  (tf_call  hierarchical_identifier  •  list_of_arguments)  (precedence: 'tf_call')
+    //   2:  'var'  _identifier  '='  (variable_lvalue  hierarchical_identifier)  •  '++'  …    (precedence: 'variable_lvalue')
+    ['variable_lvalue', 'tf_call'],
+
+
+    // Do not allow calling functions inside brackets (maybe only system functions like $sizeof)
+    // INFO: This one generalizes one that appeared above!
+    //
+    //   module_nonansi_header  'initial'  hierarchical_identifier  '['  _identifier  •  '/'  …
+    //   1:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (constant_primary  _identifier)  •  '/'  …         (precedence: 'ps_parameter_identifier')
+    //   2:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (hierarchical_identifier  _identifier)  •  '/'  …  (precedence: 'hierarchical_identifier')
+    //   3:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (tf_call  _identifier)  •  '/'  …                  (precedence: 'tf_call')
+    ['ps_parameter_identifier', 'hierarchical_identifier', 'tf_call'],
+
+    //   module_nonansi_header  'initial'  _identifier  '.'  •  simple_identifier  …
+    //   1:  module_nonansi_header  'initial'  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …                            (precedence: 'hierarchical_identifier')
+    //   2:  module_nonansi_header  'initial'  _identifier  (list_of_arguments  '.'  •  _identifier  '('  ')'  list_of_arguments_repeat3)              (precedence: 'list_of_arguments')
+    //   3:  module_nonansi_header  'initial'  _identifier  (list_of_arguments  '.'  •  _identifier  '('  ')')                                         (precedence: 'list_of_arguments')
+    //   4:  module_nonansi_header  'initial'  _identifier  (list_of_arguments  '.'  •  _identifier  '('  expression  ')'  list_of_arguments_repeat3)  (precedence: 'list_of_arguments')
+    //   5:  module_nonansi_header  'initial'  _identifier  (list_of_arguments  '.'  •  _identifier  '('  expression  ')')                             (precedence: 'list_of_arguments')
+    // ['hierarchical_identifier', 'list_of_arguments'],
+
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5395,6 +5436,8 @@ module.exports = grammar({
     ['variable_port_header'],
     ['net_declaration'],
     ['module_instantiation'],
+    ['tf_call'],
+    ['list_of_arguments'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5589,17 +5632,14 @@ module.exports = grammar({
     [$.system_tf_call, $.list_of_arguments],
 
 
-    // TODO: Conflicts for tf_call
-    // [$.variable_lvalue, $.ps_or_hierarchical_tf_identifier],
-    // [$.hierarchical_identifier, $.ps_or_hierarchical_tf_identifier],
-    // [$.primary, $.ps_or_hierarchical_tf_identifier],
-    // [$.primary, $.variable_lvalue, $.ps_or_hierarchical_tf_identifier],
-    // [$.data_type, $.hierarchical_identifier, $.ps_or_hierarchical_tf_identifier],
-    // [$.list_of_arguments],
-    // [$.cond_pattern, $.list_of_arguments],
-    // [$.data_type, $.ps_or_hierarchical_tf_identifier],
-    // [$.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_tf_identifier],
-    // [$.port_reference, $.hierarchical_identifier, $.ps_or_hierarchical_tf_identifier],
+    // This one is required and adds up to another one existing before without the tf_call
+    //
+    //   _identifier  '#'  '('  package_scope  _identifier  •  ')'  …
+    //   1:  _identifier  '#'  '('  (data_type  package_scope  _identifier)  •  ')'  …                (precedence: 'data_type')
+    //   2:  _identifier  '#'  '('  (tf_call  package_scope  _identifier)  •  ')'  …                  (precedence: 'tf_call')
+    //   3:  _identifier  '#'  '('  package_scope  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
+    // ['data_type', 'hierarchical_identifier', 'tf_call'],
+    [$.data_type, $.tf_call, $.hierarchical_identifier],
 ],
 
 });
