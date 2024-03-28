@@ -4163,13 +4163,17 @@ const rules = {
   // ),
   concatenation: $ => seq('{', sepBy1(',', $.expression), '}'),
 
-  // constant_concatenation: $ => seq(
-  //   '{', psep1(PREC.CONCAT, ',', $.constant_expression), '}'
-  // ),
+  // TODO: What about the PREC.CONCAT?
+  constant_concatenation: $ => seq(
+    '{', sepBy1(',', $.constant_expression), '}'
+  ),
 
   // constant_multiple_concatenation: $ => prec.left(PREC.CONCAT, seq(
   //   '{', $.constant_expression, $.constant_concatenation, '}'
   // )),
+  constant_multiple_concatenation: $ => seq(
+    '{', $.constant_expression, $.constant_concatenation, '}'
+  ),
 
   // module_path_concatenation: $ => seq(
   //   '{', psep1(PREC.CONCAT, ',', $.module_path_expression), '}'
@@ -4182,6 +4186,9 @@ const rules = {
   // multiple_concatenation: $ => prec.left(PREC.CONCAT, seq(
   //   '{', $.expression, $.concatenation, '}'
   // )),
+  multiple_concatenation: $ => seq(
+    '{', $.expression, $.concatenation, '}'
+  ),
 
   // streaming_concatenation: $ => prec.left(PREC.CONCAT, seq(
   //   '{', $.stream_operator, optional($.slice_size), $.stream_concatenation, '}'
@@ -4417,10 +4424,10 @@ const rules = {
     '$'
   ),
 
-  // _constant_range_expression: $ => choice(
-  //   $.constant_expression,
-  //   $._constant_part_select_range
-  // ),
+  _constant_range_expression: $ => choice(
+    $.constant_expression,
+    $._constant_part_select_range
+  ),
 
   _constant_part_select_range: $ => prec('_constant_part_select_range', choice(
     $.constant_range,
@@ -4538,8 +4545,8 @@ const rules = {
     // // $.genvar_identifier,
     // // seq($.formal_port_identifier, optional($.constant_select1)),
     // // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier),
-    // seq($.constant_concatenation, optseq('[', $._constant_range_expression, ']')),
-    // seq($.constant_multiple_concatenation, optseq('[', $._constant_range_expression, ']')),
+    seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
+    seq($.constant_multiple_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
     // // $.constant_function_call,
     // // $._constant_let_expression,
     seq('(', $.constant_mintypmax_expression, ')'),
@@ -4567,7 +4574,7 @@ const rules = {
     ),
     // $.empty_unpacked_array_concatenation,
     seq($.concatenation, optional(seq('[', $.range_expression, ']'))),
-    // seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
+    seq($.multiple_concatenation, optional(seq('[', $.range_expression, ']'))),
     $.function_subroutine_call,
     // // $.let_expression, // TODO: Remove temporarily to narrow conflicts
     seq('(', $.mintypmax_expression, ')'),
