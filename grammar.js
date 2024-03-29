@@ -1079,23 +1079,24 @@ const rules = {
   //   $.constraint_block
   // ),
 
-  // constraint_block: $ => seq('{', repeat($.constraint_block_item), '}'),
+  constraint_block: $ => seq('{', repeat($.constraint_block_item), '}'),
 
-  // constraint_block_item: $ => choice(
-  //   seq('solve', $.solve_before_list, 'before', $.solve_before_list, ';'),
-  //   $.constraint_expression
-  // ),
+  constraint_block_item: $ => choice(
+    seq('solve', $.solve_before_list, 'before', $.solve_before_list, ';'),
+    $.constraint_expression
+  ),
 
-  // solve_before_list: $ => sep1(',', $.constraint_primary),
+  solve_before_list: $ => sepBy1(',', $.constraint_primary),
 
-  // constraint_primary: $ => seq(
-  //   optional(choice(
-  //     seq($.implicit_class_handle, '.'),
-  //     $.class_scope
-  //   )),
-  //   $.hierarchical_identifier,
-  //   optional($.select1)
-  // ),
+  constraint_primary: $ => seq(
+    optional(choice(
+      seq($.implicit_class_handle, '.'),
+      $.class_scope
+    )),
+    $.hierarchical_identifier,
+    optional($.select1),
+    optional(seq('(', ')'))
+  ),
 
   // constraint_expression: $ => choice(
   //   seq(optional('soft'), $.expression_or_dist, ';'),
@@ -1114,6 +1115,24 @@ const rules = {
   //   ),
   //   seq('disable', 'soft', $.constraint_primary, ';')
   // ),
+  constraint_expression: $ => choice(
+    // TODO: Implement
+    // seq(optional('soft'), $.expression_or_dist, ';'),
+    // seq($.uniqueness_constraint, ';'),
+    // prec.right(PREC.IMPLICATION, seq($.expression, '–>', $.constraint_set)),
+    // prec.left(seq(
+    //   'if', '(', $.expression, ')', $.constraint_set,
+    //   optseq('else', $.constraint_set)
+    // )),
+    // seq(
+    //   'foreach', '(',
+    //   $.ps_or_hierarchical_array_identifier,
+    //   '[', optional($.loop_variables1), ']',
+    //   ')',
+    //   $.constraint_set
+    // ),
+    // seq('disable', 'soft', $.constraint_primary, ';')
+  ),
 
   // uniqueness_constraint: $ => seq(
   //   'unique', '{', $.open_range_list, '}'
@@ -1148,7 +1167,7 @@ const rules = {
   //   $.constraint_block
   // ),
 
-  // identifier_list: $ => sep1(',', $._identifier),
+  identifier_list: $ => sepBy1(',', $._identifier),
 
 
   // /* A.1.11 Package items */
@@ -3233,7 +3252,7 @@ const rules = {
     seq(repeat($.attribute_instance), ';')
   ),
 
-  // variable_identifier_list: $ => sep1(',', $._variable_identifier),
+  variable_identifier_list: $ => sepBy1(',', $._variable_identifier),
 
 
   // // A.6.5 Timing control statements
@@ -4267,7 +4286,7 @@ const rules = {
   subroutine_call: $ => choice(
     $.tf_call,
     $.system_tf_call,
-    // $.method_call,
+    $.method_call,
     // seq(optseq('std', '::'), $.randomize_call)
   ),
 
@@ -4316,28 +4335,28 @@ const rules = {
   //   ')'
   // ),
 
-  // method_call: $ => seq($._method_call_root, '.', $.method_call_body),
+  method_call: $ => seq($._method_call_root, '.', $.method_call_body),
 
-  // method_call_body: $ => choice(
-  //   prec.left(seq(
-  //     $.method_identifier,
-  //     repeat($.attribute_instance),
-  //     optional($.list_of_arguments_parent)
-  //   )),
-  //   $._built_in_method_call
-  // ),
+  method_call_body: $ => choice(
+    seq(
+      $.method_identifier,
+      repeat($.attribute_instance),
+      optional(seq('(', optional($.list_of_arguments), ')'))
+    ),
+    $._built_in_method_call
+  ),
 
-  // _built_in_method_call: $ => choice(
-  //   $.array_manipulation_call,
-  //   $.randomize_call
-  // ),
+  _built_in_method_call: $ => choice(
+    $.array_manipulation_call,
+    $.randomize_call
+  ),
 
-  // array_manipulation_call: $ => prec.left(seq(
-  //   $.array_method_name,
-  //   repeat($.attribute_instance),
-  //   optional($.list_of_arguments_parent),
-  //   optseq('with', '(', $.expression, ')')
-  // )),
+  array_manipulation_call: $ => seq(
+    $.array_method_name,
+    repeat($.attribute_instance),
+    optional(seq('(', optional($.list_of_arguments), ')')),
+    optional(seq('with', '(', $.expression, ')'))
+  ),
 
   // randomize_call: $ => prec.left(seq(
   //   'randomize',
@@ -4361,11 +4380,17 @@ const rules = {
   //   )
   // )),
 
-  // _method_call_root: $ => choice($.primary, $.implicit_class_handle),
+  randomize_call: $ => seq(
+    'randomize', repeat($.attribute_instance),
+    optional(seq('(', optional(choice($.variable_identifier_list, 'null')), ')')),
+    optional(seq('with', optional(seq('(', optional($.identifier_list), ')')), $.constraint_block))
+  ),
 
-  // array_method_name: $ => choice(
-  //   $.method_identifier, 'unique', 'and', 'or', 'xor'
-  // ),
+  _method_call_root: $ => prec('_method_call_root', choice($.primary, $.implicit_class_handle)),
+
+  array_method_name: $ => choice(
+    $.method_identifier, 'unique', 'and', 'or', 'xor'
+  ),
 
   // // A.8.3 Expressions
 
@@ -4631,7 +4656,7 @@ const rules = {
   ),
 
   implicit_class_handle: $ => prec('implicit_class_handle', choice(
-    prec.right(seq('this', optional(seq('.', 'super')))), // TODO: Is this fine? Or should be a conflict because of 1 token lookahead
+    seq('this', optional(seq('.', 'super'))),
     'super'
   )),
 
@@ -4949,7 +4974,7 @@ const rules = {
   instance_identifier: $ => alias($._identifier, $.instance_identifier),
   // library_identifier: $ => alias($._identifier, $.library_identifier),
   member_identifier: $ => alias($._identifier, $.member_identifier),
-  // method_identifier: $ => alias($._identifier, $.method_identifier),
+  method_identifier: $ => alias($._identifier, $.method_identifier),
   modport_identifier: $ => alias($._identifier, $.modport_identifier),
   _module_identifier: $ => $._identifier,
   _net_identifier: $ => $._identifier,
@@ -5471,6 +5496,7 @@ module.exports = grammar({
     ['class_method', 'method_qualifier'],
 
 
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header1'],
@@ -5484,6 +5510,7 @@ module.exports = grammar({
     ['class_constructor_declaration'],
     ['implicit_class_handle'],
     ['class_property'],
+    ['_method_call_root'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5694,6 +5721,50 @@ module.exports = grammar({
     //   1:  'class'  _identifier  ';'  (_property_qualifier  class_item_qualifier)  •  'static'  …
     //   2:  'class'  _identifier  ';'  (method_qualifier  class_item_qualifier)  •  'static'  …
     [$._property_qualifier, $.method_qualifier],
+
+
+
+
+
+    // TODO: Conflicts after implementing method_call
+
+    // Implicit can be both options depending on the context. Tried with right associativity but didn't work well.
+    //
+    //   module_nonansi_header  'initial'  'this'  •  '.'  …
+    //   1:  module_nonansi_header  'initial'  (implicit_class_handle  'this'  •  '.'  'super')  (precedence: 'implicit_class_handle')
+    //   2:  module_nonansi_header  'initial'  (implicit_class_handle  'this')  •  '.'  …        (precedence: 'implicit_class_handle')
+    [$.implicit_class_handle],
+
+
+    // Assumes that since this comes from statement_item, it could be in many places and therefore
+    // it's a better idea to set a conflict (it could be inside a forever block inside a class for a method_call_root)
+    //
+    //   module_nonansi_header  'initial'  implicit_class_handle  •  '.'  …
+    //   1:  module_nonansi_header  'initial'  (_method_call_root  implicit_class_handle)  •  '.'  …                                         (precedence: '_method_call_root')
+    //   2:  module_nonansi_header  'initial'  (class_qualifier  implicit_class_handle  •  '.')                                              (precedence: 'class_qualifier')
+    //   3:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  _hierarchical_variable_identifier  select1)  (precedence: 'variable_lvalue')
+    //   4:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  _hierarchical_variable_identifier)           (precedence: 'variable_lvalue')
+    [$._method_call_root, $.class_qualifier, $.variable_lvalue],
+
+
+    // Same as before, this case could be all the options inside the initial, need more lookahead
+    //
+    // module_nonansi_header  'initial'  hierarchical_identifier  •  '.'  …
+    // 1:  module_nonansi_header  'initial'  (primary  hierarchical_identifier  •  select1)          (precedence: 'primary')
+    // 2:  module_nonansi_header  'initial'  (primary  hierarchical_identifier)  •  '.'  …           (precedence: 'primary')
+    // 3:  module_nonansi_header  'initial'  (tf_call  hierarchical_identifier)  •  '.'  …           (precedence: 'tf_call')
+    // 4:  module_nonansi_header  'initial'  (variable_lvalue  hierarchical_identifier  •  select1)  (precedence: 'variable_lvalue')
+    [$.tf_call, $.primary, $.variable_lvalue],
+
+
+    [$.tf_call, $.hierarchical_identifier],
+    [$.primary],
+    [$.primary, $.variable_lvalue],
+    [$._method_call_root, $.class_qualifier],
+    [$.tf_call, $.primary],
+    [$.method_call_body, $.array_method_name],
+    [$.select1],
+
 ],
 
 });
