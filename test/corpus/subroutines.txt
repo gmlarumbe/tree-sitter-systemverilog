@@ -540,27 +540,84 @@ endfunction
 
 ----
 
-(source_file
-  (package_or_generate_item_declaration
-    (function_declaration
-      (function_body_declaration
-        (function_data_type_or_implicit1
-          (data_type_or_void))
-        (function_identifier
-          (function_identifier
-            (simple_identifier)))
-        (function_statement_or_null
-          (function_statement
-            (statement
-              (statement_item
-                (subroutine_call_statement
-                  (class_scope
-                    (class_type
-                      (class_identifier
-                        (simple_identifier))))
-                  (tf_call
-                    (simple_identifier)
-                    (list_of_arguments_parent)))))))))))
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (subroutine_call_statement
+                      (subroutine_call
+                        (tf_call
+                          (package_scope
+                            (package_identifier
+                              (simple_identifier)))
+                          (tf_identifier
+                            (simple_identifier)))))))))))))
+
+============================================
+base/subroutines - static method nested
+============================================
+
+function void foo;
+    package_scope::class_type1::class_type2::member[a].a().method();
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (subroutine_call_statement
+                      (subroutine_call
+                        (method_call
+                          (primary
+                            (function_subroutine_call
+                              (subroutine_call
+                                (method_call
+                                  (primary
+                                    (class_qualifier
+                                      (class_scope
+                                        (class_type
+                                          (class_identifier
+                                            (simple_identifier))
+                                          (class_identifier
+                                            (simple_identifier))
+                                          (class_identifier
+                                            (simple_identifier)))))
+                                    (hierarchical_identifier
+                                      (simple_identifier))
+                                    (select1
+                                      (bit_select1
+                                        (expression
+                                          (primary
+                                            (hierarchical_identifier
+                                              (simple_identifier)))))))
+                                  (method_call_body
+                                    (method_identifier
+                                      (method_identifier
+                                        (simple_identifier))))))))
+                          (method_call_body
+                            (method_identifier
+                              (method_identifier
+                                (simple_identifier)))))))))))))))
 
 
 ============================================
@@ -1312,8 +1369,98 @@ endfunction
 
 ----
 
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (blocking_assignment
+                      (operator_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)))
+                        (assignment_operator)
+                        (expression
+                          (primary
+                            (function_subroutine_call
+                              (subroutine_call
+                                (tf_call
+                                  (package_scope
+                                    (package_identifier
+                                      (simple_identifier)))
+                                  (tf_identifier
+                                    (simple_identifier)))))))))))))))))
 
+============================================
+base/subroutines - static method nested RHS
+============================================
 
+function void foo;
+    a = package_scope::class_type::member[a].a().method();
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (blocking_assignment
+                      (operator_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)))
+                        (assignment_operator)
+                        (expression
+                          (primary
+                            (function_subroutine_call
+                              (subroutine_call
+                                (method_call
+                                  (primary
+                                    (function_subroutine_call
+                                      (subroutine_call
+                                        (method_call
+                                          (primary
+                                            (class_qualifier
+                                              (class_scope
+                                                (class_type
+                                                  (class_identifier
+                                                    (simple_identifier))
+                                                  (class_identifier
+                                                    (simple_identifier)))))
+                                            (hierarchical_identifier
+                                              (simple_identifier))
+                                            (select1
+                                              (bit_select1
+                                                (expression
+                                                  (primary
+                                                    (hierarchical_identifier
+                                                      (simple_identifier)))))))
+                                          (method_call_body
+                                            (method_identifier
+                                              (method_identifier
+                                                (simple_identifier))))))))
+                                  (method_call_body
+                                    (method_identifier
+                                      (method_identifier
+                                        (simple_identifier)))))))))))))))))))
 
 ============================================
 base/subroutines - call method in conditional expr RHS

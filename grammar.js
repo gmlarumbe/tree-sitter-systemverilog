@@ -1479,11 +1479,7 @@ const rules = {
 
   class_scope: $ => seq($.class_type, '::'),
 
-  // prec.right because of:
-  // module_nonansi_header  'var'  _identifier  '='  _identifier  parameter_value_assignment  •  '::'  …
-  //   1:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment  •  class_type_repeat1)
-  //   2:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment)  •  '::'  …
-  class_type: $ => prec.right(seq(
+  class_type: $ => prec('class_type', seq(
     $.ps_class_identifier,
     optional($.parameter_value_assignment),
     repeat(prec('class_type', seq('::', $.class_identifier, optional($.parameter_value_assignment))))
@@ -4287,7 +4283,7 @@ const rules = {
     $.tf_call,
     $.system_tf_call,
     $.method_call,
-    // seq(optseq('std', '::'), $.randomize_call)
+    seq(optional(seq('std', '::')), $.randomize_call)
   ),
 
   function_subroutine_call: $ => $.subroutine_call,
@@ -4997,9 +4993,10 @@ const rules = {
   // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '::'  …
   //   1:  module_nonansi_header  'var'  _identifier  '='  (package_scope  _identifier  •  '::')
   //   2:  module_nonansi_header  'var'  _identifier  '='  (ps_class_identifier  _identifier)  •  '::'  …
-  ps_class_identifier: $ => prec.left(seq(
+  // ps_class_identifier: $ => prec.left(seq(
+  ps_class_identifier: $ => seq(
     optional($.package_scope), $.class_identifier
-  )),
+  ),
 
   // ps_covergroup_identifier: $ => seq(
   //   optional($.package_scope), $.covergroup_identifier
@@ -5223,15 +5220,6 @@ module.exports = grammar({
     //   1:  module_keyword  _module_identifier  '('  (ansi_port_declaration  '.'  _identifier  '('  ')')  •  ')'  …  (precedence: 'ansi_port_declaration')
     //   2:  module_keyword  _module_identifier  '('  (port1  '.'  _identifier  '('  ')')  •  ')'  …
     ['port1', 'ansi_port_declaration'],
-
-
-    // TODO: Not sure about this one, but seems that package scope always comes before class scope
-    // INFO: Could have also been solved with prec.left on $.package_scope rule
-    // module_nonansi_header  'var'  _identifier  '='  _identifier  '::'  •  simple_identifier  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  (package_scope  _identifier  '::')  •  simple_identifier  …
-    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (class_type_repeat1  '::'  •  _identifier  parameter_value_assignment)
-    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (class_type_repeat1  '::'  •  _identifier)
-    ['package_scope', 'class_type'],
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
@@ -5511,6 +5499,8 @@ module.exports = grammar({
     ['implicit_class_handle'],
     ['class_property'],
     ['_method_call_root'],
+    ['class_type'],
+    ['package_scope'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5723,11 +5713,6 @@ module.exports = grammar({
     [$._property_qualifier, $.method_qualifier],
 
 
-
-
-
-    // TODO: Conflicts after implementing method_call
-
     // Implicit can be both options depending on the context. Tried with right associativity but didn't work well.
     //
     //   module_nonansi_header  'initial'  'this'  •  '.'  …
@@ -5757,6 +5742,7 @@ module.exports = grammar({
     [$.tf_call, $.primary, $.variable_lvalue],
 
 
+    // All of these also seemed needed after implementing method calls, external methods and static methods
     [$.tf_call, $.hierarchical_identifier],
     [$.primary],
     [$.primary, $.variable_lvalue],
@@ -5765,6 +5751,18 @@ module.exports = grammar({
     [$.method_call_body, $.array_method_name],
     [$.select1],
 
+
+    // Need to set these to allow correct parsing of external methods and static methods
+    //
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  parameter_value_assignment  •  '::'  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment  •  class_type_repeat1)
+    //   2:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment)  •  '::'  …
+    [$.class_type],
+    // _identifier  •  '::'  …
+    // 1:  (class_type  _identifier  •  class_type_repeat1)
+    // 2:  (class_type  _identifier)  •  '::'  …
+    // 3:  (package_scope  _identifier  •  '::')             (precedence: 'package_scope')
+    [$.class_type, $.package_scope],
 ],
 
 });
