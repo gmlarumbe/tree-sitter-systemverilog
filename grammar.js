@@ -355,6 +355,10 @@ const rules = {
     // seq(repeat($.attribute_instance), $.bind_directive)
     // $.config_declaration,
     // End of TODO
+
+    // DANGER: Out of the LRM, have them here to parse snippets
+    $.statement_or_null,
+    // End of DANGER
   ),
 
   // module_nonansi_header: $ =>
@@ -1179,7 +1183,7 @@ const rules = {
     // $.timeunits_declaration
   ),
 
-  package_or_generate_item_declaration: $ => choice(
+  package_or_generate_item_declaration: $ => prec('package_or_generate_item_declaration', choice(
     prec.dynamic(0, $.net_declaration),
     prec.dynamic(1, $.data_declaration),
     $.task_declaration,
@@ -1196,7 +1200,7 @@ const rules = {
     // $._assertion_item_declaration, // TODO: Remove temporarily to avoid some conflicts
     ';',
     // $._directives
-  ),
+  )),
 
   // anonymous_program: $ => seq(
   //   'program', ';', repeat($.anonymous_program_item), 'endprogram'
@@ -3205,10 +3209,10 @@ const rules = {
 
   // // A.6.4 Statements
 
-  statement_or_null: $ => choice(
+  statement_or_null: $ => prec('statement_or_null', choice(
     $.statement,
     seq(repeat($.attribute_instance), ';')
-  ),
+  )),
 
   statement: $ => choice(
     // $.text_macro_usage,
@@ -5167,6 +5171,12 @@ module.exports = grammar({
   ],
 
   precedences: () => [
+    // Top level precedence
+    // Used when declarations and/or statements are outside of sequential statements,
+    // modules, classes, packages or checkers
+    // Use case: snippets of code on web, include files...
+    ['statement_or_null', 'package_or_generate_item_declaration'],
+
     // module_nonansi_header  'input'  data_type  •  simple_identifier  …
     //   1:  module_nonansi_header  'input'  (_var_data_type  data_type)  •  simple_identifier  …
     //   2:  module_nonansi_header  'input'  (data_type_or_implicit1  data_type)  •  simple_identifier  …  (precedence: 'data_type_or_implicit1')
