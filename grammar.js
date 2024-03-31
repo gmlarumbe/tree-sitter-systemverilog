@@ -3166,14 +3166,14 @@ const rules = {
     $.expression
   ),
 
-  // procedural_continuous_assignment: $ => choice(
-  //   seq('assign', $.variable_assignment),
-  //   seq('deassign', $.variable_lvalue),
-  //   seq('force', $.variable_assignment),
-  //   seq('force', $.net_assignment),
-  //   seq('release', $.variable_lvalue),
-  //   seq('release', $.net_lvalue)
-  // ),
+  procedural_continuous_assignment: $ => choice(
+    seq('assign', $.variable_assignment),
+    seq('deassign', $.variable_lvalue),
+    seq('force', $.variable_assignment),
+    seq('force', $.net_assignment),
+    seq('release', $.variable_lvalue),
+    seq('release', $.net_lvalue)
+  ),
 
   // INFO: drom's one
   // variable_assignment: $ => prec.left(PREC.ASSIGN, seq(
@@ -3225,10 +3225,9 @@ const rules = {
   statement_item: $ => choice(
     seq($.blocking_assignment, ';'),
     seq($.nonblocking_assignment, ';'),
-    // seq($.procedural_continuous_assignment, ';'),
+    seq($.procedural_continuous_assignment, ';'),
     $.case_statement,
     $.conditional_statement,
-    // seq($.inc_or_dec_expression, ';'),
     $.subroutine_call_statement,
     // $.disable_statement,
     // $.event_trigger,
@@ -3237,6 +3236,7 @@ const rules = {
     // $.par_block,
     $.seq_block,
     $.procedural_timing_control_statement,
+    $.seq_block,
     // $.wait_statement,
     // $._procedural_assertion_statement,
     // // seq($.clocking_drive, ';'),
