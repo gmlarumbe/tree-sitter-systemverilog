@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PATTERN=$1
+
 # First create the directory structure to prevent copy errors
 TESTS=( $(find sv-tests -type d) )
 
@@ -19,10 +21,17 @@ DEST_FILE=
 LAST_FILE_LINE=
 
 # Expected failure tests
-EXPECTED_FAIL_FILELIST=(test/corpus/sv-tests/chapter-5/5.7.1--integers-signed-illegal.sv
+EXPECTED_FAIL_FILELIST=(test/corpus/sv-tests/chapter-5/5.6--wrong-identifiers.sv
+                        test/corpus/sv-tests/chapter-5/5.7.1--integers-signed-illegal.sv
                         test/corpus/sv-tests/chapter-5/5.7.1--integers-unsized-illegal.sv
                         test/corpus/sv-tests/chapter-5/5.7.2-real-constants-illegal.sv
                         test/corpus/sv-tests/chapter-5/5.10-structure-arrays-illegal.sv)
+
+# Filter tests, if there was an argument provided
+if [[ -n "$PATTERN" ]]; then
+    FILES_SV=( $( printf '%s\n' "${FILES_SV[@]}" | grep "$PATTERN" ) )
+    echo "Filtering with regexp: $PATTERN"
+fi
 
 # Create tests
 for file in ${FILES_SV[@]}; do
