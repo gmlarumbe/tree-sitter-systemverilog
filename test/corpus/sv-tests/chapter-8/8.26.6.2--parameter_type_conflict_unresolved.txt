@@ -1,0 +1,176 @@
+============================================
+sv-tests/chapter-8/8.26.6.2--parameter_type_conflict_unresolved
+============================================
+
+// Copyright (C) 2019-2021  The SymbiFlow Authors.
+//
+// Use of this source code is governed by a ISC-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/ISC
+//
+// SPDX-License-Identifier: ISC
+
+
+/*
+:name: parameter_type_conflict_unresolved
+:description: superclass type declaration conflicts must be resolved in subclass
+:should_fail_because: superclass type declaration conflicts must be resolved in subclass
+:tags: 8.26.6.2
+:type: simulation elaboration
+*/
+module class_tb ();
+	interface class ic1#(type T = logic);
+		pure virtual function void fn1(T a);
+	endclass
+
+	interface class ic2#(type T = logic);
+		pure virtual function void fn2(T a);
+	endclass
+	
+	interface class ic3#(type TYPE = logic) extends ic1#(TYPE), ic2#(TYPE);
+	endclass
+endmodule
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (net_declaration
+          (simple_identifier)
+          (list_of_net_decl_assignments
+            (net_decl_assignment
+              (simple_identifier))))))
+    (ERROR
+      (class_type
+        (class_identifier
+          (simple_identifier))
+        (parameter_value_assignment
+          (ERROR
+            (ordered_parameter_assignment
+              (_ordered_parameter_assignment
+                (data_type
+                  (simple_identifier))))
+            (simple_identifier))
+          (list_of_parameter_value_assignments
+            (ordered_parameter_assignment
+              (_ordered_parameter_assignment
+                (data_type
+                  (integer_vector_type))))))))
+    (module_or_generate_item
+      (package_or_generate_item_declaration))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (net_declaration
+          (simple_identifier)
+          (list_of_net_decl_assignments
+            (net_decl_assignment
+              (simple_identifier))))))
+    (ERROR
+      (function_data_type_or_implicit1
+        (data_type_or_void))
+      (function_identifier
+        (function_identifier
+          (simple_identifier)))
+      (tf_port_list
+        (tf_port_item1
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (port_identifier
+            (simple_identifier))))
+      (ERROR
+        (data_type_or_implicit1
+          (data_type
+            (simple_identifier)))
+        (simple_identifier)
+        (simple_identifier)
+        (simple_identifier)
+        (simple_identifier)
+        (data_type_or_implicit1
+          (data_type
+            (integer_vector_type))))
+      (function_statement_or_null)
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (subroutine_call_statement
+                (subroutine_call
+                  (tf_call
+                    (hierarchical_identifier
+                      (simple_identifier))
+                    (ERROR
+                      (simple_identifier))
+                    (list_of_arguments
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier)))))
+                    (ERROR
+                      (simple_identifier)))))))))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (blocking_assignment
+                (operator_assignment
+                  (variable_lvalue
+                    (hierarchical_identifier
+                      (simple_identifier)))
+                  (ERROR
+                    (simple_identifier)
+                    (simple_identifier)
+                    (ordered_parameter_assignment
+                      (_ordered_parameter_assignment
+                        (data_type
+                          (simple_identifier))))
+                    (simple_identifier))
+                  (assignment_operator)
+                  (ERROR
+                    (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))
+                    (class_type
+                      (class_identifier
+                        (simple_identifier))
+                      (parameter_value_assignment
+                        (list_of_parameter_value_assignments
+                          (ordered_parameter_assignment
+                            (_ordered_parameter_assignment
+                              (mintypmax_expression
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier)))))))))))
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier))))))
+              (ERROR
+                (parameter_value_assignment
+                  (list_of_parameter_value_assignments
+                    (ordered_parameter_assignment
+                      (_ordered_parameter_assignment
+                        (mintypmax_expression
+                          (expression
+                            (primary
+                              (hierarchical_identifier
+                                (simple_identifier))))))))))))))
+      (simple_identifier))))
+
+(MISSING ";")

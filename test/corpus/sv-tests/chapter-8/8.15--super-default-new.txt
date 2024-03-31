@@ -1,0 +1,213 @@
+============================================
+sv-tests/chapter-8/8.15--super-default-new
+============================================
+
+// Copyright (C) 2019-2021  The SymbiFlow Authors.
+//
+// Use of this source code is governed by a ISC-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/ISC
+//
+// SPDX-License-Identifier: ISC
+
+
+/*
+:name: super-def-new
+:description: Base class has no user-defined constructor, derived class accesses superclass new()
+:tags: 8.15
+:unsynthesizable: 1
+*/
+package test_pkg;
+
+  virtual class uvm_void;
+  endclass : uvm_void
+
+  class uvm_object extends uvm_void;
+    virtual function void print ();
+      $display ("Print");
+    endfunction : print 
+  endclass : uvm_object
+
+  class uvm_report_object extends uvm_object;
+    function new ();
+      super.new ();
+    endfunction : new 
+  endclass : uvm_report_object 
+
+endpackage : test_pkg
+
+module m;
+  import test_pkg::*;
+  uvm_object u0;
+  
+   initial begin : test
+     #100;
+     $display ("Hello World");
+     u0 = new ();
+     u0.print();
+
+   end : test
+
+endmodule : m
+
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (package_or_generate_item_declaration
+    (data_declaration
+      (data_type_or_implicit1
+        (data_type
+          (simple_identifier)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          (simple_identifier)))))
+  (package_or_generate_item_declaration
+    (class_declaration
+      (class_identifier
+        (simple_identifier))
+      (class_identifier
+        (simple_identifier))))
+  (package_or_generate_item_declaration
+    (class_declaration
+      (class_identifier
+        (simple_identifier))
+      (class_type
+        (class_identifier
+          (simple_identifier)))
+      (class_item
+        (class_method
+          (method_qualifier)
+          (function_declaration
+            (function_body_declaration
+              (function_data_type_or_implicit1
+                (data_type_or_void))
+              (function_identifier
+                (function_identifier
+                  (simple_identifier)))
+              (function_statement_or_null
+                (function_statement
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (subroutine_call
+                          (system_tf_call
+                            (system_tf_identifier)
+                            (list_of_arguments
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (string_literal))))))))))))
+              (function_identifier
+                (function_identifier
+                  (simple_identifier)))))))
+      (class_identifier
+        (simple_identifier))))
+  (package_or_generate_item_declaration
+    (class_declaration
+      (class_identifier
+        (simple_identifier))
+      (class_type
+        (class_identifier
+          (simple_identifier)))
+      (class_item
+        (class_method
+          (class_constructor_declaration
+            (list_of_arguments
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))))))
+      (class_identifier
+        (simple_identifier))))
+  (statement_or_null
+    (statement
+      block_name: (simple_identifier)
+      (statement_item
+        (subroutine_call_statement
+          (subroutine_call
+            (tf_call
+              (hierarchical_identifier
+                (simple_identifier))))
+          (ERROR
+            (simple_identifier)
+            (simple_identifier))))))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)))
+      (ERROR)))
+  (package_or_generate_item_declaration
+    (data_declaration
+      (data_type_or_implicit1
+        (data_type
+          (simple_identifier)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          (simple_identifier)))))
+  (statement_or_null
+    (statement
+      block_name: (simple_identifier)
+      (ERROR
+        (simple_identifier))
+      (statement_item
+        (subroutine_call_statement
+          (subroutine_call
+            (tf_call
+              (hierarchical_identifier
+                (simple_identifier))))
+          (ERROR
+            (unsigned_number))))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (subroutine_call_statement
+          (subroutine_call
+            (system_tf_call
+              (system_tf_identifier)
+              (list_of_arguments
+                (expression
+                  (primary
+                    (primary_literal
+                      (string_literal)))))))))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (blocking_assignment
+          (operator_assignment
+            (variable_lvalue
+              (hierarchical_identifier
+                (simple_identifier)))
+            (assignment_operator)
+            (expression
+              (primary
+                (function_subroutine_call
+                  (subroutine_call
+                    (tf_call
+                      (hierarchical_identifier
+                        (simple_identifier))))))))))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (subroutine_call_statement
+          (subroutine_call
+            (tf_call
+              (hierarchical_identifier
+                (simple_identifier)
+                (simple_identifier))))))))
+  (ERROR
+    (simple_identifier)
+    (simple_identifier)
+    (simple_identifier)))
+
+(MISSING simple_identifier)

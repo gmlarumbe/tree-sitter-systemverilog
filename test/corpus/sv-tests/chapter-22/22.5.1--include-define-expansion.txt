@@ -1,0 +1,66 @@
+============================================
+sv-tests/chapter-22/22.5.1--include-define-expansion
+============================================
+
+// Copyright (C) 2019-2021  The SymbiFlow Authors.
+//
+// Use of this source code is governed by a ISC-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/ISC
+//
+// SPDX-License-Identifier: ISC
+
+
+/*
+:name: 22.5.1--include-define-expansion
+:description: Test
+:tags: 22.5.1
+:type: preprocessing
+*/
+`define foo(the_file) `"the_file`"
+`include `foo(dummy_include.sv)
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (ERROR
+    (ERROR)
+    (subroutine_call
+      (tf_call
+        (hierarchical_identifier
+          (simple_identifier))
+        (ERROR
+          (simple_identifier))
+        (list_of_arguments
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))
+    (ERROR)
+    (primary
+      (primary_literal
+        (string_literal)))
+    (ERROR)
+    (subroutine_call
+      (tf_call
+        (hierarchical_identifier
+          (simple_identifier))
+        (ERROR
+          (ERROR)
+          (simple_identifier))
+        (list_of_arguments
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)
+                (simple_identifier)))))))))
+
+(ERROR)

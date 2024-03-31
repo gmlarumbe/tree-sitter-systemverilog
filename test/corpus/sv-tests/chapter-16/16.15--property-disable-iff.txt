@@ -1,0 +1,409 @@
+============================================
+sv-tests/chapter-16/16.15--property-disable-iff
+============================================
+
+// Copyright (C) 2019-2021  The SymbiFlow Authors.
+//
+// Use of this source code is governed by a ISC-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/ISC
+//
+// SPDX-License-Identifier: ISC
+
+
+/*
+:name: property_disable_iff_test
+:description: property with disable iff
+:type: simulation elaboration parsing
+:tags: 16.15
+:unsynthesizable: 1
+*/
+
+module clk_gen(
+    input      rst,
+    input      clk,
+    output reg out
+);
+
+    initial begin
+        out = 0;
+    end
+
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            out <= 0;
+        else
+            out <= 1;
+    end
+
+endmodule: clk_gen
+
+module top();
+
+    logic rst;
+    logic clk;
+    logic out;
+
+    clk_gen dut(.rst(rst), .clk(clk), .out(out));
+
+    initial begin
+        clk   = 0;
+        rst   = 1;
+    end
+
+    property prop;
+        @(posedge clk) disable iff (rst) out;
+    endproperty
+
+    assert property (prop) else $error($sformatf("property check failed :assert: (False)"));
+
+    initial begin
+        forever begin
+            #(50) clk = ~clk;
+        end
+    end
+
+    initial #1000 $finish;
+
+endmodule
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header1
+            (port_direction))
+          (port_identifier
+            (simple_identifier)))
+        (ansi_port_declaration
+          (net_port_header1
+            (port_direction))
+          (port_identifier
+            (simple_identifier)))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (data_type
+              (integer_vector_type)))
+          (port_identifier
+            (simple_identifier)))))
+    (module_or_generate_item
+      (initial_construct
+        (statement_or_null
+          (statement
+            (statement_item
+              (seq_block
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (blocking_assignment
+                        (operator_assignment
+                          (variable_lvalue
+                            (hierarchical_identifier
+                              (simple_identifier)))
+                          (assignment_operator)
+                          (expression
+                            (primary
+                              (primary_literal
+                                (integral_number
+                                  (decimal_number
+                                    (unsigned_number)))))))))))))))))
+    (module_or_generate_item
+      (always_construct
+        (always_keyword)
+        (statement
+          (statement_item
+            (procedural_timing_control_statement
+              (event_control
+                (clocking_event
+                  (event_expression
+                    (event_expression
+                      (edge_identifier)
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier)))))
+                    (event_expression
+                      (edge_identifier)
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier))))))))
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (seq_block
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (conditional_statement
+                              (cond_predicate
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier)))))
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (nonblocking_assignment
+                                      (variable_lvalue
+                                        (hierarchical_identifier
+                                          (simple_identifier)))
+                                      (expression
+                                        (primary
+                                          (primary_literal
+                                            (integral_number
+                                              (decimal_number
+                                                (unsigned_number))))))))))
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (nonblocking_assignment
+                                      (variable_lvalue
+                                        (hierarchical_identifier
+                                          (simple_identifier)))
+                                      (expression
+                                        (primary
+                                          (primary_literal
+                                            (integral_number
+                                              (decimal_number
+                                                (unsigned_number)))))))))))))))))))))))
+    (simple_identifier))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (module_or_generate_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (instance_identifier
+              (simple_identifier)))
+          (list_of_port_connections
+            (named_port_connection
+              (port_identifier
+                (simple_identifier))
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              (port_identifier
+                (simple_identifier))
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              (port_identifier
+                (simple_identifier))
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (module_or_generate_item
+      (initial_construct
+        (statement_or_null
+          (statement
+            (statement_item
+              (seq_block
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (blocking_assignment
+                        (operator_assignment
+                          (variable_lvalue
+                            (hierarchical_identifier
+                              (simple_identifier)))
+                          (assignment_operator)
+                          (expression
+                            (primary
+                              (primary_literal
+                                (integral_number
+                                  (decimal_number
+                                    (unsigned_number)))))))))))
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (blocking_assignment
+                        (operator_assignment
+                          (variable_lvalue
+                            (hierarchical_identifier
+                              (simple_identifier)))
+                          (assignment_operator)
+                          (expression
+                            (primary
+                              (primary_literal
+                                (integral_number
+                                  (decimal_number
+                                    (unsigned_number)))))))))))))))))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (net_declaration
+          (simple_identifier)
+          (list_of_net_decl_assignments
+            (net_decl_assignment
+              (simple_identifier)))))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (event_control
+            (clocking_event
+              (event_expression
+                (edge_identifier)
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier)))))))
+          (statement_or_null
+            (statement
+              (statement_item
+                (subroutine_call_statement
+                  (subroutine_call
+                    (tf_call
+                      (hierarchical_identifier
+                        (simple_identifier))
+                      (ERROR)
+                      (list_of_arguments
+                        (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier)))))))
+                  (ERROR
+                    (simple_identifier))))))))))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)))))
+  (ERROR
+    (subroutine_call
+      (tf_call
+        (hierarchical_identifier
+          (simple_identifier))
+        (list_of_arguments
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))
+    (simple_identifier))
+  (statement_or_null
+    (statement
+      (statement_item
+        (subroutine_call_statement
+          (subroutine_call
+            (system_tf_call
+              (system_tf_identifier)
+              (list_of_arguments
+                (expression
+                  (primary
+                    (function_subroutine_call
+                      (subroutine_call
+                        (system_tf_call
+                          (system_tf_identifier)
+                          (list_of_arguments
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (string_literal)))))))))))))))))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)))))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (delay_control
+            (mintypmax_expression
+              (expression
+                (primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))
+          (statement_or_null
+            (statement
+              (statement_item
+                (blocking_assignment
+                  (operator_assignment
+                    (variable_lvalue
+                      (hierarchical_identifier
+                        (simple_identifier)))
+                    (assignment_operator)
+                    (expression
+                      (unary_operator)
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))))))))))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)))
+      (ERROR
+        (unsigned_number)
+        (system_tf_identifier))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (subroutine_call_statement
+          (subroutine_call
+            (tf_call
+              (hierarchical_identifier
+                (simple_identifier)))))))))
+
+(MISSING "endmodule")

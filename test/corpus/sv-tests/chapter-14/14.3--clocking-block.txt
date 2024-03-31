@@ -1,0 +1,96 @@
+============================================
+sv-tests/chapter-14/14.3--clocking-block
+============================================
+
+// Copyright (C) 2019-2021  The SymbiFlow Authors.
+//
+// Use of this source code is governed by a ISC-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/ISC
+//
+// SPDX-License-Identifier: ISC
+
+
+/*
+:name: clocking_block
+:description: clocking block test
+:tags: 14.3
+:unsynthesizable: 1
+*/
+module top(input clk);
+
+clocking ck1 @(posedge clk);
+	default input #10ns output #5ns;
+endclocking
+
+endmodule
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (ERROR
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header1
+            (port_direction))
+          (port_identifier
+            (simple_identifier)))))
+    (simple_identifier)
+    (simple_identifier))
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (event_control
+            (clocking_event
+              (event_expression
+                (edge_identifier)
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier)))))))
+          (statement_or_null)))))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (delay_control
+            (delay_value
+              (time_literal
+                (unsigned_number)
+                (time_unit))))
+          (statement_or_null
+            (statement
+              (statement_item
+                (subroutine_call_statement
+                  (subroutine_call
+                    (tf_call
+                      (hierarchical_identifier
+                        (simple_identifier))))
+                  (ERROR
+                    (unsigned_number))))))))))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier))))))
+
+(ERROR)

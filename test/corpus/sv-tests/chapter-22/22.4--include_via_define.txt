@@ -1,0 +1,123 @@
+============================================
+sv-tests/chapter-22/22.4--include_via_define
+============================================
+
+// Copyright (C) 2019-2021  The SymbiFlow Authors.
+//
+// Use of this source code is governed by a ISC-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/ISC
+//
+// SPDX-License-Identifier: ISC
+
+
+/*
+:name: 22.4--include_via_define
+:description: Though not well documented, real world code does `defines that cause includes
+:tags: 22.4
+:type: preprocessing parsing
+*/
+`define DO_INCLUDE(FN) `include FN
+
+// Check that multiple define references don't throw a multiple `include-on-line error
+`DO_INCLUDE("dummy_include.sv") `DO_INCLUDE("dummy_include.sv")
+
+// Check that ifdefs
+`ifdef NEVER
+ `DO_INCLUDE("SHOULD_NOT_BE_INCLUDED")
+`endif
+
+module top ();
+endmodule
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (ERROR
+    (ERROR))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)))))
+  (ERROR
+    (primary
+      (mintypmax_expression
+        (expression
+          (primary
+            (hierarchical_identifier
+              (simple_identifier))))))
+    (ERROR)
+    (subroutine_call
+      (tf_call
+        (hierarchical_identifier
+          (simple_identifier))
+        (ERROR
+          (simple_identifier)
+          (comment)
+          (ERROR)
+          (simple_identifier))
+        (list_of_arguments
+          (expression
+            (primary
+              (primary_literal
+                (string_literal)))))))
+    (ERROR)
+    (subroutine_call
+      (tf_call
+        (hierarchical_identifier
+          (simple_identifier))
+        (list_of_arguments
+          (expression
+            (primary
+              (primary_literal
+                (string_literal)))))))
+    (comment)
+    (ERROR)
+    (subroutine_call
+      (tf_call
+        (hierarchical_identifier
+          (simple_identifier))
+        (ERROR
+          (simple_identifier)
+          (ERROR)
+          (simple_identifier))
+        (list_of_arguments
+          (expression
+            (primary
+              (primary_literal
+                (string_literal)))))))
+    (ERROR))
+  (package_or_generate_item_declaration
+    (net_declaration
+      (simple_identifier)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (subroutine_call_statement
+          (subroutine_call
+            (tf_call
+              (hierarchical_identifier
+                (simple_identifier))))))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (subroutine_call_statement
+          (subroutine_call
+            (tf_call
+              (hierarchical_identifier
+                (simple_identifier)))))))))
+
+(ERROR)
