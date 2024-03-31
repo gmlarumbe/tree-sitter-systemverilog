@@ -140,97 +140,179 @@ function constExprOp($, prior, ops) {
   return prec.left(prior, seq($.constant_expression, ops, repeat($.attribute_instance), $.constant_expression));
 }
 
-// /**
-//  *
-//  * @param {string} command
-//  *
-//  * @returns {AliasRule}
-//  *
-//  */
-// function directive(command) {
-//   return alias(new RegExp('`' + command), 'directive_' + command);
-// }
+/**
+ *
+ * @param {string} command
+ *
+ * @returns {AliasRule}
+ *
+ */
+function directive(command) {
+  return alias(new RegExp('`' + command), 'directive_' + command);
+}
 
 /*
-    Verilog parser grammar based on IEEE Std 1800-2017.
+    Verilog parser grammar based on IEEE Std 1800-2023.
 */
 
 const rules = {
   source_file: $ => repeat($._description), // TODO: What about [timeunits_declaration]
 
-  // /* 22. Compiler directives */
+  /* 22. Compiler directives */
+  // `__FILE__ [22.13]
+  // `__LINE__ [22.13]
+  // `begin_keywords [22.14]
+  // `celldefine [22.10]
+  // `default_nettype [22.8]
+  // `define [22.5.1]
+  // `else [22.6]
+  // `elsif [22.6]
+  // `end_keywords [22.14]
+  // `endcelldefine [22.10]
+  // `endif [22.6]
+  // `ifdef [22.6]
+  // `ifndef [22.6]
+  // `include [22.4]
+  // `line [22.12]
+  // `nounconnected_drive [22.9]
+  // `pragma [22.11]
+  // `resetall [22.3]
+  // `timescale [22.7]
+  // `unconnected_drive [22.9]
+  // `undef [22.5.2]
+  // `undefineall [22.5.3]
 
-  // /* 22-1 `include */
+  _directives: $ => choice(
+    $.resetall_compiler_directive,
+    $.include_compiler_directive,
+    $.text_macro_definition,
+    $.text_macro_usage,
+    $.undefine_compiler_directive,
+    $.undefineall_compiler_directive,
+    $.conditional_compilation_directive,
+    $.timescale_compiler_directive,
+    $.default_nettype_compiler_directive,
+    $.unconnected_drive_compiler_directive,
+    $.celldefine_compiler_directive,
+    $.endcelldefine_compiler_directive,
+    $.pragma,
+    $.line_compiler_directive,
+    $.file_or_line_compiler_directive,
+    $.keywords_directive,
+    $.endkeywords_directive
+  ),
 
-  // double_quoted_string: $ => seq(
-  //   '"', token.immediate(prec(1, /[^\\"\n]+/)), '"'
+
+  /* 22-3 `resetall */
+  resetall_compiler_directive: $ => directive('resetall'),
+
+
+  /* 22-4 `include */
+  double_quoted_string: $ => seq(
+    '"', token.immediate(prec(1, /[^\\"\n]+/)), '"'
+  ),
+
+  include_compiler_directive_standard: $ => seq(
+    '<', token.immediate(prec(1, /[^\\>\n]+/)), '>'
+  ),
+
+  include_compiler_directive: $ => seq(
+    directive('include'),
+    choice(
+      $.double_quoted_string,
+      $.include_compiler_directive_standard
+    )
+  ),
+
+
+  /* 22.5 `define, `undef, and `undefineall */
+  default_text: $ => /\w+/,
+
+  macro_text: $ => /(\\(.|\r?\n)|[^\\\n])*/,
+
+  text_macro_definition: $ => seq(
+    directive('define'),
+    $.text_macro_name,
+    optional($.macro_text),
+    '\n'
+  ),
+
+  text_macro_name: $ => seq(
+    $.text_macro_identifier,
+    optional(seq('(', $.text_macro_list_of_formal_arguments, ')'))
+  ),
+
+  text_macro_list_of_formal_arguments: $ => sepBy1(',', $.text_macro_formal_argument),
+
+  text_macro_formal_argument: $ => seq(
+    $.simple_identifier,
+    optional(seq('=', $.default_text))
+  ),
+
+  text_macro_identifier: $ => $._identifier,
+
+  text_macro_usage: $ => prec.right(seq(
+    '`',
+    $.text_macro_identifier,
+    optional(seq('(', $.text_macro_list_of_actual_arguments, ')'))
+  )),
+
+  text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
+
+  text_macro_actual_argument: $ => $.expression,
+
+  undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
+
+  undefineall_compiler_directive: $ => directive('undefineall'),
+
+
+  // DANGER: Remove this?
+  // TODO missing arguments, empty list of arguments
+
+  // To use a macro defined with arguments, the name of the text macro shall be
+  // followed by a list of actual arguments in parentheses, separated by
+  // commas. Actual arguments and defaults shall not contain comma or right
+  // parenthesis characters outside matched pairs of left and right parentheses
+  // (), square brackets [], braces {}, double quotes "", or an escaped
+  // identifier.
+  // End of DANGER
+
+  // _actual_argument: $ => choice(
+  //   // $.expression, // TODO: Comment to avoid parsing syntax of macros as it might make things more complicated for the time being
+  //   // $.data_type // INFO: Many UVM macros require a class type as an argument
+  //   // $.macro_text // TODO: Gave many conflicts and errors, but should be the correct one,  or at least an option (with less precedence)?
   // ),
 
-  // include_compiler_directive_standard: $ => seq(
-  //   '<', token.immediate(prec(1, /[^\\>\n]+/)), '>'
-  // ),
 
-  // include_compiler_directive: $ => seq(
-  //   directive('include'),
-  //   choice(
-  //     $.double_quoted_string,
-  //     $.include_compiler_directive_standard
-  //   )
-  // ),
+  /* 22.6 `ifdef, `else, `elsif, `endif, `ifndef */
+  // conditional_compilation_directive ::=
+  //   ifdef_or_ifndef ifdef_condition block_of_text
+  //   { `elsif ifdef_condition block_of_text }
+  //   [ `else block_of_text ]
+  //   `endif
 
-  // /* 22-2 `define */
+  conditional_compilation_directive: $ => choice( // Rearranged, don't parse preprocessed code
+    seq($.ifdef_or_ifndef, $.ifdef_condition),
+    seq(directive('elsif'), $.ifdef_condition),
+    directive('else'),
+    directive('endif')
+  ),
 
-  // default_text: $ => /\w+/,
+  ifdef_or_ifndef: $ => choice(directive('ifdef'), directive('ifndef')),
 
-  // macro_text: $ => /(\\(.|\r?\n)|[^\\\n])*/,
+  ifdef_condition: $ => choice(
+    $.text_macro_identifier,
+    seq('(', $.ifdef_macro_expression, ')')
+  ),
 
-  // text_macro_name: $ => seq(
-  //   $.text_macro_identifier,
-  //   optseq('(', $.list_of_formal_arguments, ')')
-  // ),
+  ifdef_macro_expression: $ => prec.left(choice(
+    $.text_macro_identifier,
+    seq($.ifdef_macro_expression, $.binary_logical_operator, $.ifdef_macro_expression),
+    seq('!', $.ifdef_macro_expression),
+    seq('(', $.ifdef_macro_expression, ')')
+  )),
 
-  // list_of_formal_arguments: $ => sep1(',', $.formal_argument),
-
-  // formal_argument: $ => seq(
-  //   $.simple_identifier,
-  //   optseq('=', $.default_text)
-  // ),
-
-  // text_macro_identifier: $ => $._identifier,
-
-  // /* 22-5 define */
-
-  // text_macro_definition: $ => seq(
-  //   directive('define'),
-  //   $.text_macro_name,
-  //   optional($.macro_text),
-  //   '\n'
-  // ),
-
-  // /* 22-3 usage */
-
-  // text_macro_usage: $ => prec.right(seq(
-  //   '`',
-  //   $.text_macro_identifier,
-  //   optseq('(', $.list_of_actual_arguments, ')')
-  // )),
-
-  // simple_text_macro_usage: $ => seq(
-  //   '`',
-  //   $.text_macro_identifier
-  // ),
-
-  // /* 22-4 22-5 */
-
-  // id_directive: $ => seq(
-  //   choice(
-  //     directive('ifdef'),
-  //     directive('ifndef'),
-  //     directive('elsif'),
-  //     directive('undef') /* 22-5-2 */
-  //   ),
-  //   $.text_macro_identifier
-  // ),
+  binary_logical_operator: $ => choice('&&', '||', '->', '<->'),
 
   // zero_directive: $ => choice(
   //   directive('resetall'), /* 22-3 */
@@ -243,81 +325,94 @@ const rules = {
   //   directive('end_keywords') /* 22.14 */
   // ),
 
-  // /* 22-7 timescale */
+  /* 22-7 timescale */
+  timescale_compiler_directive: $ => seq(
+    directive('timescale'),
+    $.time_literal, // time_unit,
+    '/',
+    $.time_literal, // time_precision
+    '\n' // TODO: Are newlines required?
+  ),
 
-  // timescale_compiler_directive: $ => seq(
-  //   directive('timescale'),
-  //   $.time_literal, // time_unit,
-  //   '/',
-  //   $.time_literal, // time_precision
-  //   '\n'
-  // ),
+  /* 22-8 default_nettype */
+  default_nettype_compiler_directive: $ => seq(
+    directive('default_nettype'),
+    $.default_nettype_value,
+    // '\n' ; DANGER:
+  ),
 
-  // /* 22-8 default_nettype */
+  default_nettype_value: $ => choice('wire', 'tri', 'tri0', 'tri1', 'wand', 'triand', 'wor', 'trior', 'trireg', 'uwire', 'none'),
 
-  // default_nettype_compiler_directive: $ => seq(
-  //   directive('default_nettype'),
-  //   $.default_nettype_value,
-  //   '\n'
-  // ),
+  /* 22-9 */
+  unconnected_drive_compiler_directive: $ => seq(
+    directive('unconnected_drive'),
+    choice('pull0', 'pull1'),
+    '\n'
+  ),
 
-  // default_nettype_value: $ => choice('wire', 'tri', 'tri0', 'tri1', 'wand', 'triand', 'wor', 'trior', 'trireg', 'uwire', 'none'),
+  /* 22.10 `celldefine and `endcelldefine */
+  celldefine_compiler_directive: $ => directive('celldefine'),
+  endcelldefine_compiler_directive: $ => directive('endcelldefine'),
 
-  // /* 22-9 */
 
-  // unconnected_drive: $ => seq(
-  //   directive('unconnected_drive'),
-  //   choice('pull0', 'pull1'),
-  //   '\n'
-  // ),
+  /* 22.11 `pragma */
+  pragma: $ => prec.right(seq(
+    directive('pragma'),
+    $.pragma_name,
+    sepBy(',', $.pragma_expression),
+  )),
 
-  // /* 22-12 */
+  pragma_name: $ => $.simple_identifier,
 
-  // line_compiler_directive: $ => seq(
-  //   directive('line'),
-  //   $.unsigned_number,
-  //   $.double_quoted_string,
-  //   $.unsigned_number,
-  //   '\n'
-  // ),
+  pragma_expression: $ => choice(
+    $.pragma_keyword,
+    seq($.pragma_keyword, '=', $.pragma_value),
+    $.pragma_value,
+  ),
 
-  // /* 22.13 */
-  // /* `__FILE__ and `__LINE__ */
+  pragma_value: $ => choice(
+    seq('(', sepBy1(',', $.pragma_expression) , ')'),
+    $._number,
+    $.string_literal,
+    $._identifier,
+  ),
 
-  // /* 22.14 */
-  // begin_keywords: $ => seq(
-  //   directive('begin_keywords'),
-  //   $.double_quoted_string
-  // ),
+  pragma_keyword: $ => $.simple_identifier,
 
-  // _directives: $ => choice(
-  //   $.line_compiler_directive,
-  //   $.include_compiler_directive,
-  //   $.text_macro_definition,
-  //   $.text_macro_usage,
-  //   $.id_directive,
-  //   $.zero_directive,
-  //   $.timescale_compiler_directive,
-  //   $.default_nettype_compiler_directive,
-  //   $.unconnected_drive,
-  //   $.begin_keywords
-  // ),
+  /* 22-12 `line */
+  line_compiler_directive: $ => seq(
+    directive('line'),
+    $.unsigned_number,
+    $.double_quoted_string,
+    $.unsigned_number,
+    '\n'
+  ),
 
-  // // TODO missing arguments, empty list of arguments
+  /* 22.13 `__FILE__ and `__LINE__ */
+  file_or_line_compiler_directive: $ => choice(
+    directive('__FILE__'),
+    directive('__LINE__'),
+  ),
 
-  // // To use a macro defined with arguments, the name of the text macro shall be
-  // // followed by a list of actual arguments in parentheses, separated by
-  // // commas. Actual arguments and defaults shall not contain comma or right
-  // // parenthesis characters outside matched pairs of left and right parentheses
-  // // (), square brackets [], braces {}, double quotes "", or an escaped
-  // // identifier.
-  // list_of_actual_arguments: $ => sep1(',', $._actual_argument),
+  /* 22.14 */
+  keywords_directive: $ => seq(
+    directive('begin_keywords'),
+    '\"', $.version_specifier, '\"'
+  ),
 
-  // _actual_argument: $ => choice(
-  //   // $.expression, // TODO: Comment to avoid parsing syntax of macros as it might make things more complicated for the time being
-  //   // $.data_type // INFO: Many UVM macros require a class type as an argument
-  //   $.macro_text // TODO: Gave many conflicts and errors, but should be the correct one,  or at least an option (with less precedence)?
-  // ),
+  version_specifier: $ => choice(
+    '1800-2023',
+    '1800-2017',
+    '1800-2012',
+    '1800-2009',
+    '1800-2005',
+    '1364-2005',
+    '1364-2001',
+    '1364-2001-noconfig',
+    '1364-1995',
+  ),
+
+  endkeywords_directive: $ => directive('end_keywords'),
 
 
   // /* A.1.1 Library source text */
@@ -343,8 +438,8 @@ const rules = {
 
   // /* A.1.2 SystemVerilog source text */
 
-  _description: $ => choice(
-    // $._directives, // TODO: This one is not in the LRM but probably adds support for lots of stuff
+  _description: $ => prec('_description', choice(
+    $._directives, // DANGER: This one is not in the LRM but adds good support for lots of stuff
     $.module_declaration,
     // TODO: Simplifying debugging
     // $.udp_declaration,
@@ -359,7 +454,7 @@ const rules = {
     // DANGER: Out of the LRM, have them here to parse snippets
     $.statement_or_null,
     // End of DANGER
-  ),
+  )),
 
   // module_nonansi_header: $ =>
   //   { attribute_instance } module_keyword [ lifetime ] _module_identifier
@@ -797,7 +892,7 @@ const rules = {
   ),
 
   _non_port_module_item: $ => choice(
-    // $._directives,
+    $._directives, // // DANGER: This one is not in the LRM but adds good support for lots of stuff
     // $.generate_region,
     $.module_or_generate_item,
     // $.specify_block,
@@ -3214,13 +3309,14 @@ const rules = {
     seq(repeat($.attribute_instance), ';')
   )),
 
-  statement: $ => choice(
+  statement: $ => prec('statement', choice(
     // $.text_macro_usage,
+    // $._directives, // DANGER: This one is not in the LRM but adds good support for lots of stuff
     seq(
       optional(seq(field('block_name', $._block_identifier), ':')),
       repeat($.attribute_instance),
       $.statement_item
-    )),
+    ))),
 
   statement_item: $ => choice(
     seq($.blocking_assignment, ';'),
@@ -4497,6 +4593,8 @@ const rules = {
     $.conditional_expression,
     // $.inside_expression,
     // $.tagged_union_expression
+
+    $.text_macro_usage, // DANGER: Out of LRM
   ),
 
   // tagged_union_expression: $ => prec.left(seq(
@@ -4634,7 +4732,6 @@ const rules = {
     $.time_literal,
     $.unbased_unsized_literal,
     $.string_literal,
-    // $.simple_text_macro_usage
   ),
 
   time_literal: $ => choice(
@@ -5168,6 +5265,7 @@ module.exports = grammar({
   //   $.cross_identifier
 
     $._expression_or_cond_pattern,
+    // $.pragma_keyword,
   ],
 
   precedences: () => [
@@ -5176,6 +5274,7 @@ module.exports = grammar({
     // modules, classes, packages or checkers
     // Use case: snippets of code on web, include files...
     ['statement_or_null', 'package_or_generate_item_declaration'],
+    // ['_description', 'statement'],
 
     // module_nonansi_header  'input'  data_type  •  simple_identifier  …
     //   1:  module_nonansi_header  'input'  (_var_data_type  data_type)  •  simple_identifier  …
@@ -5511,6 +5610,8 @@ module.exports = grammar({
     ['_method_call_root'],
     ['class_type'],
     ['package_scope'],
+    ['_description'],
+    ['statement'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5773,6 +5874,10 @@ module.exports = grammar({
     // 2:  (class_type  _identifier)  •  '::'  …
     // 3:  (package_scope  _identifier  •  '::')             (precedence: 'package_scope')
     [$.class_type, $.package_scope],
+
+
+    // TODO: Directives conflicts
+    [$.pragma_keyword, $._identifier],
 ],
 
 });
