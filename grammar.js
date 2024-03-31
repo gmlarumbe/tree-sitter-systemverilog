@@ -1400,7 +1400,7 @@ const rules = {
       $.list_of_variable_decl_assignments,
       ';'
     ),
-    // $.type_declaration,
+    $.type_declaration,
     // $.package_import_declaration,
     // $.net_type_declaration
   ),
@@ -1473,6 +1473,32 @@ const rules = {
   //   ),
   //   ';'
   // ),
+  type_declaration: $ => seq(
+    'typedef',
+    choice(
+      seq($.data_type_or_incomplete_class_scoped_type, $._type_identifier, repeat($._variable_dimension)),
+      seq($.interface_port_identifier, optional($.constant_bit_select1), '.', $._type_identifier, $._type_identifier),
+      seq(optional($._forward_type), $._type_identifier)
+    ),
+    ';'
+  ),
+
+  data_type_or_incomplete_class_scoped_type: $ => prec('data_type_or_incomplete_class_scoped_type', choice(
+    $.data_type,
+    $.incomplete_class_scoped_type
+  )),
+
+  // incomplete_class_scoped_type :: =
+  //    type_identifier :: type_identifier_or_class_type
+  //    | incomplete_class_scoped_type :: type_identifier_or_class_type
+  //
+  incomplete_class_scoped_type: $ => prec('incomplete_class_scoped_type', choice(
+    seq($._type_identifier, '::', $.type_identifier_or_class_type),
+    $.incomplete_class_scoped_type, '::', $.type_identifier_or_class_type
+  )),
+
+
+  type_identifier_or_class_type: $ => choice($._type_identifier, $.class_type),
 
   // net_type_declaration: $ => seq(
   //   'nettype',
@@ -1514,17 +1540,17 @@ const rules = {
     prec.right(seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension))),
     seq($.integer_atom_type, optional($._signing)),
     $.non_integer_type,
-    // seq(
-    //   $.struct_union,
-    //   optseq('packed', optional($._signing)),
-    //   '{', repeat1($.struct_union_member), '}',
-    //   repeat($.packed_dimension)
-    // ),
-    // seq(
-    //   'enum', optional($.enum_base_type),
-    //   '{', sep1(',', $.enum_name_declaration), '}',
-    //   repeat($.packed_dimension)
-    // ),
+    seq(
+      $.struct_union,
+      optional(seq('packed', optional($._signing))),
+      '{', repeat1($.struct_union_member), '}',
+      repeat($.packed_dimension)
+    ),
+    seq(
+      'enum', optional($.enum_base_type),
+      '{', sepBy1(',', $.enum_name_declaration), '}',
+      repeat($.packed_dimension)
+    ),
     'string',
     'chandle',
     // prec.left(seq(
@@ -1556,25 +1582,19 @@ const rules = {
   )),
   // End of INFO
 
-  // enum_base_type: $ => choice(
-  //   seq(
-  //     $.integer_atom_type, optional($._signing)
-  //   ),
-  //   seq(
-  //     $.integer_vector_type, optional($._signing), optional($.packed_dimension)
-  //   ),
-  //   seq(
-  //     $._type_identifier, optional($.packed_dimension)
-  //   )
-  // ),
+  enum_base_type: $ => choice(
+    seq($.integer_atom_type, optional($._signing)),
+    seq($.integer_vector_type, optional($._signing), optional($.packed_dimension)),
+    seq($._type_identifier, optional($.packed_dimension))
+  ),
 
-  // enum_name_declaration: $ => seq(
-  //   $.enum_identifier,
-  //   optseq(
-  //     '[', $.integral_number, optseq(':', $.integral_number), ']'
-  //   ),
-  //   optseq('=', $.constant_expression)
-  // ),
+  enum_name_declaration: $ => seq(
+    $.enum_identifier,
+    optional(seq(
+      '[', $.integral_number, optional(seq(':', $.integral_number)), ']'
+    )),
+    optional(seq('=', $.constant_expression))
+  ),
 
   class_scope: $ => seq($.class_type, '::'),
 
@@ -1584,10 +1604,10 @@ const rules = {
     repeat(prec('class_type', seq('::', $.class_identifier, optional($.parameter_value_assignment))))
   )),
 
-  // _integer_type: $ => choice(
-  //   $.integer_vector_type,
-  //   $.integer_atom_type
-  // ),
+  _integer_type: $ => choice(
+    $.integer_vector_type,
+    $.integer_atom_type
+  ),
 
   integer_atom_type: $ => choice('byte', 'shortint', 'int', 'longint', 'integer', 'time'),
 
@@ -1627,30 +1647,30 @@ const rules = {
 
   _signing: $ => choice('signed', 'unsigned'),
 
-  // _simple_type: $ => choice(
-  //   $._integer_type,
-  //   $.non_integer_type,
-  //   $.ps_type_identifier,
-  //   $.ps_parameter_identifier
-  // ),
+  _simple_type: $ => choice(
+    $._integer_type,
+    $.non_integer_type,
+    $.ps_type_identifier,
+    $.ps_parameter_identifier
+  ),
 
-  // struct_union_member: $ => seq(
-  //   repeat($.attribute_instance),
-  //   optional($.random_qualifier),
-  //   $.data_type_or_void,
-  //   $.list_of_variable_decl_assignments,
-  //   ';'
-  // ),
+  struct_union_member: $ => seq(
+    repeat($.attribute_instance),
+    optional($.random_qualifier),
+    $.data_type_or_void,
+    $.list_of_variable_decl_assignments,
+    ';'
+  ),
 
   data_type_or_void: $ => choice(
     $.data_type,
     'void'
   ),
 
-  // struct_union: $ => choice(
-  //   'struct',
-  //   seq('union', optional('tagged'))
-  // ),
+  struct_union: $ => choice(
+    'struct',
+    seq('union', optional(choice('soft', 'tagged')))
+  ),
 
   // type_reference: $ => seq(
   //   'type', '(',
@@ -3560,43 +3580,42 @@ const rules = {
     seq('\'{', sepBy1(',', seq($.member_identifier, ':', $.pattern)), '}')
   )),
 
-  // assignment_pattern: $ => seq(
-  //   '\'{',
-  //   choice(
-  //     sep1(',', $.expression),
-  //     // sep1(',', seq($._structure_pattern_key, ':', $.expression)),
-  //     sep1(',', seq($._array_pattern_key, ':', $.expression)),
-  //     seq($.constant_expression, '{', sep1(',', $.expression), '}')
-  //   ),
-  //   '}'
-  // ),
+  assignment_pattern: $ => seq(
+    '\'{',
+    choice(
+      sepBy1(',', $.expression),
+      sepBy1(',', seq($._structure_pattern_key, ':', $.expression)),
+      sepBy1(',', seq($._array_pattern_key, ':', $.expression)),
+      seq($.constant_expression, '{', sepBy1(',', $.expression), '}')
+    ),
+    '}'
+  ),
 
-  // _structure_pattern_key: $ => choice(
-  //   $.member_identifier,
-  //   $.assignment_pattern_key
-  // ),
+  _structure_pattern_key: $ => choice(
+    $.member_identifier,
+    $.assignment_pattern_key
+  ),
 
-  // _array_pattern_key: $ => choice(
-  //   $.constant_expression,
-  //   $.assignment_pattern_key
-  // ),
+  _array_pattern_key: $ => choice(
+    $.constant_expression,
+    $.assignment_pattern_key
+  ),
 
-  // assignment_pattern_key: $ => choice(
-  //   $._simple_type,
-  //   'default'
-  // ),
+  assignment_pattern_key: $ => choice(
+    $._simple_type,
+    'default'
+  ),
 
-  // assignment_pattern_expression: $ => seq(
-  //   optional($._assignment_pattern_expression_type), $.assignment_pattern
-  // ),
+  assignment_pattern_expression: $ => seq(
+    optional($._assignment_pattern_expression_type), $.assignment_pattern
+  ),
 
-  // TODO: Fill with the proper ones
-  // _assignment_pattern_expression_type: $ => choice(
-  //   $.ps_type_identifier,
-  //   $.ps_parameter_identifier,
-  //   $.integer_atom_type,
-  //   // $.type_reference
-  // ),
+  _assignment_pattern_expression_type: $ => choice(
+    $.ps_type_identifier,
+    $.ps_parameter_identifier,
+    $.integer_atom_type,
+    // $.type_reference
+  ),
 
   // constant_assignment_pattern_expression: $ => $.assignment_pattern_expression,
 
@@ -4332,7 +4351,7 @@ const rules = {
   //   ))
   // ),
 
-  // empty_unpacked_array_concatenation: $ => seq('{', '}'),
+  empty_unpacked_array_concatenation: $ => seq('{', '}'),
 
   // /* A.8.2 Subroutine calls */
 
@@ -4700,14 +4719,14 @@ const rules = {
       $.hierarchical_identifier,
       optional($.select1)
     ),
-    // $.empty_unpacked_array_concatenation,
+    $.empty_unpacked_array_concatenation,
     seq($.concatenation, optional(seq('[', $.range_expression, ']'))),
     seq($.multiple_concatenation, optional(seq('[', $.range_expression, ']'))),
     $.function_subroutine_call,
     // // $.let_expression, // TODO: Remove temporarily to narrow conflicts
     seq('(', $.mintypmax_expression, ')'),
     // // $.cast, // TODO: Remove temporarily to narrow conflicts
-    // $.assignment_pattern_expression,
+    $.assignment_pattern_expression,
     // $.streaming_concatenation,
     // // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
     // 'this',
@@ -5024,7 +5043,7 @@ const rules = {
   // cover_point_identifier: $ => alias($._identifier, $.cover_point_identifier),
   // cross_identifier: $ => alias($._identifier, $.cross_identifier),
   // dynamic_array_variable_identifier: $ => alias($._variable_identifier, $.dynamic_array_variable_identifier),
-  // enum_identifier: $ => alias($._identifier, $.enum_identifier),
+  enum_identifier: $ => alias($._identifier, $.enum_identifier),
   escaped_identifier: $ => seq('\\', /[^\s]*/),
   // formal_identifier: $ => alias($._identifier, $.formal_identifier),
   // formal_port_identifier: $ => alias($._identifier, $.formal_port_identifier),
@@ -5066,6 +5085,7 @@ const rules = {
   // index_variable_identifier: $ => alias($._identifier, $.index_variable_identifier),
   interface_identifier: $ => alias($._identifier, $.interface_identifier),
   // interface_instance_identifier: $ => alias($._identifier, $.interface_instance_identifier),
+  interface_port_identifier: $ => alias($._identifier, $.interface_port_identifier),
   // inout_port_identifier: $ => alias($._identifier, $.inout_port_identifier),
   // input_port_identifier: $ => alias($._identifier, $.input_port_identifier),
   instance_identifier: $ => alias($._identifier, $.instance_identifier),
@@ -5231,7 +5251,7 @@ module.exports = grammar({
     $.parameter_identifier,
     $.class_identifier,
   //   $.covergroup_identifier,
-  //   $.enum_identifier,
+    $.enum_identifier,
   //   $.formal_port_identifier,
   //   $.genvar_identifier,
   //   $.specparam_identifier,
@@ -5266,6 +5286,7 @@ module.exports = grammar({
 
     $._expression_or_cond_pattern,
     // $.pragma_keyword,
+    // $.incomplete_class_scoped_type,
   ],
 
   precedences: () => [
@@ -5593,6 +5614,12 @@ module.exports = grammar({
     ['class_method', 'method_qualifier'],
 
 
+    // 'typedef'  incomplete_class_scoped_type  •  '\'  …
+    // 1:  'typedef'  (data_type_or_incomplete_class_scoped_type  incomplete_class_scoped_type)  •  '\'  …
+    // 2:  'typedef'  (incomplete_class_scoped_type  incomplete_class_scoped_type)  •  '\'  …
+    ['data_type_or_incomplete_class_scoped_type', 'incomplete_class_scoped_type'],
+
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5876,8 +5903,34 @@ module.exports = grammar({
     [$.class_type, $.package_scope],
 
 
-    // TODO: Directives conflicts
+    // Directives conflicts
     [$.pragma_keyword, $._identifier],
+
+
+    // TODO: Typedef conflicts
+    // 'typedef'  _identifier  •  '::'  …
+    // 1:  'typedef'  (class_type  _identifier  •  class_type_repeat1)                                     (precedence: 'class_type')
+    // 2:  'typedef'  (class_type  _identifier)  •  '::'  …                                                (precedence: 'class_type')
+    // 3:  'typedef'  (incomplete_class_scoped_type  _identifier  •  '::'  type_identifier_or_class_type)  (precedence: 'incomplete_class_scoped_type')
+    // 4:  'typedef'  (package_scope  _identifier  •  '::')                                                (precedence: 'package_scope')
+    [$.incomplete_class_scoped_type, $.class_type, $.package_scope],
+
+    [$.data_type, $.interface_port_identifier],
+    [$.type_identifier_or_class_type, $.data_type, $.class_type],
+    [$.data_type, $.class_type],
+    [$.type_identifier_or_class_type, $.class_type],
+
+
+    [$._forward_type, $.data_type],
+
+
+    // TODO: Struct initialization/assignment conflicts
+    [$._assignment_pattern_expression_type, $.ps_type_identifier],
+    [$._structure_pattern_key, $._array_pattern_key],
+    [$._simple_type, $._structure_pattern_key, $.constant_primary, $.ps_type_identifier],
+    [$._simple_type, $.constant_primary, $.ps_type_identifier],
+    [$._simple_type, $._structure_pattern_key, $.ps_type_identifier],
+    [$._simple_type, $.ps_type_identifier],
 ],
 
 });
