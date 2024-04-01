@@ -3300,12 +3300,12 @@ const rules = {
   // INFO: Mine
   variable_assignment: $ => seq($.variable_lvalue, '=', $.expression),
 
-  // // A.6.3 Parallel and sequential blocks
+  // A.6.3 Parallel and sequential blocks
 
-  // action_block: $ => choice(
-  //   $.statement_or_null,
-  //   seq(optional($.statement), 'else', $.statement_or_null)
-  // ),
+  action_block: $ => prec('action_block', choice(
+    $.statement_or_null,
+    seq(optional($.statement), 'else', $.statement_or_null)
+  )),
 
   seq_block: $ => seq(
     'begin', optional(seq(':', $._block_identifier)),
@@ -3314,14 +3314,14 @@ const rules = {
     'end', optional(seq(':', $._block_identifier))
   ),
 
-  // par_block: $ => seq(
-  //   'fork', optseq(':', $._block_identifier),
-  //   repeat($.block_item_declaration),
-  //   repeat($.statement_or_null),
-  //   $.join_keyword, optseq(':', $._block_identifier)
-  // ),
+  par_block: $ => seq(
+    'fork', optional(seq(':', $._block_identifier)),
+    repeat($.block_item_declaration),
+    repeat($.statement_or_null),
+    $.join_keyword, optional(seq(':', $._block_identifier))
+  ),
 
-  // join_keyword: $ => choice('join', 'join_any', 'join_none'),
+  join_keyword: $ => choice('join', 'join_any', 'join_none'),
 
   // // A.6.4 Statements
 
@@ -3346,15 +3346,15 @@ const rules = {
     $.case_statement,
     $.conditional_statement,
     $.subroutine_call_statement,
-    // $.disable_statement,
-    // $.event_trigger,
+    $.disable_statement,
+    $.event_trigger,
     $.loop_statement,
     $.jump_statement,
-    // $.par_block,
+    $.par_block,
     $.seq_block,
     $.procedural_timing_control_statement,
     $.seq_block,
-    // $.wait_statement,
+    $.wait_statement,
     // $._procedural_assertion_statement,
     // // seq($.clocking_drive, ';'),
     // // $.randsequence_statement,
@@ -3443,22 +3443,22 @@ const rules = {
     ';'
   ),
 
-  // wait_statement: $ => choice(
-  //   seq('wait', '(', $.expression, ')', $.statement_or_null),
-  //   seq('wait', 'fork', ';'),
-  //   seq('wait_order', '(', sep1(',', $.hierarchical_identifier), ')', $.action_block)
-  // ),
+  wait_statement: $ => choice(
+    seq('wait', '(', $.expression, ')', $.statement_or_null),
+    seq('wait', 'fork', ';'),
+    seq('wait_order', '(', sepBy1(',', $.hierarchical_identifier), ')', $.action_block)
+  ),
 
-  // event_trigger: $ => choice(
-  //   seq('->', $._hierarchical_event_identifier, ';'),
-  //   seq('->>', optional($.delay_or_event_control), $._hierarchical_event_identifier, ';')
-  // ),
+  event_trigger: $ => choice(
+    seq('->', $._hierarchical_event_identifier, optional($.nonrange_select1), ';'),
+    seq('->>', optional($.delay_or_event_control), $._hierarchical_event_identifier, optional($.nonrange_select1), ';')
+  ),
 
-  // disable_statement: $ => choice(
-  //   seq('disable', $._hierarchical_task_identifier, ';'),
-  //   seq('disable', $._hierarchical_block_identifier, ';'),
-  //   seq('disable', 'fork', ';')
-  // ),
+  disable_statement: $ => choice(
+    seq('disable', $._hierarchical_task_identifier, ';'),
+    seq('disable', $._hierarchical_block_identifier, ';'),
+    seq('disable', 'fork', ';')
+  ),
 
   // // A.6.6 Conditional statements
 
@@ -4818,6 +4818,13 @@ const rules = {
   //   )),
   //   $.bit_select1
   // ),
+  nonrange_select1: $ => choice(  // reordered -> non empty
+    seq( // 1x
+      repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
+      optional($.bit_select1)
+    ),
+    $.bit_select1
+  ),
 
   constant_bit_select1: $ => repeat1(prec('constant_bit_select1', seq( // reordered -> non empty
     '[', $.constant_expression, ']'
@@ -5063,8 +5070,8 @@ const rules = {
   // generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
   // genvar_identifier: $ => alias($._identifier, $.genvar_identifier),
   _hierarchical_array_identifier: $ => $.hierarchical_identifier,
-  // _hierarchical_block_identifier: $ => $.hierarchical_identifier,
-  // _hierarchical_event_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_block_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_event_identifier: $ => $.hierarchical_identifier,
 
   // prec.left because of:
   // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '.'  …
@@ -5085,7 +5092,7 @@ const rules = {
   // _hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_property_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
-  // _hierarchical_task_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_task_identifier: $ => $.hierarchical_identifier,
   _hierarchical_tf_identifier: $ => $.hierarchical_identifier,
   _hierarchical_variable_identifier: $ => $.hierarchical_identifier,
 
@@ -5246,8 +5253,8 @@ module.exports = grammar({
     $._hierarchical_tf_identifier,
   //   $._hierarchical_sequence_identifier,
   //   $._hierarchical_property_identifier,
-  //   $._hierarchical_block_identifier,
-  //   $._hierarchical_task_identifier,
+    $._hierarchical_block_identifier,
+    $._hierarchical_task_identifier,
 
   //   $.ps_or_hierarchical_net_identifier,
     $.ps_or_hierarchical_tf_identifier,
@@ -5671,13 +5678,14 @@ module.exports = grammar({
     ['nettype_declaration', 'data_type'],
 
 
+    // On action block, else must be related to it
+    //
+    //   'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  statement  •  'else'  …
+    //   1:  'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  (action_block  statement  •  'else'  statement_or_null)  (precedence: 'action_block')
+    //   2:  'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  (statement_or_null  statement)  •  'else'  …             (precedence: 'statement_or_null')
+    ['action_block', 'statement_or_null'],
 
-    // ['implicit_class_handle', 'primary'],
-    // ['param_expression', 'primary'],
 
-
-    // ['value_range', 'primary'],
-    // ['primary', 'value_range'],
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5706,7 +5714,7 @@ module.exports = grammar({
     ['nettype_declaration'],
     ['param_expression'],
     ['value_range'],
-
+    ['action_block'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5795,7 +5803,7 @@ module.exports = grammar({
     //   _identifier  •  simple_identifier  …
     //   1:  (data_type  _identifier)  •  simple_identifier  …
     //   2:  (net_declaration  _identifier  •  list_of_net_decl_assignments  ';')
-    [$.net_declaration, $.data_type],
+    // [$.net_declaration, $.data_type],
 
 
     // Setting prec.left prevented having more than 1 bit_select dimension:
@@ -5823,7 +5831,7 @@ module.exports = grammar({
     //     2:  module_nonansi_header  (module_instantiation  _identifier  •  hierarchical_instance  ';')                                (precedence: 'module_instantiation')
     //     3:  module_nonansi_header  (module_instantiation  _identifier  •  hierarchical_instance  module_instantiation_repeat1  ';')  (precedence: 'module_instantiation')
     //     4:  module_nonansi_header  (net_declaration  _identifier  •  list_of_net_decl_assignments  ';')                              (precedence: 'net_declaration')
-    [$.net_declaration, $.data_type, $.module_instantiation],
+    // [$.net_declaration, $.data_type, $.module_instantiation],
 
 
     // This is derived from the LRM:
@@ -5908,7 +5916,7 @@ module.exports = grammar({
     //   2:  _identifier  '#'  '('  (tf_call  package_scope  _identifier)  •  ')'  …                  (precedence: 'tf_call')
     //   3:  _identifier  '#'  '('  package_scope  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
     // ['data_type', 'hierarchical_identifier', 'tf_call'],
-    [$.data_type, $.tf_call, $.hierarchical_identifier],
+    // [$.data_type, $.tf_call, $.hierarchical_identifier],
 
 
     // It's not possible to know after 'local static' (e.g) if it's a property or a method:
@@ -6046,29 +6054,24 @@ module.exports = grammar({
     // 6:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  pattern_repeat2  '}')  (precedence: 'pattern')
     [$._simple_type, $.pattern, $._structure_pattern_key, $.constant_primary],
 
-
-    // TODO: Type-reference
+    // Type-reference
     [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
     [$.data_type, $.constant_primary],
-
     [$.expression, $.constant_primary],
     [$.data_type, $.expression],
 
-
-    // TODO:: Fixing queue dimensions
+    // Queue dimensions
     [$.primary, $.implicit_class_handle],
     [$.param_expression, $.primary],
     [$.value_range, $.primary],
-
-
     [$.constant_param_expression, $.constant_primary],
     [$.queue_dimension, $.constant_primary],
 
-    // TODO: Tagged union
+    // Tagged union
     [$.tagged_union_expression],
     [$.pattern, $.tagged_union_expression],
 
-    // TODO: Adding class_type as data_type
+    // Class_type as data_type
     [$.net_declaration, $.data_type, $.class_type],
     [$.type_identifier_or_class_type, $.data_type],
     [$.nettype_declaration, $.data_type, $.class_type],
@@ -6079,20 +6082,16 @@ module.exports = grammar({
     [$.data_type, $.class_type, $.tf_port_item1],
     [$.data_type, $.class_type, $.constant_primary],
 
-
     [$.ansi_port_declaration],
 
-
-    // TODO:
-    // class_new
+    // Class new
     [$.list_of_arguments, $.mintypmax_expression],
 
-    // TODO: Shallow copy
-    [$.shallow_copy, $.hierarchical_identifier],
-
-    // TODO: Typed constructor
+    // Typed constructor
     [$.blocking_assignment, $.shallow_copy, $.hierarchical_identifier],
     [$.shallow_copy, $.tf_call, $.hierarchical_identifier],
+
+
 ],
 
 });
