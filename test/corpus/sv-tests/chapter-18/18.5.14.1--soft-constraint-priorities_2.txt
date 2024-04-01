@@ -64,8 +64,6 @@ constraint a2::c3 { soft b > 100; };
             (data_type_or_implicit1
               (data_type
                 (simple_identifier)))
-            (ERROR
-              (simple_identifier))
             (list_of_variable_decl_assignments
               (variable_decl_assignment
                 (simple_identifier)))
@@ -101,10 +99,14 @@ constraint a2::c3 { soft b > 100; };
               (simple_identifier))
             (list_of_variable_decl_assignments
               (variable_decl_assignment
-                (simple_identifier)))
-            (ERROR
-              (simple_identifier)
-              (unsigned_number)))))
+                (simple_identifier)
+                (ERROR)
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))))))
       (ERROR)
       (class_item
         (class_property
@@ -115,24 +117,30 @@ constraint a2::c3 { soft b > 100; };
             (list_of_variable_decl_assignments
               (variable_decl_assignment
                 (simple_identifier))))))))
-  (package_or_generate_item_declaration
-    (data_declaration
-      (data_type_or_implicit1
-        (data_type
-          (package_scope
-            (package_identifier
-              (simple_identifier))
-            (ERROR
-              (simple_identifier)))
-          (simple_identifier)))
-      (ERROR)
-      (list_of_variable_decl_assignments
-        (variable_decl_assignment
-          (simple_identifier)))
+  (ERROR
+    (class_type
+      (class_identifier
+        (simple_identifier))
       (ERROR
-        (simple_identifier)
-        (unsigned_number))))
-  (ERROR)
+        (simple_identifier))
+      (class_identifier
+        (simple_identifier)))
+    (primary
+      (concatenation
+        (expression
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (ERROR
+            (simple_identifier))
+          (expression
+            (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))
+        (ERROR))))
   (statement_or_null))
 
 (ERROR)
