@@ -3621,7 +3621,8 @@ const rules = {
     // $.type_reference
   ),
 
-  // constant_assignment_pattern_expression: $ => $.assignment_pattern_expression,
+  // _constant_assignment_pattern_expression: $ => prec('_constant_assignment_pattern_expression', $.assignment_pattern_expression),
+  _constant_assignment_pattern_expression: $ => $.assignment_pattern_expression,
 
   assignment_pattern_net_lvalue: $ => seq('\'{', sepBy1(',', $.net_lvalue), '}'),
 
@@ -4702,7 +4703,7 @@ const rules = {
     // // $._constant_let_expression,
     seq('(', $.constant_mintypmax_expression, ')'),
     // // $.constant_cast,
-    // // // $.constant_assignment_pattern_expression,
+    $._constant_assignment_pattern_expression,
     // $.type_reference,
     // 'null'
   )),
@@ -5292,6 +5293,7 @@ module.exports = grammar({
     $._expression_or_cond_pattern,
     // $.pragma_keyword,
     // $.incomplete_class_scoped_type,
+    $._constant_assignment_pattern_expression,
   ],
 
   precedences: () => [
@@ -5657,6 +5659,7 @@ module.exports = grammar({
     ['port_reference', 'constant_primary'],
 
 
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header1'],
@@ -5680,6 +5683,7 @@ module.exports = grammar({
     ['cast'],
     ['casting_type'],
     ['constant_primary'],
+    ['_constant_assignment_pattern_expression'],
 
 
     ///////////////////////////////////////////////////
@@ -6008,6 +6012,18 @@ module.exports = grammar({
     // Casting
     [$._simple_type, $.constant_primary],
     [$._simple_type, $._structure_pattern_key, $.constant_primary],
+
+
+    // Big conflict after inlining constant assignment pattern expression
+    //
+    // '('  expression  'matches'  ''{'  _identifier  •  ':'  …
+    // 1:  '('  expression  'matches'  ''{'  (_simple_type  _identifier)  •  ':'  …                         (precedence: 'ps_parameter_identifier')
+    // 2:  '('  expression  'matches'  ''{'  (_simple_type  _identifier)  •  ':'  …                         (precedence: 'ps_type_identifier')
+    // 3:  '('  expression  'matches'  ''{'  (_structure_pattern_key  _identifier)  •  ':'  …               (precedence: '_structure_pattern_key')
+    // 4:  '('  expression  'matches'  ''{'  (constant_primary  _identifier)  •  ':'  …                     (precedence: 'ps_parameter_identifier')
+    // 5:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  '}')                   (precedence: 'pattern')
+    // 6:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  pattern_repeat2  '}')  (precedence: 'pattern')
+    [$._simple_type, $.pattern, $._structure_pattern_key, $.constant_primary],
 ],
 
 });
