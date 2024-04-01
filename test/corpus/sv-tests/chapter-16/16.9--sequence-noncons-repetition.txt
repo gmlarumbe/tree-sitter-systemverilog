@@ -44,10 +44,10 @@ endmodule
   (comment)
   (comment)
   (module_declaration
-    (module_ansi_header
+    (module_nonansi_header
       (module_keyword)
       name: (simple_identifier)
-      (list_of_port_declarations))
+      (list_of_ports))
     (module_or_generate_item
       (package_or_generate_item_declaration
         (data_declaration
@@ -77,83 +77,73 @@ endmodule
               (simple_identifier))))))
     (module_or_generate_item
       (package_or_generate_item_declaration
-        (net_declaration
+        (sequence_declaration
           (simple_identifier)
-          (list_of_net_decl_assignments
-            (net_decl_assignment
-              (simple_identifier)))))))
-  (statement_or_null
-    (statement
-      (statement_item
-        (procedural_timing_control_statement
-          (event_control
-            (clocking_event
-              (event_expression
-                (edge_identifier)
+          (sequence_expr
+            (sequence_expr
+              (sequence_expr
+                (clocking_event
+                  (event_expression
+                    (edge_identifier)
+                    (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))))
+                (sequence_expr
+                  (expression_or_dist
+                    (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))))
+              (cycle_delay_range
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))
+              (sequence_expr
+                (expression_or_dist
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))
+                (non_consecutive_repetition
+                  (cycle_delay_const_range_expression
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number))))))
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number))))))))))
+            (cycle_delay_range
+              (constant_primary
+                (primary_literal
+                  (integral_number
+                    (decimal_number
+                      (unsigned_number))))))
+            (sequence_expr
+              (expression_or_dist
                 (expression
                   (primary
                     (hierarchical_identifier
                       (simple_identifier)))))))
-          (ERROR
-            (blocking_assignment
-              (operator_assignment
-                (variable_lvalue
+          (comment))))
+    (module_or_generate_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (instance_identifier
+              (simple_identifier)))
+          (list_of_port_connections
+            (ordered_port_connection
+              (expression
+                (primary
                   (hierarchical_identifier
-                    (simple_identifier)))
-                (ERROR
-                  (unsigned_number)
-                  (simple_identifier))
-                (assignment_operator)
-                (ERROR
-                  (expression
-                    (primary
-                      (primary_literal
-                        (integral_number
-                          (decimal_number
-                            (unsigned_number)))))))
-                (expression
-                  (primary
-                    (primary_literal
-                      (integral_number
-                        (decimal_number
-                          (unsigned_number)))))))))
-          (statement_or_null
-            (statement
-              (statement_item
-                (procedural_timing_control_statement
-                  (cycle_delay
-                    (integral_number
-                      (decimal_number
-                        (unsigned_number))))
-                  (statement_or_null
-                    (statement
-                      (statement_item
-                        (subroutine_call_statement
-                          (subroutine_call
-                            (tf_call
-                              (hierarchical_identifier
-                                (simple_identifier))))))))))))))))
-  (comment)
-  (package_or_generate_item_declaration
-    (net_declaration
-      (simple_identifier)
-      (list_of_net_decl_assignments
-        (net_decl_assignment
-          (simple_identifier)))))
-  (statement_or_null
-    (statement
-      (statement_item
-        (subroutine_call_statement
-          (subroutine_call
-            (tf_call
-              (hierarchical_identifier
-                (simple_identifier))
-              (list_of_arguments
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier)))))))))))
-  (ERROR
-    (simple_identifier)))
-
-(MISSING "endmodule")
+                    (simple_identifier)))))))))))
