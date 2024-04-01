@@ -1425,7 +1425,6 @@ endclass
         (simple_identifier))
       (parameter_value_assignment
         (ERROR
-          (simple_identifier)
           (simple_identifier))
         (list_of_parameter_value_assignments
           (ordered_parameter_assignment
@@ -1886,7 +1885,9 @@ endclass
       (list_of_variable_decl_assignments
         (variable_decl_assignment
           (simple_identifier)
-          (queue_dimension)))))
+          (unpacked_dimension
+            (constant_expression
+              (constant_primary)))))))
   (statement_or_null
     (statement
       (statement_item
@@ -1917,57 +1918,50 @@ endclass
                 (expression
                   (primary
                     (hierarchical_identifier
-                      (simple_identifier)))))
-              (ERROR)))))))
-  (comment)
-  (comment)
-  (statement_or_null
-    (statement
-      (statement_item
-        (subroutine_call_statement
-          (subroutine_call
-            (tf_call
-              (hierarchical_identifier
-                (simple_identifier))
-              (list_of_arguments
+                      (simple_identifier))))
                 (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier))
-                    (select1
-                      (bit_select1
-                        (expression
-                          (primary
-                            (hierarchical_identifier
-                              (simple_identifier)))))))))))))))
+                  (primary)))))))))
+  (comment)
+  (comment)
   (statement_or_null
     (statement
       (statement_item
-        (blocking_assignment
-          (operator_assignment
-            (variable_lvalue
-              (hierarchical_identifier
-                (simple_identifier)))
-            (assignment_operator)
-            (expression
-              (primary
-                (function_subroutine_call
-                  (subroutine_call
-                    (tf_call
-                      (hierarchical_identifier
-                        (simple_identifier)
-                        (constant_bit_select1
-                          (constant_expression
-                            (constant_primary
-                              (parameter_identifier
-                                (simple_identifier)))))
-                        (simple_identifier))
-                      (ERROR)
-                      (list_of_arguments
-                        (expression
-                          (primary
+        (loop_statement
+          (ps_or_hierarchical_array_identifier
+            (hierarchical_identifier
+              (simple_identifier)))
+          (loop_variables1
+            (index_variable_identifier
+              (index_variable_identifier
+                (simple_identifier))))
+          (statement
+            (statement_item
+              (blocking_assignment
+                (operator_assignment
+                  (variable_lvalue
+                    (hierarchical_identifier
+                      (simple_identifier)))
+                  (assignment_operator)
+                  (expression
+                    (primary
+                      (function_subroutine_call
+                        (subroutine_call
+                          (tf_call
                             (hierarchical_identifier
-                              (simple_identifier)))))))))))))))
+                              (simple_identifier)
+                              (constant_bit_select1
+                                (constant_expression
+                                  (constant_primary
+                                    (parameter_identifier
+                                      (simple_identifier)))))
+                              (simple_identifier))
+                            (list_of_arguments
+                              (expression
+                                (primary))
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier))))))))))))))))))
   (statement_or_null
     (statement
       (statement_item
@@ -2043,42 +2037,34 @@ endclass
                   (statement_or_null
                     (statement
                       (statement_item
-                        (subroutine_call_statement
-                          (subroutine_call
-                            (tf_call
-                              (hierarchical_identifier
-                                (simple_identifier))
-                              (list_of_arguments
-                                (expression
-                                  (primary
+                        (loop_statement
+                          (ps_or_hierarchical_array_identifier
+                            (hierarchical_identifier
+                              (simple_identifier)))
+                          (loop_variables1
+                            (index_variable_identifier
+                              (index_variable_identifier
+                                (simple_identifier))))
+                          (statement
+                            (statement_item
+                              (subroutine_call_statement
+                                (subroutine_call
+                                  (tf_call
                                     (hierarchical_identifier
+                                      (simple_identifier)
+                                      (constant_bit_select1
+                                        (constant_expression
+                                          (constant_primary
+                                            (parameter_identifier
+                                              (simple_identifier)))))
                                       (simple_identifier))
-                                    (select1
-                                      (bit_select1
-                                        (expression
-                                          (primary
-                                            (hierarchical_identifier
-                                              (simple_identifier)))))))))))))))
-                  (statement_or_null
-                    (statement
-                      (statement_item
-                        (subroutine_call_statement
-                          (subroutine_call
-                            (tf_call
-                              (hierarchical_identifier
-                                (simple_identifier)
-                                (constant_bit_select1
-                                  (constant_expression
-                                    (constant_primary
-                                      (parameter_identifier
-                                        (simple_identifier)))))
-                                (simple_identifier))
-                              (ERROR)
-                              (list_of_arguments
-                                (expression
-                                  (primary
-                                    (hierarchical_identifier
-                                      (simple_identifier)))))))))))
+                                    (list_of_arguments
+                                      (expression
+                                        (primary))
+                                      (expression
+                                        (primary
+                                          (hierarchical_identifier
+                                            (simple_identifier))))))))))))))
                   (statement_or_null
                     (statement
                       (statement_item
@@ -2232,7 +2218,9 @@ endclass
                       (hierarchical_identifier
                         (simple_identifier))))
                   (ERROR
-                    (simple_identifier)))))))
+                    (simple_identifier)
+                    (constant_expression
+                      (constant_primary))))))))
         (function_statement_or_null
           (function_statement
             (statement
@@ -2267,8 +2255,9 @@ endclass
                         (expression
                           (primary
                             (hierarchical_identifier
-                              (simple_identifier)))))
-                      (ERROR))))))))
+                              (simple_identifier))))
+                        (expression
+                          (primary))))))))))
         (function_statement_or_null
           (function_statement
             (statement
@@ -2300,62 +2289,52 @@ endclass
           (function_statement
             (statement
               (statement_item
-                (subroutine_call_statement
-                  (subroutine_call
-                    (method_call
-                      (primary
-                        (function_subroutine_call
-                          (subroutine_call
-                            (tf_call
-                              (hierarchical_identifier
-                                (simple_identifier))
-                              (list_of_arguments
-                                (expression
-                                  (primary
-                                    (hierarchical_identifier
-                                      (simple_identifier))
-                                    (select1
-                                      (bit_select1
-                                        (expression
-                                          (primary
-                                            (hierarchical_identifier
-                                              (simple_identifier)))))))))))))
-                      (ERROR
-                        (simple_identifier))
-                      (method_call_body
-                        (method_identifier
-                          (method_identifier
-                            (simple_identifier)))
-                        (list_of_arguments
-                          (expression
-                            (primary
-                              (function_subroutine_call
-                                (subroutine_call
-                                  (system_tf_call
-                                    (system_tf_identifier)
-                                    (list_of_arguments
-                                      (expression
-                                        (primary
-                                          (primary_literal
-                                            (string_literal))))
+                (loop_statement
+                  (ps_or_hierarchical_array_identifier
+                    (hierarchical_identifier
+                      (simple_identifier)))
+                  (loop_variables1
+                    (index_variable_identifier
+                      (index_variable_identifier
+                        (simple_identifier))))
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (subroutine_call
+                          (tf_call
+                            (hierarchical_identifier
+                              (simple_identifier)
+                              (simple_identifier))
+                            (list_of_arguments
+                              (expression
+                                (primary
+                                  (function_subroutine_call
+                                    (subroutine_call
+                                      (system_tf_call
+                                        (system_tf_identifier)
+                                        (list_of_arguments
+                                          (expression
+                                            (primary
+                                              (primary_literal
+                                                (string_literal))))
+                                          (expression
+                                            (primary
+                                              (hierarchical_identifier
+                                                (simple_identifier))))))))))
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier))
+                                  (select1
+                                    (bit_select1
                                       (expression
                                         (primary
                                           (hierarchical_identifier
-                                            (simple_identifier))))))))))
-                          (expression
-                            (primary
-                              (hierarchical_identifier
-                                (simple_identifier))
-                              (select1
-                                (bit_select1
-                                  (expression
-                                    (primary
-                                      (hierarchical_identifier
-                                        (simple_identifier))))))))
-                          (expression
-                            (primary
-                              (primary_literal
-                                (string_literal)))))))))))))
+                                            (simple_identifier))))))))
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (string_literal)))))))))))))))
         (function_statement_or_null
           (function_statement
             (statement
@@ -2391,8 +2370,9 @@ endclass
                                 (expression
                                   (primary
                                     (hierarchical_identifier
-                                      (simple_identifier)))))
-                              (ERROR)))))))
+                                      (simple_identifier))))
+                                (expression
+                                  (primary)))))))))
                   (statement_or_null
                     (statement
                       (statement_item
@@ -2455,8 +2435,9 @@ endclass
                                                 (expression
                                                   (primary
                                                     (hierarchical_identifier
-                                                      (simple_identifier)))))
-                                              (ERROR)))))))
+                                                      (simple_identifier))))
+                                                (expression
+                                                  (primary)))))))))
                                   (statement_or_null
                                     (statement
                                       (statement_item
@@ -2519,7 +2500,9 @@ endclass
       (list_of_variable_decl_assignments
         (variable_decl_assignment
           (simple_identifier)
-          (queue_dimension)))))
+          (unpacked_dimension
+            (constant_expression
+              (constant_primary)))))))
   (statement_or_null
     (statement
       (statement_item
@@ -2614,50 +2597,43 @@ endclass
                         (expression
                           (primary
                             (hierarchical_identifier
-                              (simple_identifier)))))
-                      (ERROR)))))))
+                              (simple_identifier))))
+                        (expression
+                          (primary)))))))))
           (statement_or_null
             (statement
               (statement_item
-                (subroutine_call_statement
-                  (subroutine_call
-                    (tf_call
-                      (hierarchical_identifier
-                        (simple_identifier))
-                      (list_of_arguments
-                        (expression
-                          (primary
-                            (hierarchical_identifier
+                (loop_statement
+                  (ps_or_hierarchical_array_identifier
+                    (hierarchical_identifier
+                      (simple_identifier)))
+                  (loop_variables1
+                    (index_variable_identifier
+                      (index_variable_identifier
+                        (simple_identifier))))
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (subroutine_call
+                          (tf_call
+                            (package_scope
+                              (package_identifier
+                                (simple_identifier)))
+                            (tf_identifier
                               (simple_identifier))
-                            (select1
-                              (bit_select1
-                                (expression
-                                  (primary
-                                    (hierarchical_identifier
-                                      (simple_identifier)))))))))))))))
-          (statement_or_null
-            (statement
-              (statement_item
-                (subroutine_call_statement
-                  (subroutine_call
-                    (tf_call
-                      (package_scope
-                        (package_identifier
-                          (simple_identifier)))
-                      (tf_identifier
-                        (simple_identifier))
-                      (ERROR)
-                      (list_of_arguments
-                        (expression
-                          (primary
-                            (hierarchical_identifier
-                              (simple_identifier))
-                            (select1
-                              (bit_select1
-                                (expression
-                                  (primary
-                                    (hierarchical_identifier
-                                      (simple_identifier)))))))))))))))
+                            (list_of_arguments
+                              (expression
+                                (primary))
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier))
+                                  (select1
+                                    (bit_select1
+                                      (expression
+                                        (primary
+                                          (hierarchical_identifier
+                                            (simple_identifier))))))))))))))))))
           (comment)
           (comment)
           (statement_or_null
@@ -2692,45 +2668,37 @@ endclass
           (statement_or_null
             (statement
               (statement_item
-                (subroutine_call_statement
-                  (subroutine_call
-                    (tf_call
-                      (hierarchical_identifier
-                        (simple_identifier))
-                      (list_of_arguments
-                        (expression
-                          (primary
-                            (hierarchical_identifier
+                (loop_statement
+                  (ps_or_hierarchical_array_identifier
+                    (hierarchical_identifier
+                      (simple_identifier)))
+                  (loop_variables1
+                    (index_variable_identifier
+                      (index_variable_identifier
+                        (simple_identifier))))
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (subroutine_call
+                          (tf_call
+                            (package_scope
+                              (package_identifier
+                                (simple_identifier)))
+                            (tf_identifier
                               (simple_identifier))
-                            (select1
-                              (bit_select1
-                                (expression
-                                  (primary
-                                    (hierarchical_identifier
-                                      (simple_identifier)))))))))))))))
-          (statement_or_null
-            (statement
-              (statement_item
-                (subroutine_call_statement
-                  (subroutine_call
-                    (tf_call
-                      (package_scope
-                        (package_identifier
-                          (simple_identifier)))
-                      (tf_identifier
-                        (simple_identifier))
-                      (ERROR)
-                      (list_of_arguments
-                        (expression
-                          (primary
-                            (hierarchical_identifier
-                              (simple_identifier))
-                            (select1
-                              (bit_select1
-                                (expression
-                                  (primary
-                                    (hierarchical_identifier
-                                      (simple_identifier)))))))))))))))))))
+                            (list_of_arguments
+                              (expression
+                                (primary))
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier))
+                                  (select1
+                                    (bit_select1
+                                      (expression
+                                        (primary
+                                          (hierarchical_identifier
+                                            (simple_identifier))))))))))))))))))))))
   (package_or_generate_item_declaration
     (net_declaration
       (simple_identifier)

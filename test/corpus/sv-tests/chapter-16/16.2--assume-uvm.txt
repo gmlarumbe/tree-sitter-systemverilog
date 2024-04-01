@@ -112,12 +112,11 @@ endmodule
   (comment)
   (comment)
   (package_or_generate_item_declaration
-    (net_declaration
-      (simple_identifier)
-      (list_of_net_decl_assignments
-        (net_decl_assignment
-          (simple_identifier)))
-      (ERROR)))
+    (data_declaration
+      (package_import_declaration
+        (package_import_item
+          (package_identifier
+            (simple_identifier))))))
   (include_compiler_directive
     (double_quoted_string))
   (module_declaration
@@ -500,7 +499,9 @@ endmodule
                           (hierarchical_identifier
                             (simple_identifier)
                             (simple_identifier))
-                          (ERROR)))))))
+                          (list_of_arguments
+                            (expression
+                              (primary)))))))))
               (ERROR)
               (statement_or_null
                 (statement
@@ -587,31 +588,26 @@ endmodule
                       (statement_or_null
                         (statement
                           (statement_item
-                            (subroutine_call_statement
-                              (subroutine_call
-                                (tf_call
-                                  (hierarchical_identifier
-                                    (simple_identifier))
-                                  (list_of_arguments
-                                    (expression
-                                      (primary
-                                        (primary_literal
-                                          (integral_number
-                                            (decimal_number
-                                              (unsigned_number)))))))))))))
-                      (statement_or_null
-                        (statement
-                          (statement_item
-                            (procedural_timing_control_statement
-                              (event_control
-                                (clocking_event
-                                  (event_expression
-                                    (expression
-                                      (primary
-                                        (hierarchical_identifier
-                                          (simple_identifier)
-                                          (simple_identifier)))))))
-                              (statement_or_null)))))
+                            (loop_statement
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (integral_number
+                                      (decimal_number
+                                        (unsigned_number))))))
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (procedural_timing_control_statement
+                                      (event_control
+                                        (clocking_event
+                                          (event_expression
+                                            (expression
+                                              (primary
+                                                (hierarchical_identifier
+                                                  (simple_identifier)
+                                                  (simple_identifier)))))))
+                                      (statement_or_null)))))))))
                       (ERROR
                         (subroutine_call
                           (tf_call
@@ -706,11 +702,13 @@ endmodule
                           (hierarchical_identifier
                             (simple_identifier)
                             (simple_identifier))
-                          (ERROR)))))))
+                          (list_of_arguments
+                            (expression
+                              (primary)))))))))
               (task_identifier
                 (task_identifier
                   (simple_identifier)))))))))
-  (ERROR
+  (module_declaration
     (module_ansi_header
       (module_keyword)
       name: (simple_identifier))
@@ -858,43 +856,41 @@ endmodule
           (statement
             (statement_item
               (seq_block
-                (block_item_declaration
-                  (data_declaration
-                    (data_type_or_implicit1
-                      (data_type
-                        (simple_identifier)))
-                    (list_of_variable_decl_assignments
-                      (variable_decl_assignment
-                        (simple_identifier)))))
                 (statement_or_null
                   (statement
                     (statement_item
-                      (procedural_timing_control_statement
-                        (delay_control
-                          (mintypmax_expression
-                            (expression
-                              (primary
-                                (primary_literal
-                                  (integral_number
-                                    (decimal_number
-                                      (unsigned_number))))))))
+                      (loop_statement
                         (statement_or_null
                           (statement
                             (statement_item
-                              (blocking_assignment
-                                (operator_assignment
-                                  (variable_lvalue
-                                    (hierarchical_identifier
-                                      (simple_identifier)
-                                      (simple_identifier)))
-                                  (assignment_operator)
-                                  (expression
-                                    (unary_operator)
-                                    (primary
-                                      (hierarchical_identifier
-                                        (simple_identifier)
-                                        (simple_identifier)))))))))))))))))))
-    (simple_identifier)
-    (simple_identifier)))
+                              (seq_block
+                                (statement_or_null
+                                  (statement
+                                    (statement_item
+                                      (procedural_timing_control_statement
+                                        (delay_control
+                                          (mintypmax_expression
+                                            (expression
+                                              (primary
+                                                (primary_literal
+                                                  (integral_number
+                                                    (decimal_number
+                                                      (unsigned_number))))))))
+                                        (statement_or_null
+                                          (statement
+                                            (statement_item
+                                              (blocking_assignment
+                                                (operator_assignment
+                                                  (variable_lvalue
+                                                    (hierarchical_identifier
+                                                      (simple_identifier)
+                                                      (simple_identifier)))
+                                                  (assignment_operator)
+                                                  (expression
+                                                    (unary_operator)
+                                                    (primary
+                                                      (hierarchical_identifier
+                                                        (simple_identifier)
+                                                        (simple_identifier)))))))))))))))))))))))))))))
 
 (ERROR)
