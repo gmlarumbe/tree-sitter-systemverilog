@@ -1553,12 +1553,12 @@ const rules = {
     ),
     'string',
     'chandle',
-    // prec.left(seq(
-    //   'virtual', optional('interface'),
-    //   $.interface_identifier,
-    //   optional($.parameter_value_assignment),
-    //   optseq('.', $.modport_identifier)
-    // )),
+    seq(
+      'virtual', optional('interface'),
+      $.interface_identifier,
+      optional($.parameter_value_assignment),
+      optional(seq('.', $.modport_identifier))
+    ),
     seq(
       optional(choice($.class_scope, $.package_scope)),
       $._type_identifier,
