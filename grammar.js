@@ -1238,11 +1238,14 @@ const rules = {
   //   seq('{', repeat($.constraint_expression), '}')
   // ),
 
-  // dist_list: $ => sep1(',', $.dist_item),
+  dist_list: $ => sepBy1(',', $.dist_item),
 
-  // dist_item: $ => seq($.value_range, optional($.dist_weight)),
+  dist_item: $ => choice(
+    seq($.value_range, optional($.dist_weight)),
+    seq('default', ':/', $.expression)
+  ),
 
-  // dist_weight: $ => seq(choice(':=', ':/'), $.expression),
+  dist_weight: $ => seq(choice(':=', ':/'), $.expression),
 
   // constraint_prototype: $ => seq(
   //   optional($.constraint_prototype_qualifier),
@@ -1287,10 +1290,9 @@ const rules = {
     $.class_constructor_declaration,
     seq($._any_parameter_declaration, ';'),
     // $.covergroup_declaration,
-    // $.overload_declaration,
-    // $._assertion_item_declaration, // TODO: Remove temporarily to avoid some conflicts
+    $._assertion_item_declaration,
     ';',
-    // $._directives
+    // $._directives  // DANGER: Out of LRM, does it make sense here instead of in statements?
   )),
 
   // anonymous_program: $ => seq(
@@ -2249,11 +2251,11 @@ const rules = {
   //   $._sequence_actual_arg
   // ),
 
-  // _assertion_item_declaration: $ => choice(
-  //   $.property_declaration,
-  //   $.sequence_declaration,
-  //   $.let_declaration
-  // ),
+  _assertion_item_declaration: $ => choice(
+    // $.property_declaration,
+    $.sequence_declaration,
+    // $.let_declaration
+  ),
 
   // property_declaration: $ => seq(
   //   'property',
@@ -2354,64 +2356,72 @@ const rules = {
   //   )
   // ),
 
-  // sequence_declaration: $ => seq(
-  //   'sequence',
-  //   $._sequence_identifier,
-  //   optseq(
-  //     '(', optional($.sequence_port_list), ')'
-  //   ),
-  //   ';',
-  //   repeat($.assertion_variable_declaration),
-  //   $.sequence_expr,
-  //   optional(';'),
-  //   'endsequence', optseq(':', $._sequence_identifier)
-  // ),
+  sequence_declaration: $ => seq(
+    'sequence',
+    $._sequence_identifier,
+    optional(seq('(', optional($.sequence_port_list), ')')), ';',
+    repeat($.assertion_variable_declaration),
+    $.sequence_expr, optional(';'),
+    'endsequence', optional(seq(':', $._sequence_identifier))
+  ),
 
-  // sequence_port_list: $ => sep1(',', $.sequence_port_item),
+  sequence_port_list: $ => sepBy1(',', $.sequence_port_item),
 
-  // sequence_port_item: $ => seq(
-  //   repeat($.attribute_instance),
-  //   optseq(
-  //     'local',
-  //     optional($.sequence_lvar_port_direction)
-  //   ),
-  //   optional($.sequence_formal_type1),
-  //   $.formal_port_identifier,
-  //   repeat($._variable_dimension),
-  //   optseq(
-  //     '=', $._sequence_actual_arg
-  //   )
-  // ),
+  sequence_port_item: $ => seq(
+    repeat($.attribute_instance),
+    optional(seq('local', optional($.sequence_lvar_port_direction))),
+    optional($.sequence_formal_type1),
+    $.formal_port_identifier,
+    repeat($._variable_dimension),
+    optional(seq('=', $._sequence_actual_arg))
+  ),
 
-  // sequence_lvar_port_direction: $ => choice('input', 'inout', 'output'),
+  sequence_lvar_port_direction: $ => choice('input', 'inout', 'output'),
 
-  // sequence_formal_type1: $ => choice(
-  //   $.data_type_or_implicit1,
-  //   'sequence',
-  //   'untyped'
-  // ),
+  sequence_formal_type1: $ => choice(
+    $.data_type_or_implicit1,
+    'sequence',
+    'untyped'
+  ),
 
+  // TODO: Come here when time dictates
   // sequence_expr: $ => choice(
-  //   prec.left(sep1(',', $.cycle_delay_range)), // FIXME precedence?
-  //   prec.left(PREC.SHARP2, seq($.sequence_expr, repeat1(seq($.cycle_delay_range, $.sequence_expr)))),
-  //   seq($.expression_or_dist, optional($._boolean_abbrev)),
-  //   seq($.sequence_instance, optional($.sequence_abbrev)),
-  //   prec.left(seq('(', $.sequence_expr, repseq(',', $._sequence_match_item), ')', optional($.sequence_abbrev))),
-  //   prec.left(PREC.and, seq($.sequence_expr, 'and', $.sequence_expr)),
-  //   prec.left(PREC.intersect, seq($.sequence_expr, 'intersect', $.sequence_expr)),
-  //   prec.left(PREC.or, seq($.sequence_expr, 'or', $.sequence_expr)),
-  //   seq('first_match', '(', $.sequence_expr, repseq(',', $._sequence_match_item), ')'),
-  //   prec.right(PREC.throughout, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
-  //   prec.left(PREC.within, seq($.sequence_expr, 'within', $.sequence_expr)),
-  //   prec.left(seq($.clocking_event, $.sequence_expr)) // FIXME precedence?
+  //   // prec.left(sep1(',', $.cycle_delay_range)), // FIXME precedence?
+  //   // prec.left(PREC.SHARP2, seq($.sequence_expr, repeat1(seq($.cycle_delay_range, $.sequence_expr)))),
+  //   // seq($.expression_or_dist, optional($._boolean_abbrev)),
+  //   // seq($.sequence_instance, optional($.sequence_abbrev)),
+  //   // prec.left(seq('(', $.sequence_expr, repseq(',', $._sequence_match_item), ')', optional($.sequence_abbrev))),
+  //   // prec.left(PREC.and, seq($.sequence_expr, 'and', $.sequence_expr)),
+  //   // prec.left(PREC.intersect, seq($.sequence_expr, 'intersect', $.sequence_expr)),
+  //   // prec.left(PREC.or, seq($.sequence_expr, 'or', $.sequence_expr)),
+  //   // seq('first_match', '(', $.sequence_expr, repseq(',', $._sequence_match_item), ')'),
+  //   // prec.right(PREC.throughout, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
+  //   // prec.left(PREC.within, seq($.sequence_expr, 'within', $.sequence_expr)),
+  //   // prec.left(seq($.clocking_event, $.sequence_expr)) // FIXME precedence?
   // ),
 
-  // cycle_delay_range: $ => choice(
-  //   prec.left(seq('##', $.constant_primary)),
-  //   prec.left(seq('##', '[', $.cycle_delay_const_range_expression, ']')),
-  //   '##[*]',
-  //   '##[+]'
-  // ),
+  // TODO: Come here when time dictates
+  sequence_expr: $ => choice(
+    repeat1(seq($.cycle_delay_range, $.sequence_expr)),
+    seq($.sequence_expr, repeat1(seq($.cycle_delay_range, $.sequence_expr))),
+    seq($.expression_or_dist, optional($._boolean_abbrev)),
+    // seq($.sequence_instance, optional($.sequence_abbrev)),
+    // prec.left(seq('(', $.sequence_expr, repseq(',', $._sequence_match_item), ')', optional($.sequence_abbrev))),
+    // prec.left(PREC.and, seq($.sequence_expr, 'and', $.sequence_expr)),
+    // prec.left(PREC.intersect, seq($.sequence_expr, 'intersect', $.sequence_expr)),
+    // prec.left(PREC.or, seq($.sequence_expr, 'or', $.sequence_expr)),
+    // seq('first_match', '(', $.sequence_expr, repseq(',', $._sequence_match_item), ')'),
+    // prec.right(PREC.throughout, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
+    // prec.left(PREC.within, seq($.sequence_expr, 'within', $.sequence_expr)),
+    seq($.clocking_event, $.sequence_expr)
+  ),
+
+  cycle_delay_range: $ => choice(
+    seq('##', $.constant_primary),
+    seq('##', '[', $.cycle_delay_const_range_expression, ']'),
+    '##[*]',
+    '##[+]'
+  ),
 
   // sequence_method_call: $ => seq($.sequence_instance, '.', $.method_identifier),
 
@@ -2434,49 +2444,50 @@ const rules = {
   //   sep1(',', seq('.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
   // ),
 
-  // _sequence_actual_arg: $ => choice(
-  //   $.event_expression,
-  //   $.sequence_expr
-  // ),
+  _sequence_actual_arg: $ => prec('_sequence_actual_arg', choice(
+    $.event_expression,
+    $.sequence_expr,
+    '$',
+  )),
 
-  // _boolean_abbrev: $ => choice(
-  //   $.consecutive_repetition,
-  //   $.non_consecutive_repetition,
-  //   $.goto_repetition
-  // ),
+  _boolean_abbrev: $ => choice(
+    $.consecutive_repetition,
+    $.non_consecutive_repetition,
+    $.goto_repetition
+  ),
 
   // sequence_abbrev: $ => $.consecutive_repetition,
 
-  // consecutive_repetition: $ => choice(
-  //   seq('[*', $._const_or_range_expression, ']'),
-  //   '[*]',
-  //   '[+]'
-  // ),
+  consecutive_repetition: $ => choice(
+    seq('[*', $._const_or_range_expression, ']'),
+    '[*]',
+    '[+]'
+  ),
 
-  // non_consecutive_repetition: $ => seq('[=', $._const_or_range_expression, ']'),
+  non_consecutive_repetition: $ => seq('[=', $._const_or_range_expression, ']'),
 
-  // goto_repetition: $ => seq('[->', $._const_or_range_expression, ']'),
+  goto_repetition: $ => seq('[->', $._const_or_range_expression, ']'),
 
-  // _const_or_range_expression: $ => choice(
-  //   $.constant_expression,
-  //   $.cycle_delay_const_range_expression
-  // ),
+  _const_or_range_expression: $ => choice(
+    $.constant_expression,
+    $.cycle_delay_const_range_expression
+  ),
 
-  // cycle_delay_const_range_expression: $ => choice(
-  //   seq($.constant_expression, ':', $.constant_expression),
-  //   seq($.constant_expression, ':', '$')
-  // ),
+  cycle_delay_const_range_expression: $ => prec('cycle_delay_const_range_expression', choice(
+    seq($.constant_expression, ':', $.constant_expression),
+    seq($.constant_expression, ':', '$')
+  )),
 
-  // expression_or_dist: $ => seq(
-  //   $.expression,
-  //   optional(prec.left(PREC.RELATIONAL, seq('dist', '{', $.dist_list, '}')))
-  // ),
+  expression_or_dist: $ => prec('expression_or_dist', seq(
+    $.expression,
+    optional(prec.left(PREC.RELATIONAL, seq('dist', '{', $.dist_list, '}')))
+  )),
 
-  // assertion_variable_declaration: $ => seq(
-  //   $._var_data_type,
-  //   $.list_of_variable_decl_assignments,
-  //   ';'
-  // ),
+  assertion_variable_declaration: $ => seq(
+    $._var_data_type,
+    $.list_of_variable_decl_assignments,
+    ';'
+  ),
 
   // // A.2.11 Covergroup declarations
 
@@ -5065,7 +5076,7 @@ const rules = {
   enum_identifier: $ => alias($._identifier, $.enum_identifier),
   escaped_identifier: $ => seq('\\', /[^\s]*/),
   // formal_identifier: $ => alias($._identifier, $.formal_identifier),
-  // formal_port_identifier: $ => alias($._identifier, $.formal_port_identifier),
+  formal_port_identifier: $ => alias($._identifier, $.formal_port_identifier),
   function_identifier: $ => alias($._identifier, $.function_identifier),
   // generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
   // genvar_identifier: $ => alias($._identifier, $.genvar_identifier),
@@ -5211,7 +5222,7 @@ const rules = {
     $._type_identifier
   )),
 
-  // _sequence_identifier: $ => $._identifier,
+  _sequence_identifier: $ => $._identifier,
 
   // _signal_identifier: $ => $._identifier,
 
@@ -5271,7 +5282,7 @@ module.exports = grammar({
     $.class_identifier,
   //   $.covergroup_identifier,
     $.enum_identifier,
-  //   $.formal_port_identifier,
+    $.formal_port_identifier,
   //   $.genvar_identifier,
   //   $.specparam_identifier,
     $.tf_identifier,
@@ -5686,6 +5697,20 @@ module.exports = grammar({
     ['action_block', 'statement_or_null'],
 
 
+    // Conflict exclusive to sequence declarations:
+    //
+    //   'sequence'  _sequence_identifier  '('  _identifier  '='  '$'  •  ')'  …
+    //   1:  'sequence'  _sequence_identifier  '('  _identifier  '='  (_sequence_actual_arg  '$')  •  ')'  …
+    //   2:  'sequence'  _sequence_identifier  '('  _identifier  '='  (primary  '$')  •  ')'  …               (precedence: 'primary')
+    ['_sequence_actual_arg', 'primary'],
+    ['_sequence_actual_arg', 'event_expression'],
+
+
+    // 'sequence'  _sequence_identifier  ';'  '##'  '['  constant_expression  ':'  '$'  •  ']'  …
+    // 1:  'sequence'  _sequence_identifier  ';'  '##'  '['  (cycle_delay_const_range_expression  constant_expression  ':'  '$')  •  ']'  …  (precedence: 'cycle_delay_const_range_expression')
+    // 2:  'sequence'  _sequence_identifier  ';'  '##'  '['  constant_expression  ':'  (constant_primary  '$')  •  ']'  …                    (precedence: 'constant_primary')
+    ['cycle_delay_const_range_expression', 'constant_primary'],
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5715,6 +5740,10 @@ module.exports = grammar({
     ['param_expression'],
     ['value_range'],
     ['action_block'],
+    ['cycle_delay_const_range_expression'],
+    ['_sequence_actual_arg'],
+    ['expression_or_dist'],
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -6091,7 +6120,10 @@ module.exports = grammar({
     [$.blocking_assignment, $.shallow_copy, $.hierarchical_identifier],
     [$.shallow_copy, $.tf_call, $.hierarchical_identifier],
 
-
+    // Sequences
+    [$.sequence_expr],
+    [$._assignment_pattern_expression_type, $.constant_primary],
+    [$.expression_or_dist, $.event_expression],
 ],
 
 });
