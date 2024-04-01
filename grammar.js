@@ -1647,12 +1647,12 @@ const rules = {
 
   _signing: $ => choice('signed', 'unsigned'),
 
-  _simple_type: $ => choice(
+  _simple_type: $ => prec('_simple_type', choice(
     $._integer_type,
     $.non_integer_type,
     $.ps_type_identifier,
     $.ps_parameter_identifier
-  ),
+  )),
 
   struct_union_member: $ => seq(
     repeat($.attribute_instance),
@@ -3591,15 +3591,15 @@ const rules = {
     '}'
   ),
 
-  _structure_pattern_key: $ => choice(
+  _structure_pattern_key: $ => prec('_structure_pattern_key', choice(
     $.member_identifier,
     $.assignment_pattern_key
-  ),
+  )),
 
-  _array_pattern_key: $ => choice(
+  _array_pattern_key: $ => prec('_array_pattern_key', choice(
     $.constant_expression,
     $.assignment_pattern_key
-  ),
+  )),
 
   assignment_pattern_key: $ => choice(
     $._simple_type,
@@ -5245,7 +5245,7 @@ module.exports = grammar({
     $.ps_class_identifier,
   //   $.ps_covergroup_identifier,
     $.ps_parameter_identifier,
-  //   $.ps_type_identifier,
+    $.ps_type_identifier,
   //   $.ps_checker_identifier,
 
     $.parameter_identifier,
@@ -5620,6 +5620,31 @@ module.exports = grammar({
     ['data_type_or_incomplete_class_scoped_type', 'incomplete_class_scoped_type'],
 
 
+    // With struct array initializations:
+    // Consider higher priority a structure pattern even though it could be an assignment to an array,
+    // but the parser cannot know that...
+    //
+    //   ''{'  assignment_pattern_key  •  ':'  …
+    //   1:  ''{'  (_array_pattern_key  assignment_pattern_key)  •  ':'  …
+    //   2:  ''{'  (_structure_pattern_key  assignment_pattern_key)  •  ':'  …
+    ['_structure_pattern_key', '_array_pattern_key'],
+
+
+
+    // In this case, set this order to simplify precedences that yield the same result
+    //   ''{'  _identifier  •  ':'  …
+    //   1:  ''{'  (_simple_type  _identifier)  •  ':'  …
+    //   2:  ''{'  (_simple_type  _identifier)  •  ':'  …            (precedence: 'ps_parameter_identifier')
+    //   3:  ''{'  (_structure_pattern_key  _identifier)  •  ':'  …  (precedence: '_structure_pattern_key')
+    //   4:  ''{'  (constant_primary  _identifier)  •  ':'  …        (precedence: 'ps_parameter_identifier')
+    //
+    // ''{'  class_scope  _identifier  •  ':'  …
+    // 1:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …
+    // 2:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …      (precedence: 'ps_parameter_identifier')
+    // 3:  ''{'  (constant_primary  class_scope  _identifier)  •  ':'  …  (precedence: 'ps_parameter_identifier')
+    ['_simple_type', '_structure_pattern_key', 'ps_parameter_identifier'],
+
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5915,22 +5940,56 @@ module.exports = grammar({
     // 4:  'typedef'  (package_scope  _identifier  •  '::')                                                (precedence: 'package_scope')
     [$.incomplete_class_scoped_type, $.class_type, $.package_scope],
 
-    [$.data_type, $.interface_port_identifier],
-    [$.type_identifier_or_class_type, $.data_type, $.class_type],
-    [$.data_type, $.class_type],
-    [$.type_identifier_or_class_type, $.class_type],
 
-
+    // In this case, _forward_type would refer to the type of declaration
+    // that is done at the beginning of a file so that the enum is known to be declared
+    // (e.g.what is done with classes on the UVM)
+    //
+    // 'typedef'  'enum'  •  '\'  …
+    // 1:  'typedef'  (_forward_type  'enum')  •  '\'  …
+    // 2:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  '}'  data_type_repeat1)                     (precedence: 'data_type')
+    // 3:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  '}')                                        (precedence: 'data_type')
+    // 4:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  data_type_repeat3  '}'  data_type_repeat1)  (precedence: 'data_type')
+    // 5:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  data_type_repeat3  '}')                     (precedence: 'data_type')
     [$._forward_type, $.data_type],
 
 
-    // TODO: Struct initialization/assignment conflicts
-    [$._assignment_pattern_expression_type, $.ps_type_identifier],
-    [$._structure_pattern_key, $._array_pattern_key],
-    [$._simple_type, $._structure_pattern_key, $.constant_primary, $.ps_type_identifier],
-    [$._simple_type, $.constant_primary, $.ps_type_identifier],
-    [$._simple_type, $._structure_pattern_key, $.ps_type_identifier],
-    [$._simple_type, $.ps_type_identifier],
+    // interface_port_identifier would be of the form:
+    //  typedef if_port_id[5].member my_type_t (not sure if it's correct syntax)
+    // While the data_type branch could end with a _variable_dimension
+    //
+    // 'typedef'  _identifier  •  '['  …
+    // 1:  'typedef'  (data_type  _identifier  •  data_type_repeat1)       (precedence: 'data_type')
+    // 2:  'typedef'  (interface_port_identifier  _identifier)  •  '['  …
+    [$.data_type, $.interface_port_identifier],
+
+
+    // 'typedef'  _identifier  •  '\'  …
+    // 1:  'typedef'  (class_type  _identifier)  •  '\'  …                     (precedence: 'class_type')
+    // 2:  'typedef'  (data_type  _identifier)  •  '\'  …                      (precedence: 'data_type')
+    // 3:  'typedef'  (type_identifier_or_class_type  _identifier)  •  '\'  …
+    [$.type_identifier_or_class_type, $.data_type, $.class_type],
+
+
+    // 'typedef'  package_scope  _identifier  •  '\'  …
+    // 1:  'typedef'  (class_type  package_scope  _identifier)  •  '\'  …  (precedence: 'class_type')
+    // 2:  'typedef'  (data_type  package_scope  _identifier)  •  '\'  …   (precedence: 'data_type')
+    [$.data_type, $.class_type],
+
+
+    // Seems that any could be valid. Also incomplete_class_scoped_type could be recursive
+    // so more tokens of lookahead could help
+    //
+    // 'typedef'  _identifier  '::'  _identifier  •  '\'  …
+    // 1:  'typedef'  _identifier  '::'  (class_type  _identifier)  •  '\'  …                     (precedence: 'class_type')
+    // 2:  'typedef'  _identifier  '::'  (type_identifier_or_class_type  _identifier)  •  '\'  …
+    // 3:  'typedef'  _identifier  (class_type_repeat1  '::'  _identifier)  •  '\'  …             (precedence: 'class_type')
+    [$.type_identifier_or_class_type, $.class_type],
+
+
+    // Struct initialization/assignment conflicts (assignment_pattern_expression)
+    [$._assignment_pattern_expression_type],
+
 ],
 
 });
