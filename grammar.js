@@ -445,7 +445,7 @@ const rules = {
     // $.udp_declaration,
     // $.interface_declaration,
     // $.program_declaration,
-    // $.package_declaration,
+    $.package_declaration,
     seq(repeat($.attribute_instance), $._package_item),
     // seq(repeat($.attribute_instance), $.bind_directive)
     // $.config_declaration,
@@ -655,33 +655,29 @@ const rules = {
     optional($.parameter_value_assignment)
   ),
 
-  // interface_class_declaration: $ => seq(
-  //   'interface', 'class',
-  //   $.class_identifier,
-  //   optional($.parameter_port_list),
-  //   optseq(
-  //     'extends', optional(sep1(',', $.interface_class_type)), ';'
-  //   ),
-  //   repeat($.interface_class_item),
-  //   'endclass', optseq(':', $.class_identifier)
-  // ),
+  interface_class_declaration: $ => seq(
+    'interface', 'class', $.class_identifier, optional($.parameter_port_list),
+    optional(seq('extends', optional(sepBy1(',', $.interface_class_type)), ';')),
+    repeat($.interface_class_item),
+    'endclass', optional(seq(':', $.class_identifier))
+  ),
 
-  // interface_class_item: $ => choice(
-  //   $.type_declaration,
-  //   seq(repeat($.attribute_instance), $.interface_class_method),
-  //   seq($._any_parameter_declaration, ';'),
-  //   ';'
-  // ),
+  interface_class_item: $ => choice(
+    $.type_declaration,
+    seq(repeat($.attribute_instance), $.interface_class_method),
+    seq($._any_parameter_declaration, ';'),
+    ';'
+  ),
 
-  // interface_class_method: $ => seq('pure', 'virtual', $._method_prototype, ';'),
+  interface_class_method: $ => seq('pure', 'virtual', $._method_prototype, ';'),
 
-  // package_declaration: $ => seq(
-  //   repeat($.attribute_instance),
-  //   'package', optional($.lifetime), $.package_identifier, ';',
-  //   optional($.timeunits_declaration),
-  //   repseq(repeat($.attribute_instance), $._package_item),
-  //   'endpackage', optseq(':', $.package_identifier)
-  // ),
+  package_declaration: $ => seq(
+    repeat($.attribute_instance),
+    'package', optional($.lifetime), $.package_identifier, ';',
+    optional($.timeunits_declaration),
+    repeat(seq(repeat($.attribute_instance), $._package_item)),
+    'endpackage', optional(seq(':', $.package_identifier))
+  ),
 
   // INFO: Original one
   // timeunits_declaration: $ => choice(
@@ -814,18 +810,18 @@ const rules = {
   // End of INFO
 
   ansi_port_declaration: $ => prec('ansi_port_declaration', choice(
-    seq(
+    prec.dynamic(0, seq(
       optional(choice($.net_port_header1, $.interface_port_header)),
       $.port_identifier,
       repeat(prec('ansi_port_declaration', $.unpacked_dimension)),
       optional(seq('=', $.constant_expression))
-    ),
-    seq(
+    )),
+    prec.dynamic(1, seq(
       optional($.variable_port_header),
       $.port_identifier,
       repeat($._variable_dimension),
       optional(seq('=', $.constant_expression))
-    ),
+    )),
     seq(
       optional($.port_direction), '.', $.port_identifier,
       '(', optional($.expression), ')'
@@ -1164,7 +1160,7 @@ const rules = {
     optional(seq('(', optional($.class_constructor_arg_list), ')')),
     ';',
     repeat($.block_item_declaration),
-    optional(seq('super', '.', 'new', optional(seq('(', $.list_of_arguments, ')')), ';')),
+    optional(seq('super', '.', 'new', optional(seq('(', optional($.list_of_arguments), ')')), ';')),
     repeat($.function_statement_or_null),
     'endfunction', optional(seq(':', 'new'))
   )),
@@ -1287,7 +1283,7 @@ const rules = {
     // $.dpi_import_export,
     // $.extern_constraint_declaration,
     $.class_declaration,
-    // $.interface_class_declaration, // not in spec
+    $.interface_class_declaration,
     $.class_constructor_declaration,
     seq($._any_parameter_declaration, ';'),
     // $.covergroup_declaration,
@@ -1359,16 +1355,16 @@ const rules = {
   input_declaration: $ => seq(
     'input',
     choice(
-      seq(optional($.net_port_type1), $.list_of_port_identifiers),
-      seq(optional($._variable_port_type), $.list_of_variable_identifiers)
+      prec.dynamic(0, seq(optional($.net_port_type1), $.list_of_port_identifiers)),
+      prec.dynamic(1, seq(optional($._variable_port_type), $.list_of_variable_identifiers))
     )
   ),
 
   output_declaration: $ => seq(
     'output',
     choice(
-      seq(optional($.net_port_type1), $.list_of_port_identifiers),
-      seq(optional($._variable_port_type), $.list_of_variable_port_identifiers)
+      prec.dynamic(0, seq(optional($.net_port_type1), $.list_of_port_identifiers)),
+      prec.dynamic(1, seq(optional($._variable_port_type), $.list_of_variable_port_identifiers))
     )
   ),
 
@@ -1568,7 +1564,7 @@ const rules = {
       $._type_identifier,
       repeat($.packed_dimension)
     ),
-    // $.class_type,
+    $.class_type,
     // 'event',
     // $.ps_covergroup_identifier,
     $.type_reference
@@ -1872,18 +1868,16 @@ const rules = {
     //   repeat($._variable_dimension),
     //   optseq('=', $.dynamic_array_new)
     // ),
-    // seq(
-    //   $.class_variable_identifier,
-    //   optseq('=', $.class_new)
-    // )
+    seq(
+      $.class_variable_identifier,
+      optional(seq('=', $.class_new))
+    )
   ),
 
-  // class_new: $ => choice(
-  //   seq(
-  //     optional($.class_scope), 'new', optional($.list_of_arguments_parent)
-  //   ),
-  //   seq('new', $.expression)
-  // ),
+  class_new: $ => choice(
+    prec.dynamic(1, seq(optional($.class_scope), 'new', optional(seq('(', optional($.list_of_arguments), ')')))),
+    prec.dynamic(0, seq('new', $.expression))
+  ),
 
   // dynamic_array_new: $ => seq(
   //   'new', '[', $.expression, ']', optseq('(', $.expression, ')')
@@ -3256,10 +3250,13 @@ const rules = {
     // // ),
 
     $.operator_assignment,
-
-    // INFO: New in 2023? Not in drom's
-    // $.inc_or_dec_expression,
+    $.inc_or_dec_expression, // INFO: New in 2023? Not in drom's
+    seq($.class_variable_identifier, optional(seq('=', $.class_new))), // DANGER: Out of LRM explicitly, but should be (8.8) typed constructor
+    $.shallow_copy, // DANGER: Not in LRM explicitly! 8.12
   ),
+
+  // shallow_copy: $ => seq($.variable_lvalue, '=', 'new', $._identifier),
+  shallow_copy: $ => seq($._identifier, '=', 'new', $._identifier),
 
   // INFO: Drom's one
   // operator_assignment: $ => prec.left(PREC.ASSIGN,
@@ -4569,8 +4566,8 @@ const rules = {
   )),
 
   constant_param_expression: $ => choice(
-    $.constant_mintypmax_expression,
-    $.data_type,
+    prec.dynamic(1, $.constant_mintypmax_expression),
+    prec.dynamic(0, $.data_type),
     '$'
   ),
 
@@ -5046,7 +5043,7 @@ const rules = {
   // cell_identifier: $ => alias($._identifier, $.cell_identifier),
   // checker_identifier: $ => alias($._identifier, $.checker_identifier),
   class_identifier: $ => alias($._identifier, $.class_identifier),
-  // class_variable_identifier: $ => $._variable_identifier,
+  class_variable_identifier: $ => $._variable_identifier,
   // clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
   // config_identifier: $ => alias($._identifier, $.config_identifier),
   const_identifier: $ => alias($._identifier, $.const_identifier),
@@ -5277,7 +5274,7 @@ module.exports = grammar({
   //   $._udp_identifier,
     $.package_identifier,
   //   $.dynamic_array_variable_identifier,
-  //   $.class_variable_identifier,
+    $.class_variable_identifier,
   //   $.interface_instance_identifier,
     $.interface_identifier,
     $._module_identifier,
@@ -6054,13 +6051,11 @@ module.exports = grammar({
     [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
     [$.data_type, $.constant_primary],
 
-
     [$.expression, $.constant_primary],
     [$.data_type, $.expression],
 
 
     // TODO:: Fixing queue dimensions
-    //
     [$.primary, $.implicit_class_handle],
     [$.param_expression, $.primary],
     [$.value_range, $.primary],
@@ -6070,9 +6065,34 @@ module.exports = grammar({
     [$.queue_dimension, $.constant_primary],
 
     // TODO: Tagged union
-
     [$.tagged_union_expression],
     [$.pattern, $.tagged_union_expression],
+
+    // TODO: Adding class_type as data_type
+    [$.net_declaration, $.data_type, $.class_type],
+    [$.type_identifier_or_class_type, $.data_type],
+    [$.nettype_declaration, $.data_type, $.class_type],
+    [$.net_declaration, $.data_type, $.class_type, $.module_instantiation],
+    [$.interface_port_header, $.data_type, $.class_type, $.net_port_type1],
+    [$.data_type, $.class_type, $.net_port_type1],
+    [$.class_type, $.module_instantiation],
+    [$.data_type, $.class_type, $.tf_port_item1],
+    [$.data_type, $.class_type, $.constant_primary],
+
+
+    [$.ansi_port_declaration],
+
+
+    // TODO:
+    // class_new
+    [$.list_of_arguments, $.mintypmax_expression],
+
+    // TODO: Shallow copy
+    [$.shallow_copy, $.hierarchical_identifier],
+
+    // TODO: Typed constructor
+    [$.blocking_assignment, $.shallow_copy, $.hierarchical_identifier],
+    [$.shallow_copy, $.tf_call, $.hierarchical_identifier],
 ],
 
 });
