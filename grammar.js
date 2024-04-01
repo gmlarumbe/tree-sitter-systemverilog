@@ -1524,17 +1524,21 @@ const rules = {
   lifetime: $ => prec('lifetime', choice('static', 'automatic')),
 
 
-  // /* A.2.2 Declaration data types */
+  /* A.2.2 Declaration data types */
 
-  // /* A.2.2.1 Net and variable types */
+  /* A.2.2.1 Net and variable types */
 
-  // casting_type: $ => choice(
-  //   $._simple_type,
-  //   $.constant_primary,
-  //   $._signing,
-  //   'string',
-  //   'const'
-  // ),
+  casting_type: $ => prec('casting_type', choice(
+    $._simple_type,
+    // TODO: For some reason, the constant_primary stuff gives many errors
+    // Replace temporarily with $.primary_literal
+    // $.constant_primary,
+    $.primary_literal,
+    // End of TODO
+    $._signing,
+    'string',
+    'const'
+  )),
 
   data_type: $ => prec('data_type', choice(
     prec.right(seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension))),
@@ -4725,7 +4729,7 @@ const rules = {
     $.function_subroutine_call,
     // // $.let_expression, // TODO: Remove temporarily to narrow conflicts
     seq('(', $.mintypmax_expression, ')'),
-    // // $.cast, // TODO: Remove temporarily to narrow conflicts
+    $.cast,
     $.assignment_pattern_expression,
     // $.streaming_concatenation,
     // // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
@@ -4830,7 +4834,8 @@ const rules = {
 
   // _constant_let_expression: $ => $.let_expression,
 
-  // cast: $ => seq($.casting_type, '\'', '(', $.expression, ')'),
+  cast: $ => prec('cast', seq($.casting_type, '\'', '(', $.expression, ')')),
+
 
   // // A.8.5 Expression left-side values
 
@@ -5183,14 +5188,14 @@ const rules = {
     // )
   )),
 
-  ps_type_identifier: $ => seq(
+  ps_type_identifier: $ => prec('ps_type_identifier', seq(
     optional(choice(
       seq('local', '::'),
       $.package_scope,
       $.class_scope
     )),
     $._type_identifier
-  ),
+  )),
 
   // _sequence_identifier: $ => $._identifier,
 
@@ -5630,7 +5635,6 @@ module.exports = grammar({
     ['_structure_pattern_key', '_array_pattern_key'],
 
 
-
     // In this case, set this order to simplify precedences that yield the same result
     //   ''{'  _identifier  •  ':'  …
     //   1:  ''{'  (_simple_type  _identifier)  •  ':'  …
@@ -5642,8 +5646,15 @@ module.exports = grammar({
     // 1:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …
     // 2:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …      (precedence: 'ps_parameter_identifier')
     // 3:  ''{'  (constant_primary  class_scope  _identifier)  •  ':'  …  (precedence: 'ps_parameter_identifier')
-    ['_simple_type', '_structure_pattern_key', 'ps_parameter_identifier'],
+    ['ps_parameter_identifier', 'ps_type_identifier', '_structure_pattern_key'],
 
+
+    // Cast in primary related conflicts
+    //
+    //   _module_header1  '('  '.'  _identifier  '('  '{'  _identifier  constant_select1  •  ','  …
+    //   1:  _module_header1  '('  '.'  _identifier  '('  '{'  (constant_primary  _identifier  constant_select1)  •  ','  …  (precedence: 'constant_primary')
+    //   2:  _module_header1  '('  '.'  _identifier  '('  '{'  (port_reference  _identifier  constant_select1)  •  ','  …    (precedence: 'port_reference')
+    ['port_reference', 'constant_primary'],
 
 
     ///////////////////////////////////////////////////
@@ -5664,6 +5675,13 @@ module.exports = grammar({
     ['package_scope'],
     ['_description'],
     ['statement'],
+    ['_simple_type'],
+    ['ps_type_identifier'],
+    ['cast'],
+    ['casting_type'],
+    ['constant_primary'],
+
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5987,9 +6005,9 @@ module.exports = grammar({
     [$.type_identifier_or_class_type, $.class_type],
 
 
-    // Struct initialization/assignment conflicts (assignment_pattern_expression)
-    [$._assignment_pattern_expression_type],
-
+    // Casting
+    [$._simple_type, $.constant_primary],
+    [$._simple_type, $._structure_pattern_key, $.constant_primary],
 ],
 
 });
