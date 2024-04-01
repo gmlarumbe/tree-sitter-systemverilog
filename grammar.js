@@ -1401,8 +1401,8 @@ const rules = {
       ';'
     ),
     $.type_declaration,
-    // $.package_import_declaration,
-    // $.net_type_declaration
+    $.package_import_declaration,
+    $.nettype_declaration
   ),
 
   // INFO: Original one
@@ -1500,26 +1500,26 @@ const rules = {
 
   type_identifier_or_class_type: $ => choice($._type_identifier, $.class_type),
 
-  // net_type_declaration: $ => seq(
-  //   'nettype',
-  //   choice(
-  //     seq(
-  //       $.data_type,
-  //       $._net_type_identifier,
-  //       optseq(
-  //         'with',
-  //         optional(choice($.package_scope, $.class_scope)),
-  //         $.tf_identifier
-  //       )
-  //     ),
-  //     seq(
-  //       optional(choice($.package_scope, $.class_scope)),
-  //       $._net_type_identifier,
-  //       $._net_type_identifier
-  //     )
-  //   ),
-  //   ';'
-  // ),
+  nettype_declaration: $ => prec('nettype_declaration', seq(
+    'nettype',
+    choice(
+      seq(
+        $.data_type,
+        $._net_type_identifier,
+        optional(seq(
+          'with',
+          optional(choice($.package_scope, $.class_scope)),
+          $.tf_identifier
+        ))
+      ),
+      seq(
+        optional(choice($.package_scope, $.class_scope)),
+        $._net_type_identifier,
+        $._net_type_identifier
+      )
+    ),
+    ';'
+  )),
 
   lifetime: $ => prec('lifetime', choice('static', 'automatic')),
 
@@ -1571,7 +1571,7 @@ const rules = {
     // $.class_type,
     // 'event',
     // $.ps_covergroup_identifier,
-    // $.type_reference
+    $.type_reference
   )),
 
   data_type_or_implicit1: $ => prec('data_type_or_implicit1', choice(
@@ -1676,14 +1676,14 @@ const rules = {
     seq('union', optional(choice('soft', 'tagged')))
   ),
 
-  // type_reference: $ => seq(
-  //   'type', '(',
-  //   choice(
-  //     // $.expression, // TODO: Removed temporarily by Larumbe!
-  //     $.data_type
-  //   ),
-  //   ')'
-  // ),
+  type_reference: $ => seq(
+    'type', '(',
+    choice(
+      $.expression,
+      $.data_type_or_incomplete_class_scoped_type
+    ),
+    ')'
+  ),
 
   // // A.2.2.2 Strengths
 
@@ -3351,7 +3351,7 @@ const rules = {
     $.subroutine_call_statement,
     // $.disable_statement,
     // $.event_trigger,
-    // $.loop_statement,
+    $.loop_statement,
     $.jump_statement,
     // $.par_block,
     $.seq_block,
@@ -3569,7 +3569,7 @@ const rules = {
   range_list: $ => sepBy1(',', $.value_range),
 
   // open_value_range: $ => $.value_range,
-  value_range: $ => $.value_range,
+  // value_range: $ => $.value_range,
 
   // // A.6.7.1 Patterns
 
@@ -3618,7 +3618,7 @@ const rules = {
     $.ps_type_identifier,
     $.ps_parameter_identifier,
     $.integer_atom_type,
-    // $.type_reference
+    $.type_reference
   ),
 
   // _constant_assignment_pattern_expression: $ => prec('_constant_assignment_pattern_expression', $.assignment_pattern_expression),
@@ -3632,54 +3632,57 @@ const rules = {
 
   // // A.6.8 Looping statements
 
-  // loop_statement: $ => choice(
-  //   seq('forever', $.statement_or_null),
-  //   seq('repeat', '(', $.expression, ')', $.statement_or_null),
-  //   seq('while', '(', $.expression, ')', $.statement_or_null),
-  //   seq(
-  //     'for', '(',
-  //     optional($.for_initialization), ';',
-  //     optional($.expression), ';',
-  //     optional($.for_step),
-  //     ')',
-  //     $.statement_or_null
-  //   ),
-  //   seq('do', $.statement_or_null, 'while', '(', $.expression, ')', ';'),
-  //   seq(
-  //     'foreach', '(',
-  //     $.ps_or_hierarchical_array_identifier,
-  //     '[',
-  //     optional($.loop_variables1),
-  //     ']',
-  //     ')',
-  //     $.statement
-  //   )
-  // ),
+  loop_statement: $ => choice(
+    seq('forever', $.statement_or_null),
+    seq('repeat', '(', $.expression, ')', $.statement_or_null),
+    seq('while', '(', $.expression, ')', $.statement_or_null),
+    seq(
+      'for', '(',
+      optional($.for_initialization), ';',
+      optional($.expression), ';',
+      optional($.for_step),
+      ')',
+      $.statement_or_null
+    ),
+    seq('do', $.statement_or_null, 'while', '(', $.expression, ')', ';'),
+    seq(
+      'foreach', '(',
+      $.ps_or_hierarchical_array_identifier,
+      '[',
+      optional($.loop_variables1),
+      ']',
+      ')',
+      $.statement
+    )
+  ),
 
-  // for_initialization: $ => choice(
-  //   $.list_of_variable_assignments,
-  //   sep1(',', $.for_variable_declaration)
-  // ),
+  for_initialization: $ => choice(
+    $.list_of_variable_assignments,
+    sepBy1(',', $.for_variable_declaration)
+  ),
 
-  // for_variable_declaration: $ => seq(
-  //   optional('var'), $.data_type,
-  //   sep1(',', seq(
-  //     $._variable_identifier, '=', $.expression
-  //   ))
-  // ),
+  // prec.right because of:
+  //
+  // 'for'  '('  data_type  _identifier  '='  expression  •  ','  …
+  // 1:  'for'  '('  (for_variable_declaration  data_type  _identifier  '='  expression  •  for_variable_declaration_repeat1)
+  // 2:  'for'  '('  (for_variable_declaration  data_type  _identifier  '='  expression)  •  ','  …
+  for_variable_declaration: $ => prec.right(seq(
+    optional('var'), $.data_type,
+    sepBy1(',', seq($._variable_identifier, '=', $.expression))
+  )),
 
-  // for_step: $ => sep1(',', $._for_step_assignment),
+  for_step: $ => sepBy1(',', $._for_step_assignment),
 
-  // _for_step_assignment: $ => choice(
-  //   $.operator_assignment,
-  //   $.inc_or_dec_expression,
-  //   $.function_subroutine_call
-  // ),
+  _for_step_assignment: $ => choice(
+    $.operator_assignment,
+    $.inc_or_dec_expression,
+    $.function_subroutine_call
+  ),
 
-  // loop_variables1: $ => seq(
-  //   $.index_variable_identifier,
-  //   repseq(',', optional($.index_variable_identifier))
-  // ),
+  loop_variables1: $ => seq( // Avoid matching empty string!
+    $.index_variable_identifier,
+    repeat(seq(',', optional($.index_variable_identifier)))
+  ),
 
   // // A.6.9 Subroutine call statements
 
@@ -4506,7 +4509,10 @@ const rules = {
     optional(seq('with', optional(seq('(', optional($.identifier_list), ')')), $.constraint_block))
   ),
 
-  _method_call_root: $ => prec('_method_call_root', choice($.primary, $.implicit_class_handle)),
+  _method_call_root: $ => prec('_method_call_root', choice(
+    prec.dynamic(0, $.primary),
+    prec.dynamic(1, $.implicit_class_handle)
+  )),
 
   array_method_name: $ => choice(
     $.method_identifier, 'unique', 'and', 'or', 'xor'
@@ -4568,11 +4574,11 @@ const rules = {
     '$'
   ),
 
-  param_expression: $ => choice(
+  param_expression: $ => prec('param_expression', choice(
     $.mintypmax_expression,
     $.data_type,
     '$'
-  ),
+  )),
 
   _constant_range_expression: $ => choice(
     $.constant_expression,
@@ -4616,29 +4622,30 @@ const rules = {
 
     $.conditional_expression,
     // $.inside_expression,
-    // $.tagged_union_expression
+    $.tagged_union_expression,
 
+    $.type_reference,// DANGER: Out of LRM explicitly, but should be (6.23)
     $.text_macro_usage, // DANGER: Out of LRM
   ),
 
-  // tagged_union_expression: $ => prec.left(seq(
-  //   'tagged',
-  //   $.member_identifier,
-  //   optional($.expression)
-  // )),
+  tagged_union_expression: $ => seq(
+    'tagged',
+    $.member_identifier,
+    optional($.primary)
+  ),
 
   // inside_expression: $ => prec.left(PREC.RELATIONAL, seq(
   //   $.expression, 'inside', '{', $.open_range_list, '}'
   // )),
 
-  value_range: $ => choice(
+  value_range: $ => prec('value_range', choice(
     $.expression,
     seq('[', $.expression, ':', $.expression, ']'),
     seq('[', '$', ':', $.expression, ']'),
     seq('[', $.expression, ':', '$', ']'),
     seq('[', $.expression, '+', '/', '-', $.expression, ']'),
     seq('[', $.expression, '+', '%', '-', $.expression, ']'),
-  ),
+  )),
 
   mintypmax_expression: $ => prec('mintypmax_expression', seq(
     $.expression,
@@ -4704,7 +4711,9 @@ const rules = {
     seq('(', $.constant_mintypmax_expression, ')'),
     // // $.constant_cast,
     $._constant_assignment_pattern_expression,
-    // $.type_reference,
+    $.type_reference,
+
+    '$', // DANGER: Out of LRM explicitly, but required for 7.10.4 (bullet point 47): The $ primary shall be legal only in a select for a queue variable.
     // 'null'
   )),
 
@@ -4734,8 +4743,8 @@ const rules = {
     $.assignment_pattern_expression,
     // $.streaming_concatenation,
     // // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
-    // 'this',
-    // '$',
+    'this',
+    '$',
     // 'null'
   )),
 
@@ -5056,7 +5065,7 @@ const rules = {
   function_identifier: $ => alias($._identifier, $.function_identifier),
   // generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
   // genvar_identifier: $ => alias($._identifier, $.genvar_identifier),
-  // _hierarchical_array_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_array_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_block_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_event_identifier: $ => $.hierarchical_identifier,
 
@@ -5088,7 +5097,7 @@ const rules = {
     $.escaped_identifier
   ),
 
-  // index_variable_identifier: $ => alias($._identifier, $.index_variable_identifier),
+  index_variable_identifier: $ => alias($._identifier, $.index_variable_identifier),
   interface_identifier: $ => alias($._identifier, $.interface_identifier),
   // interface_instance_identifier: $ => alias($._identifier, $.interface_instance_identifier),
   interface_port_identifier: $ => alias($._identifier, $.interface_port_identifier),
@@ -5137,14 +5146,14 @@ const rules = {
     optional($.package_scope), $._identifier
   )),
 
-  // ps_or_hierarchical_array_identifier: $ => seq(
-  //   optional(choice(
-  //     seq($.implicit_class_handle, '.'),
-  //     $.class_scope,
-  //     $.package_scope
-  //   )),
-  //   $._hierarchical_array_identifier
-  // ),
+  ps_or_hierarchical_array_identifier: $ => seq(
+    optional(choice(
+      seq($.implicit_class_handle, '.'),
+      $.class_scope,
+      $.package_scope
+    )),
+    $._hierarchical_array_identifier
+  ),
 
   // ps_or_hierarchical_net_identifier: $ => choice(
   //   prec.left(PREC.PARENT, seq(optional($.package_scope), $._net_identifier)),
@@ -5659,6 +5668,19 @@ module.exports = grammar({
     ['port_reference', 'constant_primary'],
 
 
+    // 'nettype'  _identifier  •  '\'  …
+    // 1:  'nettype'  (data_type  _identifier)  •  '\'  …                      (precedence: 'data_type')
+    // 2:  (nettype_declaration  'nettype'  _identifier  •  _identifier  ';')
+    ['nettype_declaration', 'data_type'],
+
+
+
+    // ['implicit_class_handle', 'primary'],
+    // ['param_expression', 'primary'],
+
+
+    // ['value_range', 'primary'],
+    // ['primary', 'value_range'],
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5684,7 +5706,9 @@ module.exports = grammar({
     ['casting_type'],
     ['constant_primary'],
     ['_constant_assignment_pattern_expression'],
-
+    ['nettype_declaration'],
+    ['param_expression'],
+    ['value_range'],
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -6024,7 +6048,33 @@ module.exports = grammar({
     // 5:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  '}')                   (precedence: 'pattern')
     // 6:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  pattern_repeat2  '}')  (precedence: 'pattern')
     [$._simple_type, $.pattern, $._structure_pattern_key, $.constant_primary],
+
+
+    // TODO: Type-reference
+    [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
+    [$.data_type, $.constant_primary],
+
+
+    [$.expression, $.constant_primary],
+    [$.data_type, $.expression],
+
+
+    // TODO:: Fixing queue dimensions
+    //
+    [$.primary, $.implicit_class_handle],
+    [$.param_expression, $.primary],
+    [$.value_range, $.primary],
+
+
+    [$.constant_param_expression, $.constant_primary],
+    [$.queue_dimension, $.constant_primary],
+
+    // TODO: Tagged union
+
+    [$.tagged_union_expression],
+    [$.pattern, $.tagged_union_expression],
 ],
 
 });
+
 
