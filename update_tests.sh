@@ -37,7 +37,9 @@ EXPECTED_FAIL_FILELIST=(sv-tests/chapter-5/5.6--wrong-identifiers.sv
 
 # Exclude tests
 EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-macro_0.sv # No intention of supporting preprocessing
-                   sv-tests/chapter-5/5.10-structure-arrays-illegal.sv) # No intention of detecting the /* C-like assignment is illegal */ for struct initialization
+                   sv-tests/chapter-5/5.10-structure-arrays-illegal.sv                   # No intention of detecting the /* C-like assignment is illegal */ for struct initialization
+                   sv-tests/chapter-11/11.4.14.3--unpack_stream_inv.sv                   # No intention of parse the width of the streaming assignment target
+                  )
 
 
 # Filter tests, if there was an argument provided

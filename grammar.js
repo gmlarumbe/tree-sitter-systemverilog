@@ -2729,15 +2729,6 @@ const rules = {
     optional(seq('(', optional($.let_list_of_arguments), ')'))
   )),
 
-  let_list_of_arguments: $ => choice(
-    // FIXME empty string
-    // seq(
-    //   sep1(',', optional($.let_actual_arg)),
-    //   repseq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')')
-    // ),
-    sep1(',', seq('.', $._identifier, '(', optional($.let_actual_arg), ')'))
-  ),
-
   // INFO: Copied from $.list_of_arguments
   let_list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
     // First case: mixing positional and named arguments
@@ -2762,6 +2753,11 @@ const rules = {
 
 
   let_actual_arg: $ => $.expression,
+
+  // let_list_of_arguments: $ => alias($.list_of_arguments, $.let_list_of_arguments),
+
+  // let_actual_arg: $ => alias($.expression, $.let_actual_arg),
+
 
   // // A.3 Primitive instances
 
@@ -4743,7 +4739,7 @@ const rules = {
     // seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))), // TODO: Yields wrong parsing on 11.4.14.3
     seq($.constant_multiple_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
     seq($.constant_function_call, optional(seq('[', $._constant_range_expression, ']'))),
-    // // $._constant_let_expression,
+    // $._constant_let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
     seq('(', $.constant_mintypmax_expression, ')'),
     // // $.constant_cast,
     $._constant_assignment_pattern_expression,
@@ -4773,7 +4769,7 @@ const rules = {
     seq($.concatenation, optional(seq('[', $.range_expression, ']'))),
     seq($.multiple_concatenation, optional(seq('[', $.range_expression, ']'))),
     $.function_subroutine_call,
-    // // $.let_expression, // TODO: Remove temporarily to narrow conflicts
+    // $.let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
     seq('(', $.mintypmax_expression, ')'),
     $.cast,
     $.assignment_pattern_expression,
@@ -4885,7 +4881,7 @@ const rules = {
 
   // constant_cast: $ => seq($.casting_type, '\'', '(', $.constant_expression, ')'),
 
-  // _constant_let_expression: $ => $.let_expression,
+  _constant_let_expression: $ => $.let_expression,
 
   cast: $ => prec('cast', seq($.casting_type, '\'', '(', $.expression, ')')),
 
@@ -5327,7 +5323,7 @@ module.exports = grammar({
   //   $.interface_instance_identifier,
     $.interface_identifier,
     $._module_identifier,
-  //   $.let_identifier,
+    $.let_identifier,
   //   $.sequence_identifier,
     $._net_identifier,
   //   $.program_identifier,
@@ -6180,6 +6176,7 @@ module.exports = grammar({
     [$._simple_type, $.pattern, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary],
+
 ],
 
 });
