@@ -1435,13 +1435,13 @@ const rules = {
       optional(choice($.drive_strength, $.charge_strength)),
       optional(choice('vectored', 'scalared')),
       optional($.data_type_or_implicit1),
-      // optional($.delay3), // TODO: Removed temporarily by Larumbe
+      optional($.delay3), // TODO: Removed temporarily by Larumbe
       $.list_of_net_decl_assignments,
       ';'
     ),
     seq(
       $._net_type_identifier,
-      // optional($.delay_control), // TODO: Removed temporarily by Larumbe
+      optional($.delay_control),
       $.list_of_net_decl_assignments,
       ';'
     ),
@@ -1704,18 +1704,16 @@ const rules = {
 
   charge_strength: $ => seq('(', choice('small', 'medium', 'large'), ')'),
 
-  // // A.2.2.3 Delays
+  // A.2.2.3 Delays
 
-  // delay3: $ => seq('#', choice(
-  //   $.delay_value,
-  //   seq(
-  //     '(', $.mintypmax_expression,
-  //     optseq($.mintypmax_expression,
-  //       optional($.mintypmax_expression)
-  //     ),
-  //     ')'
-  //   )
-  // )),
+  delay3: $ => seq('#', choice(
+    $.delay_value,
+    seq(
+      '(',
+      $.mintypmax_expression,
+      optional(seq($.mintypmax_expression, optional($.mintypmax_expression))),
+      ')'
+    ))),
 
   // delay2: $ => seq('#', choice(
   //   $.delay_value,
@@ -6124,6 +6122,21 @@ module.exports = grammar({
     [$.sequence_expr],
     [$._assignment_pattern_expression_type, $.constant_primary],
     [$.expression_or_dist, $.event_expression],
+
+    // Net declaration delay
+    //   _identifier  '#'  '('  mintypmax_expression  •  ')'  …
+    //   1:  _identifier  '#'  '('  (param_expression  mintypmax_expression)  •  ')'  …  (precedence: 'param_expression')
+    //   2:  _identifier  (delay_control  '#'  '('  mintypmax_expression  •  ')')
+    [$.delay_control, $.param_expression],
+
+    // delay3
+    [$.randomize_call],
+    [$.system_tf_call],
+    [$._assignment_pattern_expression_type, $.expression],
+    [$.expression, $.mintypmax_expression],
+    [$.tf_call],
+    [$.array_manipulation_call],
+    [$.method_call_body],
 ],
 
 });
