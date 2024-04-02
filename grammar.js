@@ -4750,7 +4750,7 @@ const rules = {
     $.type_reference,
 
     '$', // DANGER: Out of LRM explicitly, but required for 7.10.4 (bullet point 47): The $ primary shall be legal only in a select for a queue variable.
-    // 'null'
+    'null'
   )),
 
   // module_path_primary: $ => choice(
@@ -4781,7 +4781,7 @@ const rules = {
     // // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
     'this',
     '$',
-    // 'null'
+    'null'
   )),
 
   class_qualifier: $ => prec('class_qualifier', seq(
