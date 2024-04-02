@@ -2117,7 +2117,7 @@ const rules = {
       $.data_declaration,
       seq($._any_parameter_declaration, ';'),
       // $.overload_declaration,   // INFO: Removed from 1800-2023
-      // $.let_declaration // TODO: Come back when implemented
+      $.let_declaration
     )
   ),
 
@@ -2252,7 +2252,7 @@ const rules = {
   _assertion_item_declaration: $ => choice(
     // $.property_declaration,
     $.sequence_declaration,
-    // $.let_declaration
+    $.let_declaration
   ),
 
   // property_declaration: $ => seq(
@@ -2699,47 +2699,69 @@ const rules = {
 
   // _covergroup_expression: $ => $.expression,
 
-  // /* A.2.12 Let declarations */
+  /* A.2.12 Let declarations */
+  let_declaration: $ => seq(
+    'let', $.let_identifier,
+    optional(seq('(', optional($.let_port_list), ')')),
+    '=', $.expression, ';'
+  ),
 
-  // let_declaration: $ => seq(
-  //   'let', $.let_identifier,
-  //   optseq('(', optional($.let_port_list), ')'),
-  //   '=', $.expression, ';'
-  // ),
+  let_identifier: $ => $._identifier,
 
-  // let_identifier: $ => $._identifier,
+  let_port_list: $ => sepBy1(',', $.let_port_item),
 
-  // let_port_list: $ => sep1(',', $.let_port_item),
+  let_port_item: $ => seq(
+    repeat($.attribute_instance),
+    optional($.let_formal_type1),
+    $.formal_port_identifier,
+    repeat($._variable_dimension),
+    optional(seq('=', $.expression))
+  ),
 
-  // let_port_item: $ => seq(
-  //   repeat($.attribute_instance),
-  //   optional($.let_formal_type1),
-  //   $.formal_port_identifier,
-  //   repeat($._variable_dimension),
-  //   optseq('=', $.expression)
-  // ),
+  let_formal_type1: $ => choice(
+    $.data_type_or_implicit1,
+    'untyped'
+  ),
 
-  // let_formal_type1: $ => choice(
-  //   $.data_type_or_implicit1,
-  //   'untyped'
-  // ),
+  let_expression: $ => prec.left(seq(
+    optional($.package_scope),
+    $.let_identifier,
+    optional(seq('(', optional($.let_list_of_arguments), ')'))
+  )),
 
-  // let_expression: $ => prec.left(seq(
-  //   optional($.package_scope),
-  //   $.let_identifier,
-  //   optseq('(', optional($.let_list_of_arguments), ')')
-  // )),
+  let_list_of_arguments: $ => choice(
+    // FIXME empty string
+    // seq(
+    //   sep1(',', optional($.let_actual_arg)),
+    //   repseq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')')
+    // ),
+    sep1(',', seq('.', $._identifier, '(', optional($.let_actual_arg), ')'))
+  ),
 
-  // let_list_of_arguments: $ => choice(
-  //   // FIXME empty string
-  //   // seq(
-  //   //   sep1(',', optional($.let_actual_arg)),
-  //   //   repseq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')')
-  //   // ),
-  //   sep1(',', seq('.', $._identifier, '(', optional($.let_actual_arg), ')'))
-  // ),
+  // INFO: Copied from $.list_of_arguments
+  let_list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
+    // First case: mixing positional and named arguments
+    seq(
+      $.let_actual_arg,
+      repeat(seq(',', optional($.let_actual_arg))),
+      repeat(seq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')'))
+    ),
+    seq(
+      optional($.let_actual_arg),
+      repeat1(seq(',', optional($.let_actual_arg))),
+      repeat(seq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')'))
+    ),
+    seq(
+      optional($.let_actual_arg),
+      repeat(seq(',', optional($.let_actual_arg))),
+      repeat1(seq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')'))
+    ),
+    // Second case: using only named arguments
+    sepBy1(',', seq('.', $._identifier, '(', optional($.let_actual_arg), ')'))
+  )),
 
-  // let_actual_arg: $ => $.expression,
+
+  let_actual_arg: $ => $.expression,
 
   // // A.3 Primitive instances
 
@@ -3571,11 +3593,8 @@ const rules = {
 
   // randcase_item: $ => seq($.expression, ':', $.statement_or_null),
 
-  // open_range_list: $ => sep1(',', $.open_value_range),
   range_list: $ => sepBy1(',', $.value_range),
 
-  // open_value_range: $ => $.value_range,
-  // value_range: $ => $.value_range,
 
   // // A.6.7.1 Patterns
 
@@ -4345,31 +4364,42 @@ const rules = {
   // streaming_concatenation: $ => prec.left(PREC.CONCAT, seq(
   //   '{', $.stream_operator, optional($.slice_size), $.stream_concatenation, '}'
   // )),
+  streaming_concatenation: $ => seq(
+    '{', $.stream_operator, optional($.slice_size), $.stream_concatenation, '}'
+  ),
+  // streaming_concatenation: $ => seq(
+  //   '{', $.stream_operator, prec.dynamic(1, optional($.slice_size)), $.stream_concatenation, '}'
+  // ),
 
-  // stream_operator: $ => choice('>>', '<<'),
+  stream_operator: $ => choice('>>', '<<'),
 
-  // slice_size: $ => choice($._simple_type, $.constant_expression),
+  slice_size: $ => choice($._simple_type, $.constant_expression),
+  // slice_size: $ => prec.left(choice($._simple_type, $.constant_expression)),
+  // slice_size: $ => $._simple_type,
 
   // stream_concatenation: $ => prec.left(PREC.CONCAT, seq(
-  //   '{', sep1(',', $.stream_expression), '}'
+  //   '{', sepBy1(',', $.stream_expression), '}'
   // )),
+  stream_concatenation: $ => seq(
+    '{', sepBy1(',', $.stream_expression), '}'
+  ),
 
-  // stream_expression: $ => seq($.expression, optseq('with', '[', $.array_range_expression, ']')),
+  stream_expression: $ => seq($.expression, optional(seq('with', '[', $.array_range_expression, ']'))),
 
-  // array_range_expression: $ => seq(
-  //   $.expression,
-  //   optional(choice(
-  //     seq( ':', $.expression),
-  //     seq('+:', $.expression),
-  //     seq('-:', $.expression)
-  //   ))
-  // ),
+  array_range_expression: $ => seq(
+    $.expression,
+    optional(choice(
+      seq( ':', $.expression),
+      seq('+:', $.expression),
+      seq('-:', $.expression)
+    ))
+  ),
 
   empty_unpacked_array_concatenation: $ => seq('{', '}'),
 
   // /* A.8.2 Subroutine calls */
 
-  // constant_function_call: $ => $.function_subroutine_call,
+  constant_function_call: $ => $.function_subroutine_call,
 
   // tf_call: $ => prec.left(seq(
   //   $._hierarchical_tf_identifier, // FIXME
@@ -4627,7 +4657,7 @@ const rules = {
     exprOp($, PREC.IMPLICATION, choice('->', '<->')),
 
     $.conditional_expression,
-    // $.inside_expression,
+    $.inside_expression,
     $.tagged_union_expression,
 
     $.type_reference,// DANGER: Out of LRM explicitly, but should be (6.23)
@@ -4640,9 +4670,9 @@ const rules = {
     optional($.primary)
   ),
 
-  // inside_expression: $ => prec.left(PREC.RELATIONAL, seq(
-  //   $.expression, 'inside', '{', $.open_range_list, '}'
-  // )),
+  inside_expression: $ => prec.left(PREC.RELATIONAL, seq(
+    $.expression, 'inside', '{', $.range_list, '}'
+  )),
 
   value_range: $ => prec('value_range', choice(
     $.expression,
@@ -4712,7 +4742,7 @@ const rules = {
     // // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier),
     seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
     seq($.constant_multiple_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
-    // // $.constant_function_call,
+    seq($.constant_function_call, optional(seq('[', $._constant_range_expression, ']'))),
     // // $._constant_let_expression,
     seq('(', $.constant_mintypmax_expression, ')'),
     // // $.constant_cast,
@@ -4747,7 +4777,7 @@ const rules = {
     seq('(', $.mintypmax_expression, ')'),
     $.cast,
     $.assignment_pattern_expression,
-    // $.streaming_concatenation,
+    $.streaming_concatenation,
     // // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
     'this',
     '$',
@@ -6137,6 +6167,16 @@ module.exports = grammar({
     [$.tf_call],
     [$.array_manipulation_call],
     [$.method_call_body],
+
+    // Constant function call (13.4.3)
+    [$.constant_function_call, $.primary],
+    [$._simple_type, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._simple_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._simple_type, $.tf_call, $.constant_primary],
+    [$.concatenation, $.stream_expression],
+    [$._simple_type, $.pattern, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary],
 ],
 
 });
