@@ -4777,7 +4777,8 @@ const rules = {
     // // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
     'this',
     '$',
-    'null'
+    'null',
+    '$root', // DANGER: Out of LRM but needed for sv-tests/chapter-20/20.14--coverage
   )),
 
   class_qualifier: $ => prec('class_qualifier', seq(
@@ -5737,6 +5738,14 @@ module.exports = grammar({
     // 1:  'sequence'  _sequence_identifier  ';'  '##'  '['  (cycle_delay_const_range_expression  constant_expression  ':'  '$')  •  ']'  …  (precedence: 'cycle_delay_const_range_expression')
     // 2:  'sequence'  _sequence_identifier  ';'  '##'  '['  constant_expression  ':'  (constant_primary  '$')  •  ']'  …                    (precedence: 'constant_primary')
     ['cycle_delay_const_range_expression', 'constant_primary'],
+
+
+    // After adding $root as a primary
+    // '$root'  •  '.'  …
+    // 1:  (hierarchical_identifier  '$root'  •  '.'  _identifier)                                   (precedence: 'hierarchical_identifier')
+    // 2:  (hierarchical_identifier  '$root'  •  '.'  hierarchical_identifier_repeat1  _identifier)  (precedence: 'hierarchical_identifier')
+    // 3:  (primary  '$root')  •  '.'  …                                                             (precedence: 'primary')
+    ['hierarchical_identifier', 'primary'],
 
 
     ///////////////////////////////////////////////////
