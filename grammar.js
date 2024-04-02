@@ -1089,11 +1089,11 @@ const rules = {
   // /* A.1.9 Class items */
 
   class_item: $ => choice(
-    // $._directives, // TODO: Still not in the LRM but will probably come back here
+    $._directives, // INFO: Out of LRM but useful for basic parsing in the UVM
     seq(repeat($.attribute_instance), $.class_property),
     seq(repeat($.attribute_instance), $.class_method),
     // seq(repeat($.attribute_instance), $._class_constraint),
-    // seq(repeat($.attribute_instance), $.class_declaration),
+    seq(repeat($.attribute_instance), $.class_declaration),
     // seq(repeat($.attribute_instance), $.interface_class_declaration),
     // seq(repeat($.attribute_instance), $.covergroup_declaration),
     seq($._any_parameter_declaration, ';'),
@@ -1548,12 +1548,14 @@ const rules = {
     seq(
       $.struct_union,
       optional(seq('packed', optional($._signing))),
-      '{', repeat1($.struct_union_member), '}',
+      // '{', repeat1($.struct_union_member), '}',
+      '{', repeat1(choice($._directives, $.struct_union_member)), '}', // INFO: _directives out of LRM, for sv-tests/generic/typedef tests
       repeat($.packed_dimension)
     ),
     seq(
       'enum', optional($.enum_base_type),
-      '{', sepBy1(',', $.enum_name_declaration), '}',
+      // '{', sepBy1(',', $.enum_name_declaration), '}',
+      '{', choice($._directives, sepBy1(',', $.enum_name_declaration)), '}', // INFO: _directives out of LRM, for sv-tests/generic/typedef tests
       repeat($.packed_dimension)
     ),
     'string',
@@ -3595,8 +3597,7 @@ const rules = {
   range_list: $ => sepBy1(',', $.value_range),
 
 
-  // // A.6.7.1 Patterns
-
+  // A.6.7.1 Patterns
   // INFO: Modified from Drom's one
   pattern: $ => prec('pattern', choice(
     seq('(', $.pattern, ')'),
@@ -3685,12 +3686,7 @@ const rules = {
     sepBy1(',', $.for_variable_declaration)
   ),
 
-  // prec.right because of:
-  //
-  // 'for'  '('  data_type  _identifier  '='  expression  •  ','  …
-  // 1:  'for'  '('  (for_variable_declaration  data_type  _identifier  '='  expression  •  for_variable_declaration_repeat1)
-  // 2:  'for'  '('  (for_variable_declaration  data_type  _identifier  '='  expression)  •  ','  …
-  for_variable_declaration: $ => prec.right(seq(
+  for_variable_declaration: $ => prec.left(seq(
     optional('var'), $.data_type,
     sepBy1(',', seq($._variable_identifier, '=', $.expression))
   )),
