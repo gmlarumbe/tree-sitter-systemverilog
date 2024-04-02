@@ -1863,12 +1863,12 @@ const rules = {
       repeat($._variable_dimension),
       optional(seq('=', $.expression))
     ),
-    // seq(
-    //   $.dynamic_array_variable_identifier,
-    //   $.unsized_dimension,
-    //   repeat($._variable_dimension),
-    //   optseq('=', $.dynamic_array_new)
-    // ),
+    seq(
+      $.dynamic_array_variable_identifier,
+      $.unsized_dimension,
+      repeat($._variable_dimension),
+      optional(seq('=', $.dynamic_array_new))
+    ),
     seq(
       $.class_variable_identifier,
       optional(seq('=', $.class_new))
@@ -1880,9 +1880,9 @@ const rules = {
     prec.dynamic(0, seq('new', $.expression))
   ),
 
-  // dynamic_array_new: $ => seq(
-  //   'new', '[', $.expression, ']', optseq('(', $.expression, ')')
-  // ),
+  dynamic_array_new: $ => seq(
+    'new', '[', $.expression, ']', optional(seq('(', $.expression, ')'))
+  ),
 
   // // A.2.5 Declaration ranges
 
@@ -4950,14 +4950,14 @@ const rules = {
   //   $.streaming_concatenation
   // ),
 
-  // nonrange_variable_lvalue: $ => prec.left(PREC.PARENT, seq(
-  //   optional(choice(
-  //     seq($.implicit_class_handle, '.'),
-  //     $.package_scope
-  //   )),
-  //   $._hierarchical_variable_identifier,
-  //   optional($.nonrange_select1)
-  // )),
+  nonrange_variable_lvalue: $ => seq(
+    optional(choice(
+      seq($.implicit_class_handle, '.'),
+      $.package_scope
+    )),
+    $._hierarchical_variable_identifier,
+    optional($.nonrange_select1)
+  ),
 
   // // A.8.6 Operators
 
@@ -5098,7 +5098,7 @@ const rules = {
   // // covergroup_variable_identifier = _variable_identifier
   // cover_point_identifier: $ => alias($._identifier, $.cover_point_identifier),
   // cross_identifier: $ => alias($._identifier, $.cross_identifier),
-  // dynamic_array_variable_identifier: $ => alias($._variable_identifier, $.dynamic_array_variable_identifier),
+  dynamic_array_variable_identifier: $ => alias($._variable_identifier, $.dynamic_array_variable_identifier),
   enum_identifier: $ => alias($._identifier, $.enum_identifier),
   escaped_identifier: $ => seq('\\', /[^\s]*/),
   // formal_identifier: $ => alias($._identifier, $.formal_identifier),
@@ -5317,7 +5317,7 @@ module.exports = grammar({
     $._variable_identifier,
   //   $._udp_identifier,
     $.package_identifier,
-  //   $.dynamic_array_variable_identifier,
+    $.dynamic_array_variable_identifier,
     $.class_variable_identifier,
   //   $.interface_instance_identifier,
     $.interface_identifier,
@@ -6212,6 +6212,23 @@ module.exports = grammar({
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation],
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type],
     [$.list_of_interface_identifiers, $.net_decl_assignment],
+
+    // Dynamic array new
+    [$.variable_decl_assignment, $._variable_dimension],
+    [$.variable_decl_assignment, $.packed_dimension, $._variable_dimension],
+
+    [$._method_call_root, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.select1, $.nonrange_select1],
+    [$.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+
+
+    [$.constant_primary, $.primary],
+
+
+    // TODO: Remove!
+    [$.select1, $.variable_lvalue],
 ],
 
 });
