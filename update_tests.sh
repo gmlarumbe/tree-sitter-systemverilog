@@ -30,7 +30,10 @@ EXPECTED_FAIL_FILELIST=(sv-tests/chapter-5/5.6--wrong-identifiers.sv
                         sv-tests/chapter-5/5.7.2-real-constants-illegal.sv
                         sv-tests/chapter-5/5.10-structure-arrays-illegal.sv
                         # Chapter 6
-                        sv-tests/chapter-6/6.9.2--vector_vectored_inv.sv)
+                        sv-tests/chapter-6/6.9.2--vector_vectored_inv.sv
+                        # Chapter 11
+                        sv-tests/chapter-11/11.3.6--assign_in_expr_inv.sv
+                       )
 
 # Exclude tests
 EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-macro_0.sv # No intention of supporting preprocessing
