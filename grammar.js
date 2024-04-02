@@ -418,26 +418,26 @@ const rules = {
   endkeywords_directive: $ => directive('end_keywords'),
 
 
-  // /* A.1.1 Library source text */
+  /* A.1.1 Library source text */
 
-  // // library_text: $ => repeat($.library_description),
+  // library_text: $ => repeat($.library_description),
 
-  // // library_description: $ => choice(
-  // //   $.library_declaration,
-  // //   $.include_statement,
-  // //   $.config_declaration,
-  // //   ';'
-  // // ),
-  // //
-  // // library_declaration: $ => seq(
-  // //   'library',
-  // //   $.library_identifier,
-  // //   sep1(',', $.file_path_spec),
-  // //   optseq('-incdir', sep1(',', $.file_path_spec)),
-  // //   ';'
-  // // ),
-  // //
-  // // include_statement: $ => seq('include', $.file_path_spec, ';'),
+  // library_description: $ => choice(
+  //   $.library_declaration,
+  //   $.include_statement,
+  //   // $.config_declaration,
+  //   ';'
+  // ),
+
+  // library_declaration: $ => seq(
+  //   'library',
+  //   $.library_identifier,
+  //   sep1(',', $.file_path_spec),
+  //   optseq('-incdir', sep1(',', $.file_path_spec)),
+  //   ';'
+  // ),
+
+  // include_statement: $ => seq('include', $.file_path_spec, ';'),
 
   // /* A.1.2 SystemVerilog source text */
 
@@ -446,8 +446,8 @@ const rules = {
     $.module_declaration,
     // TODO: Simplifying debugging
     // $.udp_declaration,
-    // $.interface_declaration,
-    // $.program_declaration,
+    $.interface_declaration,
+    $.program_declaration,
     $.package_declaration,
     seq(repeat($.attribute_instance), $._package_item),
     // seq(repeat($.attribute_instance), $.bind_directive)
@@ -527,102 +527,99 @@ const rules = {
 
   module_keyword: $ => choice('module', 'macromodule'),
 
+  interface_declaration: $ => choice(
+    seq(
+      $.interface_nonansi_header,
+      optional($.timeunits_declaration),
+      repeat($.interface_item),
+      'endinterface', optional(seq(':', $.interface_identifier))
+    ),
+    seq(
+      $.interface_ansi_header,
+      optional($.timeunits_declaration),
+      repeat($._non_port_interface_item),
+      'endinterface', optional(seq(':', $.interface_identifier))
+    ),
+    seq(
+      repeat($.attribute_instance),
+      'interface',
+      $.interface_identifier,
+      '(', '.*', ')', ';',
+      optional($.timeunits_declaration),
+      repeat($.interface_item),
+      'endinterface', optional(seq(':', $.interface_identifier))
+    ),
+    seq('extern', $.interface_nonansi_header),
+    seq('extern', $.interface_ansi_header)
+  ),
 
-  // interface_declaration: $ => choice(
-  //   seq(
-  //     $.interface_nonansi_header,
-  //     optional($.timeunits_declaration),
-  //     repeat($.interface_item),
-  //     'endinterface', optseq(':', $.interface_identifier)
-  //   ),
-  //   seq(
-  //     $.interface_ansi_header,
-  //     optional($.timeunits_declaration),
-  //     repeat($._non_port_interface_item),
-  //     'endinterface', optseq(':', $.interface_identifier)
-  //   ),
-  //   seq(
-  //     repeat($.attribute_instance),
-  //     'interface',
-  //     $.interface_identifier,
-  //     '(', '.*', ')', ';',
-  //     optional($.timeunits_declaration),
-  //     repeat($.interface_item),
-  //     'endinterface', optseq(':', $.interface_identifier)
-  //   ),
-  //   seq('extern', $.interface_nonansi_header),
-  //   seq('extern', $.interface_ansi_header)
-  // ),
+  _interface_header1: $ => prec.left(seq(
+    repeat($.attribute_instance),
+    'interface',
+    optional($.lifetime),
+    field('name', $.interface_identifier),
+    repeat($.package_import_declaration),
+    optional($.parameter_port_list)
+  )),
 
-  // interface_nonansi_header: $ => seq(
-  //   repeat($.attribute_instance),
-  //   'interface',
-  //   optional($.lifetime),
-  //   $.interface_identifier,
-  //   repeat($.package_import_declaration),
-  //   optional($.parameter_port_list),
-  //   $.list_of_ports,
-  //   ';'
-  // ),
+  interface_nonansi_header: $ => seq(
+    $._interface_header1,
+    $.list_of_ports,
+    ';'
+  ),
 
-  // interface_ansi_header: $ => seq(
-  //   repeat($.attribute_instance),
-  //   'interface',
-  //   optional($.lifetime),
-  //   $.interface_identifier,
-  //   repeat($.package_import_declaration),
-  //   optional($.parameter_port_list),
-  //   optional($.list_of_port_declarations),
-  //   ';'
-  // ),
+  interface_ansi_header: $ => seq(
+    $._interface_header1,
+    optional($.list_of_port_declarations),
+    ';'
+  ),
 
-  // program_declaration: $ => choice(
-  //   seq(
-  //     $.program_nonansi_header,
-  //     optional($.timeunits_declaration),
-  //     repeat($.program_item),
-  //     'endprogram', optseq(':', $.program_identifier)
-  //   ),
-  //   seq(
-  //     $.program_ansi_header,
-  //     optional($.timeunits_declaration),
-  //     repeat($.non_port_program_item),
-  //     'endprogram', optseq(':', $.program_identifier)
-  //   ),
-  //   seq(
-  //     repeat($.attribute_instance),
-  //     'program',
-  //     $.program_identifier,
-  //     '(', '.*', ')', ';',
-  //     optional($.timeunits_declaration),
-  //     repeat($.program_item),
-  //     'endprogram', optseq(':', $.program_identifier)
-  //   ),
-  //   seq('extern', $.program_nonansi_header),
-  //   seq('extern', $.program_ansi_header)
-  // ),
+  program_declaration: $ => choice(
+    seq(
+      $.program_nonansi_header,
+      optional($.timeunits_declaration),
+      repeat($.program_item),
+      'endprogram', optional(seq(':', $.program_identifier))
+    ),
+    seq(
+      $.program_ansi_header,
+      optional($.timeunits_declaration),
+      repeat($.non_port_program_item),
+      'endprogram', optional(seq(':', $.program_identifier))
+    ),
+    seq(
+      repeat($.attribute_instance),
+      'program',
+      $.program_identifier,
+      '(', '.*', ')', ';',
+      optional($.timeunits_declaration),
+      repeat($.program_item),
+      'endprogram', optional(seq(':', $.program_identifier))
+    ),
+    seq('extern', $.program_nonansi_header),
+    seq('extern', $.program_ansi_header)
+  ),
 
-  // program_nonansi_header: $ => seq(
-  //   repeat($.attribute_instance),
-  //   'program',
-  //   optional($.lifetime),
-  //   $.program_identifier,
-  //   repeat($.package_import_declaration),
-  //   optional($.parameter_port_list),
-  //   $.list_of_ports,
-  //   ';'
-  // ),
+  _program_header1: $ => prec.left(seq(
+    repeat($.attribute_instance),
+    'program',
+    optional($.lifetime),
+    field('name', $.program_identifier),
+    repeat($.package_import_declaration),
+    optional($.parameter_port_list)
+  )),
 
-  // program_ansi_header: $ => seq(
-  //   repeat($.attribute_instance),
-  //   'program',
-  //   optional($.lifetime),
-  //   $.program_identifier,
-  //   repeat($.package_import_declaration),
-  //   optional($.parameter_port_list),
-  //   optional($.list_of_port_declarations),
-  //   ';'
-  // ),
+  program_nonansi_header: $ => seq(
+    $._program_header1,
+    $.list_of_ports,
+    ';'
+  ),
+
+  program_ansi_header: $ => seq(
+    $._program_header1,
+    optional($.list_of_port_declarations),
+    ';'
+  ),
 
   // checker_declaration: $ => seq(
   //   'checker',
@@ -990,56 +987,55 @@ const rules = {
   //   optseq(':', 'config')
   // ),
 
-  // /* A.1.6 Interface items */
+  /* A.1.6 Interface items */
+  interface_or_generate_item: $ => choice(
+    seq(repeat($.attribute_instance), $._module_common_item),
+    seq(repeat($.attribute_instance), $.extern_tf_declaration),
+    $._directives // INFO: Out of LRM but for convenience
+  ),
 
-  // interface_or_generate_item: $ => choice(
-  //   seq(repeat($.attribute_instance), $._module_common_item),
-  //   seq(repeat($.attribute_instance), $.extern_tf_declaration),
-  //   $._directives
-  // ),
+  extern_tf_declaration: $ => choice(
+    seq('extern', $._method_prototype, ';'),
+    seq('extern', 'forkjoin', $.task_prototype, ';')
+  ),
 
-  // extern_tf_declaration: $ => choice(
-  //   seq('extern', $._method_prototype, ';'),
-  //   seq('extern', 'forkjoin', $.task_prototype, ';')
-  // ),
+  interface_item: $ => choice(
+    seq($.port_declaration, ';'),
+    $._non_port_interface_item
+  ),
 
-  // interface_item: $ => choice(
-  //   seq($.port_declaration, ';'),
-  //   $._non_port_interface_item
-  // ),
+  _non_port_interface_item: $ => choice(
+    // $.generate_region, // TODO: Still pending!
+    $.interface_or_generate_item,
+    // $.program_declaration,
+    // $.modport_declaration,
+    $.interface_declaration,
+    $.timeunits_declaration
+  ),
 
-  // _non_port_interface_item: $ => choice(
-  //   $.generate_region,
-  //   $.interface_or_generate_item,
-  //   $.program_declaration,
-  //   $.modport_declaration,
-  //   $.interface_declaration,
-  //   $.timeunits_declaration
-  // ),
+  /* A.1.7 Program items */
+  program_item: $ => choice(
+    seq($.port_declaration, ';'),
+    $.non_port_program_item
+  ),
 
-  // /* A.1.7 Program items */
+  non_port_program_item: $ => choice(
+    seq(repeat($.attribute_instance), $.continuous_assign),
+    seq(repeat($.attribute_instance), $._module_or_generate_item_declaration),
+    seq(repeat($.attribute_instance), $.initial_construct),
+    seq(repeat($.attribute_instance), $.final_construct),
+    // seq(repeat($.attribute_instance), $.concurrent_assertion_item), // TODO
+    $.timeunits_declaration,
+    // $._program_generate_item
+  ),
 
-  // program_item: $ => choice(
-  //   seq($.port_declaration, ';'),
-  //   $.non_port_program_item
-  // ),
-
-  // non_port_program_item: $ => choice(
-  //   seq(repeat($.attribute_instance), $.continuous_assign),
-  //   seq(repeat($.attribute_instance), $._module_or_generate_item_declaration),
-  //   seq(repeat($.attribute_instance), $.initial_construct),
-  //   seq(repeat($.attribute_instance), $.final_construct),
-  //   seq(repeat($.attribute_instance), $.concurrent_assertion_item),
-  //   $.timeunits_declaration,
-  //   $._program_generate_item
-  // ),
-
-  // _program_generate_item: $ => choice(
-  //   $.loop_generate_construct,
-  //   $._conditional_generate_construct,
-  //   $.generate_region,
-  //   $.elaboration_system_task
-  // ),
+  _program_generate_item: $ => choice(
+    // $.loop_generate_construct,
+    // TODO
+    // $._conditional_generate_construct,
+    // $.generate_region,
+    // $.elaboration_system_task
+  ),
 
   // /* A.1.8 Checker items */
 
@@ -2144,7 +2140,7 @@ const rules = {
 
   // /* A.2.9 Interface declarations */
 
-  // modport_declaration: $ => seq('modport', sep1(',', $.modport_item), ';'),
+  // modport_declaration: $ => seq('modport', sepBy1(',', $.modport_item), ';'),
 
   // modport_item: $ => seq(
   //   $.modport_identifier,
@@ -5166,7 +5162,7 @@ const rules = {
   parameter_identifier: $ => alias($._identifier, $.parameter_identifier),
   port_identifier: $ => alias($._identifier, $.port_identifier),
   // production_identifier: $ => alias($._identifier, $.production_identifier),
-  // program_identifier: $ => alias($._identifier, $.program_identifier),
+  program_identifier: $ => alias($._identifier, $.program_identifier),
   // property_identifier: $ => alias($._identifier, $.property_identifier),
 
   // Set prec.left because of:
@@ -5328,7 +5324,7 @@ module.exports = grammar({
     $.let_identifier,
   //   $.sequence_identifier,
     $._net_identifier,
-  //   $.program_identifier,
+    $.program_identifier,
   //   $.checker_identifier,
     $.member_identifier,
     $.port_identifier,
@@ -6189,6 +6185,13 @@ module.exports = grammar({
 
 
     [$.constant_expression, $.expression],
+
+    // Interface (TODO: don't understand these two below)
+    [$.interface_declaration, $._non_port_interface_item],
+    [$.timeunits_declaration],
+
+    // Program (TODO: don't understand these two below)
+    [$.program_declaration, $.non_port_program_item],
 ],
 
 });
