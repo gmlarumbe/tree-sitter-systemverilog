@@ -182,7 +182,7 @@ const rules = {
   // `undef [22.5.2]
   // `undefineall [22.5.3]
 
-  _directives: $ => choice(
+  _directives: $ => prec('_directives', choice(
     $.resetall_compiler_directive,
     $.include_compiler_directive,
     $.text_macro_definition,
@@ -200,7 +200,7 @@ const rules = {
     $.file_or_line_compiler_directive,
     $.keywords_directive,
     $.endkeywords_directive
-  ),
+  )),
 
 
   /* 22-3 `resetall */
@@ -252,7 +252,7 @@ const rules = {
 
   text_macro_identifier: $ => $._identifier,
 
-  text_macro_usage: $ => prec.right(seq(
+  text_macro_usage: $ => prec.right('text_macro_usage', seq(
     '`',
     $.text_macro_identifier,
     optional(seq('(', optional($.text_macro_list_of_actual_arguments), ')'))
@@ -759,11 +759,11 @@ const rules = {
   port_declaration: $ => seq(
     repeat($.attribute_instance),
     choice(
-      // $.inout_declaration,
+      $.inout_declaration,
       $.input_declaration,
       $.output_declaration,
-      // $.ref_declaration,
-      // $.interface_port_declaration
+      $.ref_declaration,
+      $.interface_port_declaration
     )
   ),
 
@@ -868,7 +868,7 @@ const rules = {
     $._non_port_module_item
   ),
 
-  module_or_generate_item: $ => seq(
+  module_or_generate_item: $ => prec('module_or_generate_item', seq(
     repeat($.attribute_instance),
     choice(
       // $.parameter_override,
@@ -877,7 +877,7 @@ const rules = {
       $.module_instantiation,
       $._module_common_item
     )
-  ),
+  )),
 
   _module_or_generate_item_declaration: $ => choice(
     $.package_or_generate_item_declaration,
@@ -889,13 +889,13 @@ const rules = {
 
   _non_port_module_item: $ => choice(
     $._directives, // // DANGER: This one is not in the LRM but adds good support for lots of stuff
-    // $.generate_region,
+    $.generate_region,
     $.module_or_generate_item,
     // $.specify_block,
     // seq(repeat($.attribute_instance), $.specparam_declaration), // TODO: Make it simpler
-    // $.program_declaration, // TODO: Don't support nested program/modules
-    // $.module_declaration,  // TODO: Don't support nested program/modules
-    // $.interface_declaration, // TODO: Don't support nested program/modules
+    $.program_declaration, // TODO: Don't support nested program/modules
+    $.module_declaration,  // TODO: Don't support nested program/modules
+    $.interface_declaration, // TODO: Don't support nested program/modules
     // $.timeunits_declaration
   ),
 
@@ -988,11 +988,11 @@ const rules = {
   // ),
 
   /* A.1.6 Interface items */
-  interface_or_generate_item: $ => choice(
+  interface_or_generate_item: $ => prec('interface_or_generate_item', choice(
     seq(repeat($.attribute_instance), $._module_common_item),
     seq(repeat($.attribute_instance), $.extern_tf_declaration),
     $._directives // INFO: Out of LRM but for convenience
-  ),
+  )),
 
   extern_tf_declaration: $ => choice(
     seq('extern', $._method_prototype, ';'),
@@ -1349,9 +1349,9 @@ const rules = {
 
   // /* A.2.1.2 Port declarations */
 
-  // inout_declaration: $ => seq(
-  //   'inout', optional($.net_port_type1), $.list_of_port_identifiers
-  // ),
+  inout_declaration: $ => seq(
+    'inout', optional($.net_port_type1), $.list_of_port_identifiers
+  ),
 
   input_declaration: $ => seq(
     'input',
@@ -1369,15 +1369,15 @@ const rules = {
     )
   ),
 
-  // interface_port_declaration: $ => seq(
-  //   $.interface_identifier,
-  //   optseq('.', $.modport_identifier),
-  //   $.list_of_interface_identifiers
-  // ),
+  interface_port_declaration: $ => seq(
+    $.interface_identifier,
+    optional(seq('.', $.modport_identifier)),
+    $.list_of_interface_identifiers
+  ),
 
-  // ref_declaration: $ => seq(
-  //   'ref', $._variable_port_type, $.list_of_variable_identifiers
-  // ),
+  ref_declaration: $ => seq(
+    'ref', $._variable_port_type, $.list_of_variable_identifiers
+  ),
 
   // // A.2.1.3 Type declarations
 
@@ -1735,10 +1735,10 @@ const rules = {
 
   // list_of_genvar_identifiers: $ => sep1(',', $.genvar_identifier),
 
-  // list_of_interface_identifiers: $ => sep1(',', seq(
-  //   $.interface_identifier,
-  //   repeat($.unpacked_dimension)
-  // )),
+  list_of_interface_identifiers: $ => sepBy1(',', seq(
+    $.interface_identifier,
+    repeat($.unpacked_dimension)
+  )),
 
   list_of_net_decl_assignments: $ => sepBy1(',', $.net_decl_assignment),
 
@@ -3019,9 +3019,9 @@ const rules = {
 
   // /* A.4.2 Generated instantiation */
 
-  // generate_region: $ => seq(
-  //   'generate', repeat($._generate_item), 'endgenerate'
-  // ),
+  generate_region: $ => seq(
+    'generate', repeat($._generate_item), 'endgenerate'
+  ),
 
   // loop_generate_construct: $ => seq(
   //   'for', '(',
@@ -3076,11 +3076,11 @@ const rules = {
   //   )
   // ),
 
-  // _generate_item: $ => choice(
-  //   $.module_or_generate_item,
-  //   $.interface_or_generate_item,
-  //   $._checker_or_generate_item
-  // ),
+  _generate_item: $ => choice(
+    $.module_or_generate_item,
+    $.interface_or_generate_item,
+    // $._checker_or_generate_item
+  ),
 
   // /* A.5 UDP declaration and instantiation */
 
@@ -3359,15 +3359,13 @@ const rules = {
   )),
 
   statement: $ => prec('statement', choice(
-    // $.text_macro_usage,
-    // $._directives, // DANGER: This one is not in the LRM but adds good support for lots of stuff
     seq(
       optional(seq(field('block_name', $._block_identifier), ':')),
       repeat($.attribute_instance),
       $.statement_item
     ))),
 
-  statement_item: $ => choice(
+  statement_item: $ => prec('statement_item', choice(
     seq($.blocking_assignment, ';'),
     seq($.nonblocking_assignment, ';'),
     seq($.procedural_continuous_assignment, ';'),
@@ -3388,7 +3386,10 @@ const rules = {
     // // $.randsequence_statement,
     // // $.randcase_statement,
     // $.expect_property_statement
-  ),
+
+    $.text_macro_usage, // INFO: Out of LRM
+    // $._directives, // INFO: This one is not in the LRM but adds good support for lots of stuff
+  )),
 
   function_statement: $ => $.statement,
 
@@ -5745,6 +5746,18 @@ module.exports = grammar({
     ['hierarchical_identifier', 'primary'],
 
 
+    //   module_nonansi_header  'generate'  _module_common_item  •  'resetall_compiler_directive_token1'  …
+    //   1:  module_nonansi_header  'generate'  (interface_or_generate_item  _module_common_item)  •  'resetall_compiler_directive_token1'  …
+    //   2:  module_nonansi_header  'generate'  (module_or_generate_item  _module_common_item)  •  'resetall_compiler_directive_token1'  …
+    ['module_or_generate_item', 'interface_or_generate_item'],
+
+
+    // text_macro_usage  •  'resetall_compiler_directive_token1'  …
+    // 1:  (_directives  text_macro_usage)  •  'resetall_compiler_directive_token1'  …
+    // 2:  (statement_item  text_macro_usage)  •  'resetall_compiler_directive_token1'  …
+    ['statement_item', '_directives'],
+
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header1'],
@@ -5776,6 +5789,7 @@ module.exports = grammar({
     ['cycle_delay_const_range_expression'],
     ['_sequence_actual_arg'],
     ['expression_or_dist'],
+    ['text_macro_usage'],
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -6192,6 +6206,12 @@ module.exports = grammar({
 
     // Program (TODO: don't understand these two below)
     [$.program_declaration, $.non_port_program_item],
+
+
+    // Inout/ref/interface ports
+    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation],
+    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type],
+    [$.list_of_interface_identifiers, $.net_decl_assignment],
 ],
 
 });
