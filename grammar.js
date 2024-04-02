@@ -220,7 +220,8 @@ const rules = {
     directive('include'),
     choice(
       $.double_quoted_string,
-      $.include_compiler_directive_standard
+      $.include_compiler_directive_standard,
+      $.text_macro_usage,// INFO: Out of LRM (test sv-tests/chapter-22/22.5.1--include-define-expansion)
     )
   ),
 
@@ -254,7 +255,7 @@ const rules = {
   text_macro_usage: $ => prec.right(seq(
     '`',
     $.text_macro_identifier,
-    optional(seq('(', $.text_macro_list_of_actual_arguments, ')'))
+    optional(seq('(', optional($.text_macro_list_of_actual_arguments), ')'))
   )),
 
   // text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
@@ -4594,7 +4595,9 @@ const rules = {
       repeat($.attribute_instance), $.constant_expression,
       ':',
       $.constant_expression
-    ))
+    )),
+
+    $.text_macro_usage, // INFO: Out of LRM but needed for some basic preprocessing parsing
   ),
 
   constant_mintypmax_expression: $ => prec('constant_mintypmax_expression', seq(
@@ -6188,6 +6191,8 @@ module.exports = grammar({
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary],
 
+
+    [$.constant_expression, $.expression],
 ],
 
 });

@@ -33,12 +33,25 @@ EXPECTED_FAIL_FILELIST=(sv-tests/chapter-5/5.6--wrong-identifiers.sv
                         sv-tests/chapter-6/6.9.2--vector_vectored_inv.sv
                         # Chapter 11
                         sv-tests/chapter-11/11.3.6--assign_in_expr_inv.sv
+                        # Chapter 22
+                        sv-tests/chapter-22/22.11--pragma-invalid.sv
+                        sv-tests/chapter-22/22.12--line-illegal-1.sv
+                        sv-tests/chapter-22/22.12--line-illegal-2.sv
+                        sv-tests/chapter-22/22.12--line-illegal-3.sv
+                        sv-tests/chapter-22/22.12--line-illegal-4.sv
+                        sv-tests/chapter-22/22.12--line-illegal-5.sv
+                        sv-tests/chapter-22/22.5.1--define-expansion_21.sv
+                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-1.sv
+                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-2.sv
+                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-3.sv
                        )
 
 # Exclude tests
 EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-macro_0.sv # No intention of supporting preprocessing
                    sv-tests/chapter-5/5.10-structure-arrays-illegal.sv                   # No intention of detecting the /* C-like assignment is illegal */ for struct initialization
                    sv-tests/chapter-11/11.4.14.3--unpack_stream_inv.sv                   # No intention of parse the width of the streaming assignment target
+                   sv-tests/chapter-22/22.5.1--define-expansion_20.sv                    # No intention of supporting parsing of macro expansion
+                   sv-tests/chapter-22/22.5.1--define-expansion_25.sv                    # No intention of supporting parsing of macro expansion of string values
                   )
 
 
