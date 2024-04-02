@@ -257,7 +257,8 @@ const rules = {
     optional(seq('(', $.text_macro_list_of_actual_arguments, ')'))
   )),
 
-  text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
+  // text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
+  text_macro_list_of_actual_arguments: $ => $.list_of_arguments, // INFO: Out of LRM, but needed to support empty actual argument between commas in macros
 
   text_macro_actual_argument: $ => $.expression,
 
@@ -384,7 +385,8 @@ const rules = {
     directive('line'),
     $.unsigned_number,
     $.double_quoted_string,
-    $.unsigned_number,
+    token(/[0-2]/),
+    // $.unsigned_number,
     '\n'
   ),
 
