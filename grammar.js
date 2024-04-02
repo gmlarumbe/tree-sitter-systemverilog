@@ -3651,9 +3651,9 @@ const rules = {
 
   assignment_pattern_net_lvalue: $ => seq('\'{', sepBy1(',', $.net_lvalue), '}'),
 
-  // assignment_pattern_variable_lvalue: $ => seq(
-  //   '\'{', sep1(',', $.variable_lvalue), '}'
-  // ),
+  assignment_pattern_variable_lvalue: $ => seq(
+    '\'{', sepBy1(',', $.variable_lvalue), '}'
+  ),
 
   // // A.6.8 Looping statements
 
@@ -4740,7 +4740,7 @@ const rules = {
     // // $.genvar_identifier,
     // // seq($.formal_port_identifier, optional($.constant_select1)),
     // // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier),
-    seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
+    // seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))), // TODO: Yields wrong parsing on 11.4.14.3
     seq($.constant_multiple_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
     seq($.constant_function_call, optional(seq('[', $._constant_range_expression, ']'))),
     // // $._constant_let_expression,
@@ -4927,12 +4927,15 @@ const rules = {
       $._hierarchical_variable_identifier,
       optional($.select1)
     ),
-    // prec.left(PREC.CONCAT, seq('{', sep1(',', $.variable_lvalue), '}')),
-    // seq(
-    //   optional($._assignment_pattern_expression_type),
-    //   $.assignment_pattern_variable_lvalue
-    // )),
-    // $.streaming_concatenation
+
+    seq('{', sepBy1(',', $.variable_lvalue), '}'),
+
+    seq(
+      optional($._assignment_pattern_expression_type),
+      $.assignment_pattern_variable_lvalue
+    ),
+
+    $.streaming_concatenation
   )),
 
   // variable_lvalue: $ => choice(
