@@ -856,7 +856,7 @@ const rules = {
     $.continuous_assign,
   //   $.net_alias,
     $.initial_construct,
-  //   $.final_construct,
+    $.final_construct,
     $.always_construct,
   //   $.loop_generate_construct,
   //   $._conditional_generate_construct,
@@ -3254,7 +3254,7 @@ const rules = {
     'always', 'always_comb', 'always_latch', 'always_ff'
   ),
 
-  // final_construct: $ => seq('final', $.function_statement),
+  final_construct: $ => seq('final', $.function_statement),
 
   // TODO: Review, removed the prec.left(PREC.ASSIGN from choices
   blocking_assignment: $ => choice(
