@@ -3418,8 +3418,8 @@ const rules = {
     // // $.randcase_statement,
     // $.expect_property_statement
 
-    $.text_macro_usage, // INFO: Out of LRM
-    // $._directives, // INFO: This one is not in the LRM but adds good support for lots of stuff
+    // $.text_macro_usage, // INFO: Out of LRM
+    $._directives, // INFO: This one is not in the LRM but adds good support for lots of stuff
   )),
 
   function_statement: $ => $.statement,
@@ -5393,8 +5393,8 @@ module.exports = grammar({
     ['statement_or_null', 'package_or_generate_item_declaration'],
     // ['_description', 'statement'],
     ['_non_port_module_item', 'package_or_generate_item_declaration', '_description'],
+    ['statement_item', 'package_or_generate_item_declaration', '_description'],
     ['_package_item', '_module_or_generate_item_declaration'],
-
 
 
     // module_nonansi_header  'input'  data_type  •  simple_identifier  …
@@ -6333,15 +6333,8 @@ module.exports = grammar({
 
 
     // After adding support for directives in packages,
-    // TODO: Fix conflict dynamically? Or statically as the rest of the 'snippets' group?
-    //
-    // _directives  •  'resetall_compiler_directive_token1'  …
-    // 1:  (_description  _directives)  •  'resetall_compiler_directive_token1'  …                          (precedence: '_description')
-    // 2:  (_non_port_module_item  _directives)  •  'resetall_compiler_directive_token1'  …                 (precedence: '_non_port_module_item')
-    // 3:  (package_or_generate_item_declaration  _directives)  •  'resetall_compiler_directive_token1'  …  (precedence: 'package_or_generate_item_declaration')
-    // [$._description, $._non_port_module_item, $.package_or_generate_item_declaration],
     [$.interface_or_generate_item, $.package_or_generate_item_declaration],
-    // [$._non_port_module_item, $.package_or_generate_item_declaration],
+    [$._description, $._non_port_module_item, $.package_or_generate_item_declaration, $.statement_item],
 ],
 
 });
