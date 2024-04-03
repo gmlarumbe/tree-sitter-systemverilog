@@ -4817,6 +4817,7 @@ const rules = {
     '$',
     'null',
     '$root', // DANGER: Out of LRM but needed for sv-tests/chapter-20/20.14--coverage
+    '\'{}',  // DANGER: Out of LRM but fixes errors in some UVM files
   )),
 
   class_qualifier: $ => prec('class_qualifier', seq(
