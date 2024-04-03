@@ -4826,10 +4826,10 @@ const rules = {
   ),
 
   // TODO: Review
-  select1: $ => prec('select1', choice( // reordered -> non empty
+  select1: $ => choice( // reordered -> non empty
     seq( // 1xx
       // INFO: First line overlaps a lot with $.hierarchical_identifier, but that one uses constant_bit_select
-      repeat(prec('select1', seq('.', $.member_identifier, optional($.bit_select1)))), '.', $.member_identifier,
+      repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
       optional($.bit_select1),
       optional(seq('[', $._part_select_range, ']'))
     ),
@@ -4843,7 +4843,7 @@ const rules = {
       //
       seq('[', $._part_select_range, ']')
     )
-  )),
+  ),
 
   // nonrange_select1: $ => choice( // reordered -> non empty
   //   prec.left(PREC.PARENT, seq( // 1x
@@ -5427,16 +5427,17 @@ module.exports = grammar({
     ['hierarchical_identifier', 'constant_select1'],
 
 
-    // TODO: Not sure if this one is correct
+    // TODO: Removed to fix the expressions with primaries inside a bit_select1!!
+    //
     // INFO: constant_primary has precedence since it refers to hierarchical_identifier instead of to select1, which in theory should simplify things quite a lot
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  primary_literal  •  '/'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  primary_literal)  •  '/'  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  primary_literal)  •  '/'  …
-    ['constant_primary', 'primary'],
+    // ['constant_primary', 'primary'],
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  •  '/'  …
     // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  _identifier)  •  '/'  …  (precedence: 'ps_parameter_identifier')
     // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  _identifier)  •  '/'  …           (precedence: 'primary')
-    ['ps_parameter_identifier', 'primary'],
+    // ['ps_parameter_identifier', 'primary'],
 
 
     // Case 1 is for non-ansi port with constant_part_select.
@@ -5471,10 +5472,12 @@ module.exports = grammar({
     ['class_qualifier', 'ps_parameter_identifier'],
 
 
+    // TODO: Removed to fix the expressions with primaries inside a bit_select1!!
+    //
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '.'  _identifier  •  '/'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (constant_select1  '.'  _identifier)  •  '/'  …  (precedence: 'constant_select1')
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (select1  '.'  _identifier)  •  '/'  …           (precedence: 'select1')
-    ['constant_select1', 'select1'],
+    // ['constant_select1', 'select1'],
 
 
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  constant_range  •  ']'  …
@@ -5511,7 +5514,7 @@ module.exports = grammar({
     //   module_nonansi_header  'initial'  hierarchical_identifier  '['  _identifier  •  '/'  …
     //     1:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (constant_primary  _identifier)  •  '/'  …         (precedence: 'ps_parameter_identifier')
     //     2:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (hierarchical_identifier  _identifier)  •  '/'  …  (precedence: 'hierarchical_identifier')
-    ['ps_parameter_identifier', 'hierarchical_identifier'],
+    // ['ps_parameter_identifier', 'hierarchical_identifier'],
 
 
     // module_nonansi_header  'initial'  '@'  '('  '('  expression  •  ')'  …
@@ -5620,7 +5623,7 @@ module.exports = grammar({
     //   1:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (constant_primary  _identifier)  •  '/'  …         (precedence: 'ps_parameter_identifier')
     //   2:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (hierarchical_identifier  _identifier)  •  '/'  …  (precedence: 'hierarchical_identifier')
     //   3:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (tf_call  _identifier)  •  '/'  …                  (precedence: 'tf_call')
-    ['ps_parameter_identifier', 'hierarchical_identifier', 'tf_call'],
+    // ['ps_parameter_identifier', 'hierarchical_identifier', 'tf_call'],
 
     //   module_nonansi_header  'initial'  _identifier  '.'  •  simple_identifier  …
     //   1:  module_nonansi_header  'initial'  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …                            (precedence: 'hierarchical_identifier')
@@ -5790,6 +5793,8 @@ module.exports = grammar({
     ['_sequence_actual_arg'],
     ['expression_or_dist'],
     ['text_macro_usage'],
+    ['constant_select1'],
+    ['select1'],
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -6229,6 +6234,16 @@ module.exports = grammar({
 
     // TODO: Remove!
     [$.select1, $.variable_lvalue],
+
+
+    // INFO: Added to fix issue with expressions inside bit_select1
+    [$.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.tf_call, $.constant_primary],
+    [$.data_type, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.data_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.data_type, $.class_type, $.tf_call, $.constant_primary],
+    [$._assignment_pattern_expression_type, $.hierarchical_identifier],
+    [$._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
 ],
 
 });
