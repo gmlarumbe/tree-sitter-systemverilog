@@ -157,6 +157,7 @@ function directive(command) {
 
 const rules = {
   source_file: $ => repeat($._description), // TODO: What about [timeunits_declaration]
+  // source_file: $ => seq(optional($.timeunits_declaration), repeat($._description)), // TODO: What about [timeunits_declaration]
 
   /* 22. Compiler directives */
   // `__FILE__ [22.13]
@@ -499,7 +500,7 @@ const rules = {
   // | 'extern' module_nonansi_header
   // | 'extern' module_ansi_header
 
-  module_declaration: $ => choice(
+  module_declaration: $ => prec('module_declaration', choice(
     seq(
       $.module_nonansi_header,
       optional($.timeunits_declaration),
@@ -524,7 +525,7 @@ const rules = {
     ),
     seq('extern', $.module_nonansi_header),
     seq('extern', $.module_ansi_header)
-  ),
+  )),
 
   _module_header1: $ => prec.left(seq(
     repeat($.attribute_instance),
@@ -893,7 +894,7 @@ const rules = {
   module_or_generate_item: $ => prec('module_or_generate_item', seq(
     repeat($.attribute_instance),
     choice(
-      // $.parameter_override,
+      $.parameter_override,
       // $.gate_instantiation, // TODO: Removed temporarily to simplify parsing
       // $.udp_instantiation, // TODO: Removed temporarily to simplify parsing
       $.module_instantiation,
@@ -918,14 +919,14 @@ const rules = {
     $.program_declaration, // TODO: Don't support nested program/modules
     $.module_declaration,  // TODO: Don't support nested program/modules
     $.interface_declaration, // TODO: Don't support nested program/modules
-    // $.timeunits_declaration
+    $.timeunits_declaration
   )),
 
-  // parameter_override: $ => seq(
-  //   'defparam',
-  //   $.list_of_defparam_assignments,
-  //   ';'
-  // ),
+  parameter_override: $ => seq(
+    'defparam',
+    $.list_of_defparam_assignments,
+    ';'
+  ),
 
   // bind_directive: $ => seq(
   //   'bind',
@@ -1753,7 +1754,7 @@ const rules = {
 
   // /* A.2.3 Declaration lists */
 
-  // list_of_defparam_assignments: $ => sep1(',', $.defparam_assignment),
+  list_of_defparam_assignments: $ => sepBy1(',', $.defparam_assignment),
 
   // list_of_genvar_identifiers: $ => sep1(',', $.genvar_identifier),
 
@@ -1812,13 +1813,12 @@ const rules = {
     optional(seq('=', $.constant_expression))
   ))),
 
-  // /* A.2.4 Declaration assignments */
-
-  // defparam_assignment: $ => seq(
-  //   $._hierarchical_parameter_identifier,
-  //   '=',
-  //   $.constant_mintypmax_expression
-  // ),
+  /* A.2.4 Declaration assignments */
+  defparam_assignment: $ => seq(
+    $._hierarchical_parameter_identifier,
+    '=',
+    $.constant_mintypmax_expression
+  ),
 
   // INFO: Original by drom
   // net_decl_assignment: $ => prec.left(PREC.ASSIGN, seq(
@@ -5157,7 +5157,7 @@ const rules = {
   // INFO: After removin the prec.left it allowed the ['constant_primary', 'primary'] conflict in precedences!!
 
   _hierarchical_net_identifier: $ => $.hierarchical_identifier,
-  // _hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_property_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
   _hierarchical_task_identifier: $ => $.hierarchical_identifier,
@@ -5794,6 +5794,12 @@ module.exports = grammar({
     ['statement_item', '_directives'],
 
 
+    // module_nonansi_header  timeunits_declaration  •  'resetall_compiler_directive_token1'  …
+    // 1:  (module_declaration  module_nonansi_header  timeunits_declaration  •  module_declaration_repeat1  'endmodule'  ':'  _module_identifier)  (precedence: 'module_declaration')
+    // 2:  (module_declaration  module_nonansi_header  timeunits_declaration  •  module_declaration_repeat1  'endmodule')                           (precedence: 'module_declaration')
+    // 3:  module_nonansi_header  (_non_port_module_item  timeunits_declaration)  •  'resetall_compiler_directive_token1'  …                        (precedence: '_non_port_module_item')
+    ['module_declaration', '_non_port_module_item'],
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header1'],
@@ -5829,6 +5835,7 @@ module.exports = grammar({
     ['constant_select1'],
     ['select1'],
 
+    ['module_declaration'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
