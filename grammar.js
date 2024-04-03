@@ -1314,7 +1314,7 @@ const rules = {
     // $.covergroup_declaration,
     $._assertion_item_declaration,
     ';',
-    // $._directives  // DANGER: Out of LRM, does it make sense here instead of in statements?
+    $._directives  // DANGER: Out of LRM
   )),
 
   // anonymous_program: $ => seq(
@@ -5392,8 +5392,10 @@ module.exports = grammar({
     // Use case: snippets of code on web, include files...
     ['statement_or_null', 'package_or_generate_item_declaration'],
     // ['_description', 'statement'],
-    ['_non_port_module_item', '_description'],
+    ['_non_port_module_item', 'package_or_generate_item_declaration', '_description'],
     ['_package_item', '_module_or_generate_item_declaration'],
+
+
 
     // module_nonansi_header  'input'  data_type  •  simple_identifier  …
     //   1:  module_nonansi_header  'input'  (_var_data_type  data_type)  •  simple_identifier  …
@@ -6328,6 +6330,18 @@ module.exports = grammar({
     // 1:  'for'  '('  (genvar_initialization  _identifier  •  '='  constant_expression)
     // 2:  'for'  '('  (hierarchical_identifier  _identifier)  •  '='  …                  (precedence: 'hierarchical_identifier')
     [$.genvar_initialization, $.hierarchical_identifier],
+
+
+    // After adding support for directives in packages,
+    // TODO: Fix conflict dynamically? Or statically as the rest of the 'snippets' group?
+    //
+    // _directives  •  'resetall_compiler_directive_token1'  …
+    // 1:  (_description  _directives)  •  'resetall_compiler_directive_token1'  …                          (precedence: '_description')
+    // 2:  (_non_port_module_item  _directives)  •  'resetall_compiler_directive_token1'  …                 (precedence: '_non_port_module_item')
+    // 3:  (package_or_generate_item_declaration  _directives)  •  'resetall_compiler_directive_token1'  …  (precedence: 'package_or_generate_item_declaration')
+    // [$._description, $._non_port_module_item, $.package_or_generate_item_declaration],
+    [$.interface_or_generate_item, $.package_or_generate_item_declaration],
+    // [$._non_port_module_item, $.package_or_generate_item_declaration],
 ],
 
 });
