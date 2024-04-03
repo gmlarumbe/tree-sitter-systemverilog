@@ -881,9 +881,9 @@ const rules = {
     $.initial_construct,
     $.final_construct,
     $.always_construct,
-  //   $.loop_generate_construct,
-  //   $._conditional_generate_construct,
-  //   $.elaboration_system_task
+    $.loop_generate_construct,
+    $.conditional_generate_construct,
+    // $.elaboration_system_task // INFO: Not in LRM, is it allowed here? Without procedural block?
   ),
 
   _module_item: $ => choice(
@@ -1028,7 +1028,7 @@ const rules = {
   ),
 
   _non_port_interface_item: $ => choice(
-    // $.generate_region, // TODO: Still pending!
+    $.generate_region,
     $.interface_or_generate_item,
     // $.program_declaration,
     $.modport_declaration,
@@ -1055,7 +1055,7 @@ const rules = {
   _program_generate_item: $ => choice(
     // $.loop_generate_construct,
     // TODO
-    // $._conditional_generate_construct,
+    // $.conditional_generate_construct,
     // $.generate_region,
     // $.elaboration_system_task
   ),
@@ -1100,7 +1100,7 @@ const rules = {
 
   // _checker_generate_item: $ => choice(
   //   $.loop_generate_construct,
-  //   $._conditional_generate_construct,
+  //   $.conditional_generate_construct,
   //   $.generate_region,
   //   $.elaboration_system_task
   // ),
@@ -3039,64 +3039,68 @@ const rules = {
   // //   )
   // // ),
 
-  // /* A.4.2 Generated instantiation */
-
+  /* A.4.2 Generated instantiation */
   generate_region: $ => seq(
     'generate', repeat($._generate_item), 'endgenerate'
   ),
 
-  // loop_generate_construct: $ => seq(
-  //   'for', '(',
-  //   $.genvar_initialization, ';', $._genvar_expression, ';', $.genvar_iteration,
-  //   ')',
-  //   $.generate_block
-  // ),
+  loop_generate_construct: $ => seq(
+    'for', '(',
+    $.genvar_initialization, ';', $._genvar_expression, ';', $.genvar_iteration,
+    ')',
+    $.generate_block
+  ),
 
-  // genvar_initialization: $ => seq(
-  //   optional('genvar'),
-  //   $.genvar_identifier,
-  //   '=',
-  //   $.constant_expression
-  // ),
+  genvar_initialization: $ => seq(
+    optional('genvar'),
+    $.genvar_identifier,
+    '=',
+    $.constant_expression
+  ),
 
-  // genvar_iteration: $ => choice(
-  //   seq($.genvar_identifier, $.assignment_operator, $._genvar_expression),
-  //   seq($.inc_or_dec_operator, $.genvar_identifier),
-  //   seq($.genvar_identifier, $.inc_or_dec_operator)
-  // ),
+  genvar_iteration: $ => choice(
+    seq($.genvar_identifier, $.assignment_operator, $._genvar_expression),
+    seq($.inc_or_dec_operator, $.genvar_identifier),
+    seq($.genvar_identifier, $.inc_or_dec_operator)
+  ),
 
-  // _conditional_generate_construct: $ => choice(
-  //   $.if_generate_construct,
-  //   $.case_generate_construct
-  // ),
+  conditional_generate_construct: $ => choice(
+    $.if_generate_construct,
+    $.case_generate_construct
+  ),
 
-  // if_generate_construct: $ => prec.left(seq(
-  //   'if', '(', $.constant_expression, ')', $.generate_block,
-  //   optseq('else', $.generate_block)
-  // )),
+  // prec.right because:
+  //
+  // 'if'  '('  constant_expression  ')'  'if'  '('  constant_expression  ')'  generate_block  •  'else'  …
+  // 1:  'if'  '('  constant_expression  ')'  (if_generate_construct  'if'  '('  constant_expression  ')'  generate_block  •  'else'  generate_block)
+  // 2:  'if'  '('  constant_expression  ')'  (if_generate_construct  'if'  '('  constant_expression  ')'  generate_block)  •  'else'  …
+  if_generate_construct: $ => prec.right(seq(
+    'if', '(', $.constant_expression, ')', $.generate_block,
+    optional(seq('else', $.generate_block))
+  )),
 
-  // case_generate_construct: $ => seq(
-  //   'case', '(', $.constant_expression, ')', $.case_generate_item,
-  //   repeat($.case_generate_item),
-  //   'endcase'
-  // ),
+  case_generate_construct: $ => seq(
+    'case', '(', $.constant_expression, ')', $.case_generate_item,
+    repeat($.case_generate_item),
+    'endcase'
+  ),
 
-  // case_generate_item: $ => choice(
-  //   seq(sep1(',', $.constant_expression), ':', $.generate_block),
-  //   seq('default', optional(':'), $.generate_block)
-  // ),
+  case_generate_item: $ => choice(
+    seq(sepBy1(',', $.constant_expression), ':', $.generate_block),
+    seq('default', optional(':'), $.generate_block)
+  ),
 
-  // generate_block: $ => choice(
-  //   $._generate_item,
-  //   seq(
-  //     optseq($.generate_block_identifier, ':'),
-  //     'begin',
-  //     optseq(':', $.generate_block_identifier),
-  //     repeat($._generate_item),
-  //     'end',
-  //     optseq(':', $.generate_block_identifier)
-  //   )
-  // ),
+  generate_block: $ => choice(
+    $._generate_item,
+    seq(
+      optional(seq($.generate_block_identifier, ':')),
+      'begin',
+      optional(seq(':', $.generate_block_identifier)),
+      repeat($._generate_item),
+      'end',
+      optional(seq(':', $.generate_block_identifier))
+    )
+  ),
 
   _generate_item: $ => choice(
     $.module_or_generate_item,
@@ -4750,7 +4754,7 @@ const rules = {
     $.expression, choice('+:', '-:'), $.constant_expression
   ),
 
-  // _genvar_expression: $ => $.constant_expression,
+  _genvar_expression: $ => $.constant_expression,
 
   // /* A.8.4 Primaries */
 
@@ -5135,8 +5139,8 @@ const rules = {
   // formal_identifier: $ => alias($._identifier, $.formal_identifier),
   formal_port_identifier: $ => alias($._identifier, $.formal_port_identifier),
   function_identifier: $ => alias($._identifier, $.function_identifier),
-  // generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
-  // genvar_identifier: $ => alias($._identifier, $.genvar_identifier),
+  generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
+  genvar_identifier: $ => alias($._identifier, $.genvar_identifier),
   _hierarchical_array_identifier: $ => $.hierarchical_identifier,
   _hierarchical_block_identifier: $ => $.hierarchical_identifier,
   _hierarchical_event_identifier: $ => $.hierarchical_identifier,
@@ -5340,7 +5344,7 @@ module.exports = grammar({
   //   $.covergroup_identifier,
     $.enum_identifier,
     $.formal_port_identifier,
-  //   $.genvar_identifier,
+    $.genvar_identifier,
   //   $.specparam_identifier,
     $.tf_identifier,
     $._type_identifier,
@@ -6306,6 +6310,20 @@ module.exports = grammar({
     [$.interface_port_declaration, $.class_type, $.tf_call, $.hierarchical_identifier],
     [$.list_of_variable_assignments, $.procedural_continuous_assignment],
     [$.interface_port_declaration, $.hierarchical_identifier],
+
+    // Conditional generate
+    // 'case'  •  '('  …
+    // 1:  (case_generate_construct  'case'  •  '('  constant_expression  ')'  case_generate_item  'endcase')
+    // 2:  (case_generate_construct  'case'  •  '('  constant_expression  ')'  case_generate_item  case_generate_construct_repeat1  'endcase')
+    // 3:  (case_keyword  'case')  •  '('  …
+    // 4:  (case_statement  'case'  •  '('  case_expression  ')'  'inside'  case_statement_repeat3  'endcase')
+    [$.case_generate_construct, $.case_statement, $.case_keyword],
+
+    // Loop generate (true conflict)
+    // 'for'  '('  _identifier  •  '='  …
+    // 1:  'for'  '('  (genvar_initialization  _identifier  •  '='  constant_expression)
+    // 2:  'for'  '('  (hierarchical_identifier  _identifier)  •  '='  …                  (precedence: 'hierarchical_identifier')
+    [$.genvar_initialization, $.hierarchical_identifier],
 ],
 
 });
