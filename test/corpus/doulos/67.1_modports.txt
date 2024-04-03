@@ -1,0 +1,232 @@
+============================================
+doulos/67.1_modports
+============================================
+
+// Section 67.1: Modports
+
+interface FPGAtoDSPInt;
+  logic Start, N_Reset;
+  logic N_CS, N_DS, R_NW;
+  logic [7:0] AddrBus, DataBus;
+  modport Master(output AddrBus, ref DataBus);
+  modport Slave (input  AddrBus, ref DataBus);
+  /*...*/
+endinterface: FPGAtoDSPInt
+
+module FPGA (FPGAtoDSPInt.Master Interf, input logic Clk);  // Modport specified in module header
+  /*...*/
+endmodule
+
+module DSP (FPGAtoDSPInt Interf, input logic Clk);
+  /*...*/
+endmodule
+
+module DUT;
+  logic Clk;
+  FPGAtoDSPInt Intf;
+  FPGA FPGAMod(.Interf(Intf), .Clk);
+  DSP DSPMod(.Interf(Intf.Slave), .Clk(Clk));  // Modport specified in port connection
+endmodule
+
+
+
+----
+
+(source_file
+  (comment)
+  (interface_declaration
+    (interface_ansi_header
+      name: (interface_identifier
+        (simple_identifier)))
+    (interface_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (interface_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))
+            (variable_decl_assignment
+              (simple_identifier))
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (interface_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)
+              (packed_dimension
+                (constant_range
+                  (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number))))))
+                  (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number))))))))))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (modport_declaration
+      (modport_item
+        (modport_identifier
+          (modport_identifier
+            (simple_identifier)))
+        (modport_ports_declaration
+          (modport_simple_ports_declaration
+            (port_direction)
+            (modport_simple_port
+              (port_identifier
+                (simple_identifier)))))
+        (modport_ports_declaration
+          (modport_simple_ports_declaration
+            (port_direction)
+            (modport_simple_port
+              (port_identifier
+                (simple_identifier)))))))
+    (modport_declaration
+      (modport_item
+        (modport_identifier
+          (modport_identifier
+            (simple_identifier)))
+        (modport_ports_declaration
+          (modport_simple_ports_declaration
+            (port_direction)
+            (modport_simple_port
+              (port_identifier
+                (simple_identifier)))))
+        (modport_ports_declaration
+          (modport_simple_ports_declaration
+            (port_direction)
+            (modport_simple_port
+              (port_identifier
+                (simple_identifier)))))))
+    (comment)
+    (interface_identifier
+      (simple_identifier)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (interface_port_header
+            (interface_identifier
+              (simple_identifier))
+            (modport_identifier
+              (modport_identifier
+                (simple_identifier))))
+          (port_identifier
+            (simple_identifier)))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (data_type
+              (integer_vector_type)))
+          (port_identifier
+            (simple_identifier)))))
+    (comment)
+    (comment))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (variable_port_header
+            (data_type
+              (simple_identifier)))
+          (port_identifier
+            (simple_identifier)))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (data_type
+              (integer_vector_type)))
+          (port_identifier
+            (simple_identifier)))))
+    (comment))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (module_or_generate_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (instance_identifier
+              (simple_identifier)))
+          (list_of_port_connections
+            (named_port_connection
+              (port_identifier
+                (simple_identifier))
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              (port_identifier
+                (simple_identifier)))))))
+    (module_or_generate_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (instance_identifier
+              (simple_identifier)))
+          (list_of_port_connections
+            (named_port_connection
+              (port_identifier
+                (simple_identifier))
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)
+                    (simple_identifier)))))
+            (named_port_connection
+              (port_identifier
+                (simple_identifier))
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (comment)))

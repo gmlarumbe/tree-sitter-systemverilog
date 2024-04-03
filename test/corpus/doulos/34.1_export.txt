@@ -1,0 +1,81 @@
+============================================
+doulos/34.1_export
+============================================
+
+// Section 34.1: Export
+
+package P;
+  int a, b;
+endpackage : P
+
+package Q;
+  export P::*;  // export *::* also ok
+  import P::*;
+  int c;
+endpackage : Q
+
+module m;
+  import Q::*; // P::a, P::b and Q::c are all potentially visible
+
+
+
+----
+
+(source_file
+  (comment)
+  (package_declaration
+    (package_identifier
+      (simple_identifier))
+    (package_or_generate_item_declaration
+      (data_declaration
+        (data_type_or_implicit1
+          (data_type
+            (integer_atom_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            (simple_identifier))
+          (variable_decl_assignment
+            (simple_identifier)))))
+    (package_identifier
+      (simple_identifier)))
+  (package_declaration
+    (package_identifier
+      (simple_identifier))
+    (package_or_generate_item_declaration
+      (net_declaration
+        (simple_identifier)
+        (list_of_net_decl_assignments
+          (net_decl_assignment
+            (simple_identifier)))
+        (ERROR)))
+    (comment)
+    (package_or_generate_item_declaration
+      (data_declaration
+        (package_import_declaration
+          (package_import_item
+            (package_identifier
+              (simple_identifier))))))
+    (package_or_generate_item_declaration
+      (data_declaration
+        (data_type_or_implicit1
+          (data_type
+            (integer_atom_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            (simple_identifier)))))
+    (package_identifier
+      (simple_identifier)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (data_declaration
+          (package_import_declaration
+            (package_import_item
+              (package_identifier
+                (simple_identifier)))))))
+    (comment)))
+
+(ERROR)

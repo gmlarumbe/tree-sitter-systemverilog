@@ -1,0 +1,123 @@
+============================================
+doulos/16.2_clocking
+============================================
+
+// Section 16.2: Clocking
+
+// Synchronization statements - the events are sampled according to the clock domain timing:
+@(CB1.Q);            // Wait for the next change of Q from CB1 domain
+@(negedge CB1.Load); // Wait for negative edge of signal CB1.Load
+@(posedge CB1.Load or negedge CB1.UpDn);
+@(CB1.Q[1]);         // Wait for the next change of bit 1 of CB1.Q
+@(CB1.Q[2:0]);       // Wait for the next change of the specified slice
+
+
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (event_control
+            (clocking_event
+              (event_expression
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier)
+                      (simple_identifier)))))))
+          (statement_or_null)))))
+  (comment)
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (event_control
+            (clocking_event
+              (event_expression
+                (edge_identifier)
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier)
+                      (simple_identifier)))))))
+          (statement_or_null)))))
+  (comment)
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (event_control
+            (clocking_event
+              (event_expression
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)
+                        (simple_identifier)))))
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)
+                        (simple_identifier))))))))
+          (statement_or_null)))))
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (event_control
+            (clocking_event
+              (event_expression
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier))
+                    (select1
+                      (member_identifier
+                        (simple_identifier))
+                      (bit_select1
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))))))))
+          (statement_or_null)))))
+  (comment)
+  (statement_or_null
+    (statement
+      (statement_item
+        (procedural_timing_control_statement
+          (event_control
+            (clocking_event
+              (event_expression
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier))
+                    (select1
+                      (member_identifier
+                        (simple_identifier))
+                      (constant_range
+                        (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number))))))
+                        (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))))))))
+          (statement_or_null)))))
+  (comment))

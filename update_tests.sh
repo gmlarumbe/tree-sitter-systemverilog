@@ -5,6 +5,7 @@ PATTERN=$1
 # First create the directory structure to prevent copy errors
 TESTS=( $(find sv-tests -type d) )
 TESTS+=( $(find uvm -type d) )
+TESTS+=( $(find doulos -type d) )
 
 for dir in ${TESTS[@]}; do
     mkdir -p test/corpus/$dir
@@ -15,6 +16,8 @@ FILES_SV=( $(find sv-tests -type f -name "*.sv") )
 FILES_SV+=( $(find sv-tests -type f -name "*.svh") )
 FILES_SV+=( $(find uvm -type f -name "*.sv") )
 FILES_SV+=( $(find uvm -type f -name "*.svh") )
+FILES_SV+=( $(find doulos -type f -name "*.sv") )
+FILES_SV+=( $(find doulos -type f -name "*.svh") )
 
 # Declare variables
 DIR_FILENAME=
@@ -29,11 +32,8 @@ EXPECTED_FAIL_FILELIST=(sv-tests/chapter-5/5.6--wrong-identifiers.sv
                         sv-tests/chapter-5/5.7.1--integers-unsized-illegal.sv
                         sv-tests/chapter-5/5.7.2-real-constants-illegal.sv
                         sv-tests/chapter-5/5.10-structure-arrays-illegal.sv
-                        # Chapter 6
                         sv-tests/chapter-6/6.9.2--vector_vectored_inv.sv
-                        # Chapter 11
                         sv-tests/chapter-11/11.3.6--assign_in_expr_inv.sv
-                        # Chapter 22
                         sv-tests/chapter-22/22.11--pragma-invalid.sv
                         sv-tests/chapter-22/22.12--line-illegal-1.sv
                         sv-tests/chapter-22/22.12--line-illegal-2.sv
@@ -45,6 +45,8 @@ EXPECTED_FAIL_FILELIST=(sv-tests/chapter-5/5.6--wrong-identifiers.sv
                         sv-tests/chapter-22/22.9--unconnected_drive-invalid-2.sv
                         sv-tests/chapter-22/22.9--unconnected_drive-invalid-3.sv
                         sv-tests/sanity.sv
+                        doulos/69.2_name.sv
+                        doulos/73.3_number.sv
                        )
 
 # Exclude tests
@@ -57,6 +59,9 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    sv-tests/generic/preproc/preproc_test_2.sv
                    sv-tests/generic/typedef/typedef_test_26.sv
                    sv-tests/generic/typedef/typedef_test_27.sv
+                   # Doulos reference examples
+                   doulos/117.1_\`define.sv
+                   doulos/117.2_\`define.sv
                   )
 
 

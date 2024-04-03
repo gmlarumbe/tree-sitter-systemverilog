@@ -1,0 +1,210 @@
+============================================
+doulos/66.1_matches
+============================================
+
+// Section 66.1: Matches
+
+typedef union tagged packed {
+  void Invalid;
+  int Valid;
+} VInt;
+
+VInt v;
+int j;
+
+//Pattern-matching case statement:
+case (v) matches
+  tagged Invalid  : $display("v's value is invalid");
+  tagged Valid .n : $display("v is valid: value is %d", n);
+endcase
+
+//Pattern-matching if statement:
+if (v matches tagged Invalid)
+  $display("v's value is invalid");
+else if (v matches tagged Valid .n &&& n < 0)
+  $display("v is valid, and negative");
+
+// Pattern-matching conditional operator:
+j = v matches tagged Valid .n ? n : 'x;
+
+
+
+----
+
+(source_file
+  (comment)
+  (package_or_generate_item_declaration
+    (data_declaration
+      (type_declaration
+        (data_type_or_incomplete_class_scoped_type
+          (data_type
+            (struct_union)
+            (struct_union_member
+              (data_type_or_void)
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  (simple_identifier))))
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (integer_atom_type)))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  (simple_identifier))))))
+        (simple_identifier))))
+  (package_or_generate_item_declaration
+    (data_declaration
+      (data_type_or_implicit1
+        (data_type
+          (simple_identifier)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          (simple_identifier)))))
+  (package_or_generate_item_declaration
+    (data_declaration
+      (data_type_or_implicit1
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          (simple_identifier)))))
+  (comment)
+  (statement_or_null
+    (statement
+      (statement_item
+        (case_statement
+          (case_keyword)
+          (case_expression
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier)))))
+          (case_pattern_item
+            (pattern
+              (member_identifier
+                (simple_identifier)))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (subroutine_call_statement
+                    (subroutine_call
+                      (system_tf_call
+                        (system_tf_identifier)
+                        (list_of_arguments
+                          (expression
+                            (primary
+                              (primary_literal
+                                (string_literal))))))))))))
+          (case_pattern_item
+            (pattern
+              (member_identifier
+                (simple_identifier))
+              (pattern
+                (simple_identifier)))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (subroutine_call_statement
+                    (subroutine_call
+                      (system_tf_call
+                        (system_tf_identifier)
+                        (list_of_arguments
+                          (expression
+                            (primary
+                              (primary_literal
+                                (string_literal))))
+                          (expression
+                            (primary
+                              (hierarchical_identifier
+                                (simple_identifier))))))))))))))))
+  (comment)
+  (statement_or_null
+    (statement
+      (statement_item
+        (conditional_statement
+          (cond_predicate
+            (cond_pattern
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              (pattern
+                (member_identifier
+                  (simple_identifier)))))
+          (statement_or_null
+            (statement
+              (statement_item
+                (subroutine_call_statement
+                  (subroutine_call
+                    (system_tf_call
+                      (system_tf_identifier)
+                      (list_of_arguments
+                        (expression
+                          (primary
+                            (primary_literal
+                              (string_literal)))))))))))
+          (cond_predicate
+            (cond_pattern
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              (pattern
+                (member_identifier
+                  (simple_identifier))
+                (pattern
+                  (simple_identifier))))
+            (expression
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              (expression
+                (primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))
+          (statement_or_null
+            (statement
+              (statement_item
+                (subroutine_call_statement
+                  (subroutine_call
+                    (system_tf_call
+                      (system_tf_identifier)
+                      (list_of_arguments
+                        (expression
+                          (primary
+                            (primary_literal
+                              (string_literal)))))))))))))))
+  (comment)
+  (statement_or_null
+    (statement
+      (statement_item
+        (blocking_assignment
+          (operator_assignment
+            (variable_lvalue
+              (hierarchical_identifier
+                (simple_identifier)))
+            (assignment_operator)
+            (expression
+              (conditional_expression
+                (cond_predicate
+                  (cond_pattern
+                    (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))
+                    (pattern
+                      (member_identifier
+                        (simple_identifier))
+                      (pattern
+                        (simple_identifier)))))
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier))))
+                (expression
+                  (primary
+                    (primary_literal
+                      (unbased_unsized_literal))))))))))))

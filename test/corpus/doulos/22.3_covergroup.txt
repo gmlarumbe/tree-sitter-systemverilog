@@ -1,0 +1,234 @@
+============================================
+doulos/22.3_covergroup
+============================================
+
+// Section 22.3: Covergroup
+
+// Covergroups in classes
+class Class1;
+  bit AnEv;
+endclass
+
+class Class2;
+  Class1 C1;                 // Object of Class1
+  int Var;
+  bit X;
+  local logic Y,Z;
+  
+  covergroup CG1 @(C1.AnEv);   // Sampled on data member of C1
+    coverpoint Var;
+  endgroup 
+  
+  covergroup CG2 (int Arg) @X; // Second covergroup in the same
+                               // class, now having arguments 
+    option.at_least = Arg;    // Sets a coverage option of CG2
+    coverpoint Y; 
+  endgroup
+  
+  function new(int p);
+    CG2 = new(p);
+    C1 = new;  // C1 must be instantiated before CG1, because CG1  
+               // uses it
+    CG1 = new; 
+  endfunction
+endclass
+
+initial begin
+  Class2 Obj = new(7);
+end
+
+
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (package_or_generate_item_declaration
+    (class_declaration
+      (class_identifier
+        (simple_identifier))
+      (class_item
+        (class_property
+          (data_declaration
+            (data_type_or_implicit1
+              (data_type
+                (integer_vector_type)))
+            (list_of_variable_decl_assignments
+              (variable_decl_assignment
+                (simple_identifier))))))))
+  (ERROR
+    (simple_identifier)
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (comment)
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_atom_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (class_item
+      (class_property
+        (class_item_qualifier)
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (integer_vector_type)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier)))
+          (ERROR
+            (simple_identifier)
+            (simple_identifier)))))
+    (comment)
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier)))
+          (ERROR
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier)))))
+    (comment)
+    (comment)
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (ERROR)
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier)
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (comment)
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier))))))
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier)))
+          (ERROR
+            (simple_identifier)
+            (simple_identifier)))))
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier)
+              (class_new
+                (list_of_arguments
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))))))
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier)
+              (class_new))))))
+    (comment)
+    (comment)
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier)
+              (class_new))))))
+    (class_item
+      (class_property
+        (data_declaration
+          (data_type_or_implicit1
+            (data_type
+              (simple_identifier)))
+          (list_of_variable_decl_assignments
+            (variable_decl_assignment
+              (simple_identifier)
+              (ERROR
+                (simple_identifier)
+                (simple_identifier))
+              (class_new
+                (list_of_arguments
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))))))))
+    (simple_identifier)))
+
+(ERROR)
