@@ -259,9 +259,30 @@ const rules = {
   )),
 
   // text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
-  text_macro_list_of_actual_arguments: $ => $.list_of_arguments, // INFO: Out of LRM, but needed to support empty actual argument between commas in macros
+  // text_macro_list_of_actual_arguments: $ => $.list_of_arguments, // INFO: Out of LRM, but needed to support empty actual argument between commas in macros
+  text_macro_list_of_actual_arguments: $ => prec.left(PREC.PARENT, choice(  // INFO: Out of LRM, but needed to support empty actual argument between commas in macros, and to support data_types as arguments
+    // First case: mixing positional and named arguments
+    seq(
+      $.text_macro_actual_argument,
+      repeat(seq(',', optional($.text_macro_actual_argument))),
+      repeat(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
+    ),
+    seq(
+      optional($.text_macro_actual_argument),
+      repeat1(seq(',', optional($.text_macro_actual_argument))),
+      repeat(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
+    ),
+    seq(
+      optional($.text_macro_actual_argument),
+      repeat(seq(',', optional($.text_macro_actual_argument))),
+      repeat1(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
+    ),
+    // Second case: using only named arguments
+    sepBy1(',', seq('.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
+  )),
 
-  text_macro_actual_argument: $ => $.expression,
+  // text_macro_actual_argument: $ => $.expression,
+  text_macro_actual_argument: $ => $.param_expression, // INFO: Out of LRM, but needed to support parameterized data types as macro args (used in the UVM)
 
   undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
 
