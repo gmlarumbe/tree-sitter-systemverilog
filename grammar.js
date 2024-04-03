@@ -1008,7 +1008,7 @@ const rules = {
     // $.generate_region, // TODO: Still pending!
     $.interface_or_generate_item,
     // $.program_declaration,
-    // $.modport_declaration,
+    $.modport_declaration,
     $.interface_declaration,
     $.timeunits_declaration
   ),
@@ -2138,46 +2138,46 @@ const rules = {
 
   // overload_proto_formals: $ => sep1(',', $.data_type),
 
-  // /* A.2.9 Interface declarations */
+  /* A.2.9 Interface declarations */
 
-  // modport_declaration: $ => seq('modport', sepBy1(',', $.modport_item), ';'),
+  modport_declaration: $ => seq('modport', sepBy1(',', $.modport_item), ';'),
 
-  // modport_item: $ => seq(
-  //   $.modport_identifier,
-  //   '(', sep1(',', $.modport_ports_declaration), ')'
-  // ),
+  modport_item: $ => seq(
+    $.modport_identifier,
+    '(', sepBy1(',', $.modport_ports_declaration), ')'
+  ),
 
-  // modport_ports_declaration: $ => seq(
-  //   repeat($.attribute_instance),
-  //   choice(
-  //     $.modport_simple_ports_declaration,
-  //     $.modport_tf_ports_declaration,
-  //     $.modport_clocking_declaration
-  //   )
-  // ),
+  modport_ports_declaration: $ => seq(
+    repeat($.attribute_instance),
+    choice(
+      $.modport_simple_ports_declaration,
+      $.modport_tf_ports_declaration,
+      $.modport_clocking_declaration
+    )
+  ),
 
-  // modport_clocking_declaration: $ => seq('clocking', $.clocking_identifier),
+  modport_clocking_declaration: $ => seq('clocking', $.clocking_identifier),
 
-  // modport_simple_ports_declaration: $ => seq(
-  //   $.port_direction,
-  //   sep1(',', $.modport_simple_port)
-  // ),
+  modport_simple_ports_declaration: $ => seq(
+    $.port_direction,
+    sepBy1(',', $.modport_simple_port)
+  ),
 
-  // modport_simple_port: $ => choice(
-  //   $.port_identifier,
-  //   seq('.', $.port_identifier, '(', optional($.expression), ')')
-  // ),
+  modport_simple_port: $ => choice(
+    $.port_identifier,
+    seq('.', $.port_identifier, '(', optional($.expression), ')')
+  ),
 
-  // modport_tf_ports_declaration: $ => seq(
-  //   $.import_export, sep1(',', $._modport_tf_port)
-  // ),
+  modport_tf_ports_declaration: $ => seq(
+    $.import_export, sepBy1(',', $._modport_tf_port)
+  ),
 
-  // _modport_tf_port: $ => choice(
-  //   $._method_prototype,
-  //   $.tf_identifier
-  // ),
+  _modport_tf_port: $ => choice(
+    $._method_prototype,
+    $.tf_identifier
+  ),
 
-  // import_export: $ => choice('import', 'export'),
+  import_export: $ => choice('import', 'export'),
 
   // // A.2.10 Assertion declarations
 
@@ -5088,7 +5088,7 @@ const rules = {
   // checker_identifier: $ => alias($._identifier, $.checker_identifier),
   class_identifier: $ => alias($._identifier, $.class_identifier),
   class_variable_identifier: $ => $._variable_identifier,
-  // clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
+  clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
   // config_identifier: $ => alias($._identifier, $.config_identifier),
   const_identifier: $ => alias($._identifier, $.const_identifier),
   // constraint_identifier: $ => alias($._identifier, $.constraint_identifier),
@@ -6244,6 +6244,14 @@ module.exports = grammar({
     [$.data_type, $.class_type, $.tf_call, $.constant_primary],
     [$._assignment_pattern_expression_type, $.hierarchical_identifier],
     [$._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
+
+    // Modports
+    // INFO: Not sure about this...
+    // interface_nonansi_header  'modport'  modport_identifier  '('  port_direction  modport_simple_port  •  ','  …
+    // 1:  interface_nonansi_header  'modport'  modport_identifier  '('  (modport_simple_ports_declaration  port_direction  modport_simple_port  •  modport_simple_ports_declaration_repeat1)
+    // 2:  interface_nonansi_header  'modport'  modport_identifier  '('  (modport_simple_ports_declaration  port_direction  modport_simple_port)  •  ','  …
+    [$.modport_simple_ports_declaration],
+    [$.modport_tf_ports_declaration],
 ],
 
 });
