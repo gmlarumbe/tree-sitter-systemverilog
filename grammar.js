@@ -2932,8 +2932,10 @@ const rules = {
   ),
 
   list_of_parameter_value_assignments: $ => choice(
-    sepBy1(',', $.ordered_parameter_assignment),
-    sepBy1(',', $.named_parameter_assignment)
+    // INFO: ordered_parameter_assignment equivalent to: sepBy1(',', $.ordered_parameter_assignment)
+    // But the line below also supports empty positional arguments
+    seq(choice(',', $.ordered_parameter_assignment), repeat(choice(',', (seq(',', $.ordered_parameter_assignment))))),
+    sepBy1(',', $.named_parameter_assignment),
   ),
 
   ordered_parameter_assignment: $ => $.param_expression,
@@ -2953,7 +2955,9 @@ const rules = {
 
   // Reordered
   list_of_port_connections: $ => choice(
-    sepBy1(',', $.ordered_port_connection),
+    // INFO: ordered_port equivalent to: sepBy1(',', $.ordered_port_connection)
+    // But the line below also supports empty positional arguments
+    seq(choice(',', $.ordered_port_connection), repeat(choice(',', (seq(',', $.ordered_port_connection))))),
     sepBy1(',', $.named_port_connection)
   ),
 
