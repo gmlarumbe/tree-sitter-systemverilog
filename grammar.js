@@ -3265,6 +3265,7 @@ const rules = {
       $.nonrange_variable_lvalue, '=', $.dynamic_array_new
     )),
 
+    // TODO: Is this the one for class_new?
     // // seq(
     // //   optional(choice(
     // //     seq($.implicit_class_handle, '.'),
@@ -4486,7 +4487,8 @@ const rules = {
   //   ')'
   // ),
 
-  method_call: $ => seq($._method_call_root, '.', $.method_call_body),
+  // method_call: $ => seq($._method_call_root, '.', $.method_call_body),
+  method_call: $ => seq($._method_call_root, choice('.', '::'), $.method_call_body),
 
   method_call_body: $ => choice(
     seq(
@@ -6252,6 +6254,13 @@ module.exports = grammar({
     // 2:  interface_nonansi_header  'modport'  modport_identifier  '('  (modport_simple_ports_declaration  port_direction  modport_simple_port)  •  ','  …
     [$.modport_simple_ports_declaration],
     [$.modport_tf_ports_declaration],
+
+
+
+
+    [$.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
+    [$.class_type, $.tf_call, $.hierarchical_identifier],
+    [$.incomplete_class_scoped_type, $.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
 ],
 
 });

@@ -555,12 +555,14 @@ endfunction
                   (statement_item
                     (subroutine_call_statement
                       (subroutine_call
-                        (tf_call
-                          (package_scope
-                            (package_identifier
+                        (method_call
+                          (primary
+                            (hierarchical_identifier
                               (simple_identifier)))
-                          (tf_identifier
-                            (simple_identifier)))))))))))))
+                          (method_call_body
+                            (method_identifier
+                              (method_identifier
+                                (simple_identifier)))))))))))))))
 
 ============================================
 basic/subroutines - static method nested
@@ -618,6 +620,57 @@ endfunction
                             (method_identifier
                               (method_identifier
                                 (simple_identifier)))))))))))))))
+
+
+============================================
+basic/subroutines - static type_id::create
+============================================
+
+packet = packet_in::type_id::create("packet", this);
+
+----
+
+    (source_file
+      (statement_or_null
+        (statement
+          (statement_item
+            (blocking_assignment
+              (operator_assignment
+                (variable_lvalue
+                  (hierarchical_identifier
+                    (simple_identifier)))
+                (assignment_operator)
+                (expression
+                  (primary
+                    (function_subroutine_call
+                      (subroutine_call
+                        (method_call
+                          (primary
+                            (package_scope
+                              (package_identifier
+                                (simple_identifier)))
+                            (hierarchical_identifier
+                              (simple_identifier)))
+                          (method_call_body
+                            (method_identifier
+                              (method_identifier
+                                (simple_identifier)))
+                            (list_of_arguments
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (string_literal))))
+                              (expression
+                                (primary)))))))))))))))
+
+
+============================================
+basic/subroutines - static parameterized uvm_resource_db::set
+============================================
+
+uvm_resource_db#(virtual input_if)::set("env", "input_if", in);
+
+----
 
 
 ============================================
@@ -1388,12 +1441,14 @@ endfunction
                           (primary
                             (function_subroutine_call
                               (subroutine_call
-                                (tf_call
-                                  (package_scope
-                                    (package_identifier
+                                (method_call
+                                  (primary
+                                    (hierarchical_identifier
                                       (simple_identifier)))
-                                  (tf_identifier
-                                    (simple_identifier)))))))))))))))))
+                                  (method_call_body
+                                    (method_identifier
+                                      (method_identifier
+                                        (simple_identifier)))))))))))))))))))
 
 ============================================
 basic/subroutines - static method nested RHS
@@ -1651,3 +1706,5 @@ endfunction
                                 (statement
                                   (statement_item
                                     (jump_statement)))))))))))))))))
+
+
