@@ -4579,6 +4579,7 @@ const rules = {
     prec.dynamic(0, $.primary),
     prec.dynamic(1, $.implicit_class_handle),
     $.class_type, // INFO: Out of LRM: Added to support calling parameterized static methods
+    $.text_macro_usage,// INFO: Out of LRM, added to fix parsing errors in UVM
   )),
 
   array_method_name: $ => choice(
@@ -6335,6 +6336,9 @@ module.exports = grammar({
     // After adding support for directives in packages,
     [$.interface_or_generate_item, $.package_or_generate_item_declaration],
     [$._description, $._non_port_module_item, $.package_or_generate_item_declaration, $.statement_item],
+
+    // After adding text_macro_usage to _method_call_root
+    [$._directives, $._method_call_root],
 ],
 
 });
