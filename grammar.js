@@ -3261,9 +3261,9 @@ const rules = {
   blocking_assignment: $ => choice(
     seq($.variable_lvalue, '=', $.delay_or_event_control, $.expression),
 
-    // prec.left(PREC.ASSIGN, seq(
-    //   $.nonrange_variable_lvalue, '=', $.dynamic_array_new
-    // )),
+    prec(PREC.ASSIGN, seq(
+      $.nonrange_variable_lvalue, '=', $.dynamic_array_new
+    )),
 
     // // seq(
     // //   optional(choice(
