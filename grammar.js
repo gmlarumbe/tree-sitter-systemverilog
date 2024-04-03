@@ -477,6 +477,7 @@ const rules = {
 
     // DANGER: Out of the LRM, have them here to parse snippets
     $.statement_or_null,
+    $._module_item,
     // End of DANGER
   )),
 
@@ -900,15 +901,15 @@ const rules = {
     )
   )),
 
-  _module_or_generate_item_declaration: $ => choice(
+  _module_or_generate_item_declaration: $ => prec('_module_or_generate_item_declaration', choice(
     $.package_or_generate_item_declaration,
     // $.genvar_declaration,
     // $.clocking_declaration,
     // seq('default', 'clocking', $.clocking_identifier, ';'),
     // seq('default', 'disable', 'iff', $.expression_or_dist, ';')
-  ),
+  )),
 
-  _non_port_module_item: $ => choice(
+  _non_port_module_item: $ => prec('_non_port_module_item', choice(
     $._directives, // // DANGER: This one is not in the LRM but adds good support for lots of stuff
     $.generate_region,
     $.module_or_generate_item,
@@ -918,7 +919,7 @@ const rules = {
     $.module_declaration,  // TODO: Don't support nested program/modules
     $.interface_declaration, // TODO: Don't support nested program/modules
     // $.timeunits_declaration
-  ),
+  )),
 
   // parameter_override: $ => seq(
   //   'defparam',
@@ -1290,12 +1291,12 @@ const rules = {
 
   // /* A.1.11 Package items */
 
-  _package_item: $ => choice(
+  _package_item: $ => prec('_package_item', choice(
     $.package_or_generate_item_declaration,
     // $.anonymous_program,
     // $.package_export_declaration,
     // $.timeunits_declaration
-  ),
+  )),
 
   package_or_generate_item_declaration: $ => prec('package_or_generate_item_declaration', choice(
     prec.dynamic(0, $.net_declaration),
@@ -5383,6 +5384,8 @@ module.exports = grammar({
     // Use case: snippets of code on web, include files...
     ['statement_or_null', 'package_or_generate_item_declaration'],
     // ['_description', 'statement'],
+    ['_non_port_module_item', '_description'],
+    ['_package_item', '_module_or_generate_item_declaration'],
 
     // module_nonansi_header  'input'  data_type  •  simple_identifier  …
     //   1:  module_nonansi_header  'input'  (_var_data_type  data_type)  •  simple_identifier  …
@@ -6290,6 +6293,12 @@ module.exports = grammar({
     [$.incomplete_class_scoped_type, $.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
     [$.class_scope, $._method_call_root],
     [$.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+
+
+    // Needed to parse standalone module_items (snippets)
+    [$.interface_port_declaration, $.class_type, $.tf_call, $.hierarchical_identifier],
+    [$.list_of_variable_assignments, $.procedural_continuous_assignment],
+    [$.interface_port_declaration, $.hierarchical_identifier],
 ],
 
 });
