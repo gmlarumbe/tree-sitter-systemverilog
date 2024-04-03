@@ -2910,11 +2910,11 @@ const rules = {
   ),
 
   list_of_parameter_value_assignments: $ => choice(
-    sepBy1(',', $.ordered_parameter_assignment),
+    sepBy1(',', $._ordered_parameter_assignment),
     sepBy1(',', $.named_parameter_assignment)
   ),
 
-  ordered_parameter_assignment: $ => alias($.param_expression, $._ordered_parameter_assignment),
+  _ordered_parameter_assignment: $ => alias($.param_expression, $._ordered_parameter_assignment),
 
   named_parameter_assignment: $ => seq(
     '.', $.parameter_identifier, '(', optional($.param_expression), ')'
@@ -4487,8 +4487,14 @@ const rules = {
   //   ')'
   // ),
 
-  // method_call: $ => seq($._method_call_root, '.', $.method_call_body),
-  method_call: $ => seq($._method_call_root, choice('.', '::'), $.method_call_body),
+  method_call: $ => seq(
+    $._method_call_root,
+    choice(
+      '.',
+      '::'  // INFO Out of LRM: Needed to support static method calls
+    ),
+    $.method_call_body)
+  ,
 
   method_call_body: $ => choice(
     seq(
@@ -4541,7 +4547,8 @@ const rules = {
 
   _method_call_root: $ => prec('_method_call_root', choice(
     prec.dynamic(0, $.primary),
-    prec.dynamic(1, $.implicit_class_handle)
+    prec.dynamic(1, $.implicit_class_handle),
+    $.class_type, // INFO: Out of LRM: Added to support calling parameterized static methods
   )),
 
   array_method_name: $ => choice(
@@ -6256,11 +6263,12 @@ module.exports = grammar({
     [$.modport_tf_ports_declaration],
 
 
-
-
+    // Support for static method calls
     [$.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
     [$.class_type, $.tf_call, $.hierarchical_identifier],
     [$.incomplete_class_scoped_type, $.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
+    [$.class_scope, $._method_call_root],
+    [$.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
 ],
 
 });
