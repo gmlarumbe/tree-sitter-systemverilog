@@ -62,6 +62,8 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    # ifdef conditional compilation breaks seq_block declaration -> statements order
                    uvm/1800.2-2020-2.0/src/base/uvm_traversal.svh
                    uvm/1800.2-2020-2.0/src/tlm1/uvm_tlm_fifos.svh
+                   # reg_field has an embedded text_macro_usage inside a $.hex_number
+                   uvm/1800.2-2020-2.0/src/reg/uvm_reg_field.svh
                    # Doulos reference examples
                    doulos/117.1_\`define.sv
                    doulos/117.2_\`define.sv

@@ -1111,7 +1111,7 @@ const rules = {
     $._directives, // INFO: Out of LRM but useful for basic parsing in the UVM
     seq(repeat($.attribute_instance), $.class_property),
     seq(repeat($.attribute_instance), $.class_method),
-    // seq(repeat($.attribute_instance), $._class_constraint),
+    seq(repeat($.attribute_instance), $._class_constraint),
     seq(repeat($.attribute_instance), $.class_declaration),
     // seq(repeat($.attribute_instance), $.interface_class_declaration),
     // seq(repeat($.attribute_instance), $.covergroup_declaration),
@@ -1151,10 +1151,10 @@ const rules = {
 
   class_constructor_arg: $ => choice($.tf_port_item1, 'default'),
 
-  // _class_constraint: $ => choice(
-  //   $.constraint_prototype,
-  //   $.constraint_declaration
-  // ),
+  _class_constraint: $ => choice(
+    $.constraint_prototype,
+    $.constraint_declaration
+  ),
 
   class_item_qualifier: $ => prec('class_item_qualifier', choice('static', 'protected', 'local')),
 
@@ -1187,14 +1187,15 @@ const rules = {
     'endfunction', optional(seq(':', 'new'))
   )),
 
-  // /* A.1.10 Constraints */
+  /* A.1.10 Constraints */
 
-  // constraint_declaration: $ => seq(
-  //   optional('static'),
-  //   'constraint',
-  //   $.constraint_identifier,
-  //   $.constraint_block
-  // ),
+  constraint_declaration: $ => seq(
+    optional('static'),
+    'constraint',
+    optional($.dynamic_override_specifiers),
+    $.constraint_identifier,
+    $.constraint_block
+  ),
 
   constraint_block: $ => seq('{', repeat($.constraint_block_item), '}'),
 
@@ -1233,32 +1234,31 @@ const rules = {
   //   seq('disable', 'soft', $.constraint_primary, ';')
   // ),
   constraint_expression: $ => choice(
-    // TODO: Implement
-    // seq(optional('soft'), $.expression_or_dist, ';'),
-    // seq($.uniqueness_constraint, ';'),
-    // prec.right(PREC.IMPLICATION, seq($.expression, '–>', $.constraint_set)),
-    // prec.left(seq(
-    //   'if', '(', $.expression, ')', $.constraint_set,
-    //   optseq('else', $.constraint_set)
-    // )),
-    // seq(
-    //   'foreach', '(',
-    //   $.ps_or_hierarchical_array_identifier,
-    //   '[', optional($.loop_variables1), ']',
-    //   ')',
-    //   $.constraint_set
-    // ),
-    // seq('disable', 'soft', $.constraint_primary, ';')
+    seq(optional('soft'), $.expression_or_dist, ';'),
+    seq($.uniqueness_constraint, ';'),
+    prec.right(PREC.IMPLICATION, seq($.expression, '–>', $.constraint_set)),
+    prec.left(seq(
+      'if', '(', $.expression, ')', $.constraint_set,
+      optional(seq('else', $.constraint_set))
+    )),
+    seq(
+      'foreach', '(',
+      $.ps_or_hierarchical_array_identifier,
+      '[', optional($.loop_variables1), ']',
+      ')',
+      $.constraint_set
+    ),
+    seq('disable', 'soft', $.constraint_primary, ';')
   ),
 
-  // uniqueness_constraint: $ => seq(
-  //   'unique', '{', $.open_range_list, '}'
-  // ),
+  uniqueness_constraint: $ => seq(
+    'unique', '{', $.range_list, '}'
+  ),
 
-  // constraint_set: $ => choice(
-  //   $.constraint_expression,
-  //   seq('{', repeat($.constraint_expression), '}')
-  // ),
+  constraint_set: $ => prec('constraint_set', choice(
+    $.constraint_expression,
+    seq('{', repeat($.constraint_expression), '}')
+  )),
 
   dist_list: $ => sepBy1(',', $.dist_item),
 
@@ -1269,23 +1269,25 @@ const rules = {
 
   dist_weight: $ => seq(choice(':=', ':/'), $.expression),
 
-  // constraint_prototype: $ => seq(
-  //   optional($.constraint_prototype_qualifier),
-  //   optional('static'),
-  //   'constraint',
-  //   $.constraint_identifier,
-  //   ';'
-  // ),
+  constraint_prototype: $ => seq(
+    optional($.constraint_prototype_qualifier),
+    optional('static'),
+    'constraint',
+    $.constraint_identifier,
+    optional($.dynamic_override_specifiers),
+    ';'
+  ),
 
-  // constraint_prototype_qualifier: $ => choice('extern', 'pure'),
+  constraint_prototype_qualifier: $ => choice('extern', 'pure'),
 
-  // extern_constraint_declaration: $ => seq(
-  //   optional('static'),
-  //   'constraint',
-  //   $.class_scope,
-  //   $.constraint_identifier,
-  //   $.constraint_block
-  // ),
+  extern_constraint_declaration: $ => seq(
+    optional('static'),
+    'constraint',
+    optional($.dynamic_override_specifiers),
+    $.class_scope,
+    $.constraint_identifier,
+    $.constraint_block
+  ),
 
   identifier_list: $ => sepBy1(',', $._identifier),
 
@@ -1306,7 +1308,7 @@ const rules = {
     $.function_declaration,
     // $.checker_declaration,
     // $.dpi_import_export,
-    // $.extern_constraint_declaration,
+    $.extern_constraint_declaration,
     $.class_declaration,
     $.interface_class_declaration,
     $.class_constructor_declaration,
@@ -4418,7 +4420,7 @@ const rules = {
     ))
   ),
 
-  empty_unpacked_array_concatenation: $ => seq('{', '}'),
+  empty_unpacked_array_concatenation: $ => prec('empty_unpacked_array_concatenation', seq('{', '}')),
 
   // /* A.8.2 Subroutine calls */
 
@@ -5144,7 +5146,7 @@ const rules = {
   clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
   // config_identifier: $ => alias($._identifier, $.config_identifier),
   const_identifier: $ => alias($._identifier, $.const_identifier),
-  // constraint_identifier: $ => alias($._identifier, $.constraint_identifier),
+  constraint_identifier: $ => alias($._identifier, $.constraint_identifier),
 
   // covergroup_identifier: $ => alias($._identifier, $.covergroup_identifier),
 
@@ -5824,6 +5826,12 @@ module.exports = grammar({
     // 3:  module_nonansi_header  (_non_port_module_item  timeunits_declaration)  •  'resetall_compiler_directive_token1'  …                        (precedence: '_non_port_module_item')
     ['module_declaration', '_non_port_module_item'],
 
+
+    // 'randomize'  'with'  '{'  expression  '–>'  '{'  '}'  •  '+'  …
+    // 1:  'randomize'  'with'  '{'  expression  '–>'  (constraint_set  '{'  '}')  •  '+'  …
+    // 2:  'randomize'  'with'  '{'  expression  '–>'  (empty_unpacked_array_concatenation  '{'  '}')  •  '+'  …
+    ['constraint_set', 'empty_unpacked_array_concatenation'],
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header1'],
@@ -6362,6 +6370,9 @@ module.exports = grammar({
     [$._method_call_root, $.primary],
     [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue],
     [$._method_call_root, $.primary, $.class_qualifier],
+
+    // Constraints
+    [$.class_method, $.constraint_prototype_qualifier],
 ],
 
 });
