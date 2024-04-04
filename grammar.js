@@ -905,9 +905,9 @@ const rules = {
   _module_or_generate_item_declaration: $ => prec('_module_or_generate_item_declaration', choice(
     $.package_or_generate_item_declaration,
     // $.genvar_declaration,
-    // $.clocking_declaration,
-    // seq('default', 'clocking', $.clocking_identifier, ';'),
-    // seq('default', 'disable', 'iff', $.expression_or_dist, ';')
+    $.clocking_declaration,
+    seq('default', 'clocking', $.clocking_identifier, ';'),
+    seq('default', 'disable', 'iff', $.expression_or_dist, ';')
   )),
 
   _non_port_module_item: $ => prec('_non_port_module_item', choice(
@@ -3812,21 +3812,20 @@ const rules = {
   //   '(', $.expression, ')', $.statement_or_null
   // ),
 
-  // /* A.6.11 Clocking block */
-
-  // clocking_declaration: $ => choice(
-  //   seq(
-  //     optional('default'),
-  //     'clocking', optional($.clocking_identifier), $.clocking_event, ';',
-  //     repeat($.clocking_item),
-  //     'endclocking', optseq(':', $.clocking_identifier)
-  //   ),
-  //   seq(
-  //     'global',
-  //     'clocking', optional($.clocking_identifier), $.clocking_event, ';',
-  //     'endclocking', optseq(':', $.clocking_identifier)
-  //   )
-  // ),
+  /* A.6.11 Clocking block */
+  clocking_declaration: $ => choice(
+    seq(
+      optional('default'),
+      'clocking', optional($.clocking_identifier), $.clocking_event, ';',
+      repeat($.clocking_item),
+      'endclocking', optional(seq(':', $.clocking_identifier))
+    ),
+    seq(
+      'global',
+      'clocking', optional($.clocking_identifier), $.clocking_event, ';',
+      'endclocking', optional(seq(':', $.clocking_identifier))
+    )
+  ),
 
   // INFO: Changed substantially from Drom's implementation, adapted more to 1800-2023
   clocking_event: $ => prec('clocking_event', seq('@', choice(
@@ -3835,37 +3834,37 @@ const rules = {
     seq('(', $.event_expression, ')')
   ))),
 
-  // clocking_item: $ => choice(
-  //   seq('default', $.default_skew, ';'),
-  //   seq($.clocking_direction, $.list_of_clocking_decl_assign, ';'),
-  //   seq(repeat($.attribute_instance), $._assertion_item_declaration)
-  // ),
+  clocking_item: $ => choice(
+    seq('default', $.default_skew, ';'),
+    seq($.clocking_direction, $.list_of_clocking_decl_assign, ';'),
+    seq(repeat($.attribute_instance), $._assertion_item_declaration)
+  ),
 
-  // default_skew: $ => choice(
-  //   seq('input', $.clocking_skew),
-  //   seq('output', $.clocking_skew),
-  //   seq('input', $.clocking_skew, 'output', $.clocking_skew)
-  // ),
+  default_skew: $ => choice(
+    seq('input', $.clocking_skew),
+    seq('output', $.clocking_skew),
+    seq('input', $.clocking_skew, 'output', $.clocking_skew)
+  ),
 
-  // clocking_direction: $ => choice(
-  //   seq('input', optional($.clocking_skew)),
-  //   seq('output', optional($.clocking_skew)),
-  //   seq('input', optional($.clocking_skew), 'output', optional($.clocking_skew)),
-  //   seq('inout')
-  // ),
+  clocking_direction: $ => choice(
+    seq('input', optional($.clocking_skew)),
+    seq('output', optional($.clocking_skew)),
+    seq('input', optional($.clocking_skew), 'output', optional($.clocking_skew)),
+    seq('inout')
+  ),
 
-  // list_of_clocking_decl_assign: $ => sep1(',', $.clocking_decl_assign),
+  list_of_clocking_decl_assign: $ => sepBy1(',', $.clocking_decl_assign),
 
-  // clocking_decl_assign: $ => seq($._signal_identifier, optseq('=', $.expression)),
+  clocking_decl_assign: $ => seq($._signal_identifier, optional(seq('=', $.expression))),
 
-  // clocking_skew: $ => choice(
-  //   seq($.edge_identifier, optional($.delay_control)),
-  //   $.delay_control
-  // ),
+  clocking_skew: $ => choice(
+    seq($.edge_identifier, optional($.delay_control)),
+    $.delay_control
+  ),
 
-  // clocking_drive: $ => prec.left(PREC.ASSIGN,
-  //   seq($.clockvar_expression, '<=', optional($.cycle_delay), $.expression)
-  // ),
+  clocking_drive: $ => prec(PREC.ASSIGN, seq(
+    $.clockvar_expression, '<=', optional($.cycle_delay), $.expression
+  )),
 
   // INFO: Original by drom
   // cycle_delay: $ => prec.left(seq('##', choice(
@@ -3883,12 +3882,12 @@ const rules = {
   )),
   // End of INFO
 
-  // clockvar: $ => $.hierarchical_identifier,
+  clockvar: $ => $.hierarchical_identifier,
 
-  // clockvar_expression: $ => seq(
-  //   $.clockvar,
-  //   optional($.select1)
-  // ),
+  clockvar_expression: $ => seq(
+    $.clockvar,
+    optional($.select1)
+  ),
 
   // // A.6.12 Randsequence
 
@@ -5312,7 +5311,7 @@ const rules = {
 
   _sequence_identifier: $ => $._identifier,
 
-  // _signal_identifier: $ => $._identifier,
+  _signal_identifier: $ => $._identifier,
 
   // // A simple_identifier or c_identifier shall
   // // start with an alpha or underscore ( _ ) character,

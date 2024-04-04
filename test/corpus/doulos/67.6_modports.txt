@@ -31,7 +31,7 @@ endmodule
 (source_file
   (comment)
   (comment)
-  (ERROR
+  (interface_declaration
     (interface_ansi_header
       name: (interface_identifier
         (simple_identifier))
@@ -52,115 +52,92 @@ endmodule
               (simple_identifier))
             (net_decl_assignment
               (simple_identifier))))))
-    (simple_identifier)
-    (simple_identifier))
-  (statement_or_null
-    (statement
-      (statement_item
-        (procedural_timing_control_statement
-          (event_control
-            (clocking_event
-              (event_expression
-                (edge_identifier)
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier)))))))
-          (statement_or_null)))))
-  (port_declaration
-    (input_declaration
-      (list_of_port_identifiers
-        (port_identifier
-          (simple_identifier)))))
-  (port_declaration
-    (output_declaration
-      (list_of_port_identifiers
-        (port_identifier
-          (simple_identifier)))))
-  (comment)
-  (module_or_generate_item
-    (module_instantiation
-      instance_type: (simple_identifier)
-      (hierarchical_instance
-        (name_of_instance
-          instance_name: (instance_identifier
+    (interface_or_generate_item
+      (clocking_declaration
+        (clocking_identifier
+          (clocking_identifier
             (simple_identifier)))
-        (ERROR
-          (simple_identifier))
-        (list_of_port_connections
-          (ordered_port_connection
+        (clocking_event
+          (event_expression
+            (edge_identifier)
             (expression
               (primary
                 (hierarchical_identifier
                   (simple_identifier))))))
-        (ERROR
-          (simple_identifier)))))
-  (comment)
-  (module_or_generate_item
-    (module_instantiation
-      instance_type: (simple_identifier)
-      (hierarchical_instance
-        (name_of_instance
-          instance_name: (instance_identifier
+        (clocking_item
+          (clocking_direction)
+          (list_of_clocking_decl_assign
+            (clocking_decl_assign
+              (simple_identifier))))
+        (clocking_item
+          (clocking_direction)
+          (list_of_clocking_decl_assign
+            (clocking_decl_assign
+              (simple_identifier))))
+        (comment)))
+    (modport_declaration
+      (modport_item
+        (modport_identifier
+          (modport_identifier
             (simple_identifier)))
-        (list_of_port_connections
-          (ordered_port_connection
-            (expression
-              (primary
-                (hierarchical_identifier
-                  (simple_identifier)))))
-          (ERROR
-            (simple_identifier))
-          (ordered_port_connection
-            (expression
-              (primary
-                (hierarchical_identifier
-                  (simple_identifier))))))
-        (ERROR
-          (simple_identifier)))))
-  (comment)
-  (module_or_generate_item
-    (module_instantiation
-      instance_type: (simple_identifier)
-      (ERROR
-        (simple_identifier))
-      (hierarchical_instance
-        (name_of_instance
-          instance_name: (instance_identifier
+        (modport_ports_declaration
+          (modport_clocking_declaration
+            (clocking_identifier
+              (clocking_identifier
+                (simple_identifier)))))))
+    (comment)
+    (modport_declaration
+      (modport_item
+        (modport_identifier
+          (modport_identifier
             (simple_identifier)))
-        (list_of_port_connections
-          (ordered_port_connection
-            (expression
-              (primary
-                (hierarchical_identifier
-                  (simple_identifier)
-                  (simple_identifier))))))
-        (ERROR
-          (simple_identifier)))))
-  (comment)
-  (module_or_generate_item
-    (initial_construct
-      (statement_or_null
-        (statement
-          (statement_item
-            (seq_block
-              (statement_or_null
-                (statement
-                  (statement_item
-                    (nonblocking_assignment
-                      (variable_lvalue
-                        (hierarchical_identifier
-                          (simple_identifier)
-                          (simple_identifier)
-                          (simple_identifier)))
-                      (expression
-                        (primary
-                          (primary_literal
-                            (integral_number
-                              (decimal_number
-                                (unsigned_number))))))))))
-              (comment)))))))
-  (ERROR
-    (simple_identifier)))
-
-(ERROR)
+        (modport_ports_declaration
+          (modport_simple_ports_declaration
+            (port_direction)
+            (modport_simple_port
+              (port_identifier
+                (simple_identifier)))))
+        (modport_ports_declaration
+          (modport_simple_ports_declaration
+            (port_direction)
+            (modport_simple_port
+              (port_identifier
+                (simple_identifier)))))))
+    (comment))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (interface_port_header
+            (interface_identifier
+              (simple_identifier))
+            (modport_identifier
+              (modport_identifier
+                (simple_identifier))))
+          (port_identifier
+            (simple_identifier)))))
+    (comment)
+    (module_or_generate_item
+      (initial_construct
+        (statement_or_null
+          (statement
+            (statement_item
+              (seq_block
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (nonblocking_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)
+                            (simple_identifier)
+                            (simple_identifier)))
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number))))))))))
+                (comment)))))))))
