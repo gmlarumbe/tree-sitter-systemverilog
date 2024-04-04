@@ -1113,7 +1113,7 @@ const rules = {
     seq(repeat($.attribute_instance), $.class_method),
     seq(repeat($.attribute_instance), $._class_constraint),
     seq(repeat($.attribute_instance), $.class_declaration),
-    // seq(repeat($.attribute_instance), $.interface_class_declaration),
+    seq(repeat($.attribute_instance), $.interface_class_declaration),
     // seq(repeat($.attribute_instance), $.covergroup_declaration),
     seq($._any_parameter_declaration, ';'),
     ';'
