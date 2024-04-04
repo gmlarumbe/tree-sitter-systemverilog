@@ -904,7 +904,7 @@ const rules = {
 
   _module_or_generate_item_declaration: $ => prec('_module_or_generate_item_declaration', choice(
     $.package_or_generate_item_declaration,
-    // $.genvar_declaration,
+    $.genvar_declaration,
     $.clocking_declaration,
     seq('default', 'clocking', $.clocking_identifier, ';'),
     seq('default', 'disable', 'iff', $.expression_or_dist, ';')
@@ -1449,9 +1449,9 @@ const rules = {
   //   'export', choice('*::*', sep1(',', $.package_import_item)), ';'
   // ),
 
-  // genvar_declaration: $ => seq(
-  //   'genvar', $.list_of_genvar_identifiers, ';'
-  // ),
+  genvar_declaration: $ => seq(
+    'genvar', $.list_of_genvar_identifiers, ';'
+  ),
 
   net_declaration: $ => prec('net_declaration', choice(
     seq(
@@ -1754,11 +1754,10 @@ const rules = {
     '1step'
   ),
 
-  // /* A.2.3 Declaration lists */
-
+  /* A.2.3 Declaration lists */
   list_of_defparam_assignments: $ => sepBy1(',', $.defparam_assignment),
 
-  // list_of_genvar_identifiers: $ => sep1(',', $.genvar_identifier),
+  list_of_genvar_identifiers: $ => sepBy1(',', $.genvar_identifier),
 
   list_of_interface_identifiers: $ => sepBy1(',', seq(
     $.interface_identifier,
