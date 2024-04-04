@@ -72,15 +72,15 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    doulos/117.2_\`define.sv
                   )
 
-
 # Filter tests, if there was an argument provided
 if [[ -n "$PATTERN" ]]; then
     FILES_SV=( $( printf '%s\n' "${FILES_SV[@]}" | grep "$PATTERN" ) )
     echo "Filtering with regexp: $PATTERN"
 fi
 
-# Create tests
-for file in "${FILES_SV[@]}"; do
+process_file(){
+    file=$1
+
     DIR_FILENAME=$(dirname $file)
     BASE_FILENAME=$(basename $file)
     FILENAME_NO_EXT=${BASE_FILENAME%.sv}
@@ -117,6 +117,14 @@ for file in "${FILES_SV[@]}"; do
 
         echo "Updated $DEST_FILE"
     fi
+}
 
+
+# Create tests in parallel
+for file in "${FILES_SV[@]}"; do
+    process_file $file &
 done
+
+wait
+echo "Finished!"
 
