@@ -1,0 +1,119 @@
+============================================
+basic/macros - simple
+============================================
+
+`some_macro(arg1)
+
+----
+
+    (source_file
+      (text_macro_usage
+        (text_macro_identifier
+          (simple_identifier))
+        (text_macro_list_of_actual_arguments
+          (text_macro_actual_argument
+            (param_expression
+              (mintypmax_expression
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier))))))))))
+
+============================================
+basic/macros - two args
+============================================
+
+`some_macro(arg1, arg2)
+
+----
+
+    (source_file
+      (text_macro_usage
+        (text_macro_identifier
+          (simple_identifier))
+        (text_macro_list_of_actual_arguments
+          (text_macro_actual_argument
+            (param_expression
+              (mintypmax_expression
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier)))))))
+          (text_macro_actual_argument
+            (param_expression
+              (mintypmax_expression
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier))))))))))
+
+
+============================================
+basic/macros - nested parenthesis
+============================================
+
+`some_macro(arg1(), arg2())
+
+----
+
+    (source_file
+      (text_macro_usage
+        (text_macro_identifier
+          (simple_identifier))
+        (text_macro_list_of_actual_arguments
+          (text_macro_actual_argument
+            (param_expression
+              (mintypmax_expression
+                (expression
+                  (primary
+                    (function_subroutine_call
+                      (subroutine_call
+                        (tf_call
+                          (hierarchical_identifier
+                            (simple_identifier))))))))))
+          (text_macro_actual_argument
+            (param_expression
+              (mintypmax_expression
+                (expression
+                  (primary
+                    (function_subroutine_call
+                      (subroutine_call
+                        (tf_call
+                          (hierarchical_identifier
+                            (simple_identifier)))))))))))))
+
+
+============================================
+basic/macros - inside function
+============================================
+
+function void foo;
+  `some_macro(arg1)
+endfunction
+
+----
+
+    (source_file
+      (package_or_generate_item_declaration
+        (function_declaration
+          (function_body_declaration
+            (function_data_type_or_implicit1
+              (data_type_or_void))
+            (function_identifier
+              (function_identifier
+                (simple_identifier)))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (text_macro_usage
+                      (text_macro_identifier
+                        (simple_identifier))
+                      (text_macro_list_of_actual_arguments
+                        (text_macro_actual_argument
+                          (param_expression
+                            (mintypmax_expression
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier)))))))))))))))))
