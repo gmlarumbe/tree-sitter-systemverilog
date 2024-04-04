@@ -1307,7 +1307,7 @@ const rules = {
     $.task_declaration,
     $.function_declaration,
     // $.checker_declaration,
-    // $.dpi_import_export,
+    $.dpi_import_export,
     $.extern_constraint_declaration,
     $.class_declaration,
     $.interface_class_declaration,
@@ -1941,7 +1941,7 @@ const rules = {
 
   unsized_dimension: $ => seq('[', ']'),
 
-  // // A.2.6 Function declarations
+  // A.2.6 Function declarations
 
   function_data_type_or_implicit1: $ => choice(
     $.data_type_or_void,
@@ -1979,53 +1979,57 @@ const rules = {
     optional(seq('(', optional($.tf_port_list), ')'))
   ),
 
-  // dpi_import_export: $ => choice(
-  //   seq(
-  //     'import',
-  //     $.dpi_spec_string,
-  //     optional($.dpi_function_import_property),
-  //     optseq($.c_identifier, '='),
-  //     $.dpi_function_proto,
-  //     ';'
-  //   ),
-  //   seq(
-  //     'import',
-  //     $.dpi_spec_string,
-  //     optional($.dpi_task_import_property),
-  //     optseq($.c_identifier, '='),
-  //     $.dpi_task_proto,
-  //     ';'
-  //   ),
-  //   seq(
-  //     'export',
-  //     $.dpi_spec_string,
-  //     optseq($.c_identifier, '='),
-  //     'function',
-  //     $.function_identifier,
-  //     ';'
-  //   ),
-  //   seq(
-  //     'export',
-  //     $.dpi_spec_string,
-  //     optseq($.c_identifier, '='),
-  //     'task',
-  //     $.task_identifier,
-  //     ';'
-  //   )
-  // ),
+  dpi_import_export: $ => choice(
+    seq(
+      'import',
+      $.dpi_spec_string,
+      optional($.dpi_function_import_property),
+      optional(seq($.simple_identifier, '=')), // TODO: Change to $c_identifier: might it have to do with tree-sitter $word => ?
+      // optional(seq($.c_identifier, '=')),
+      $.dpi_function_proto,
+      ';'
+    ),
+    seq(
+      'import',
+      $.dpi_spec_string,
+      optional($.dpi_task_import_property),
+      optional(seq($.simple_identifier, '=')), // TODO: Change to $c_identifier: might it have to do with tree-sitter $word => ?
+      // optional(seq($.c_identifier, '=')),
+      $.dpi_task_proto,
+      ';'
+    ),
+    seq(
+      'export',
+      $.dpi_spec_string,
+      optional(seq($.simple_identifier, '=')), // TODO: Change to $c_identifier: might it have to do with tree-sitter $word => ?
+      // optional(seq($.c_identifier, '=')),
+      'function',
+      $.function_identifier,
+      ';'
+    ),
+    seq(
+      'export',
+      $.dpi_spec_string,
+      optional(seq($.simple_identifier, '=')), // TODO: Change to $c_identifier: might it have to do with tree-sitter $word => ?
+      // optional(seq($.c_identifier, '=')),
+      'task',
+      $.task_identifier,
+      ';'
+    )
+  ),
 
-  // dpi_spec_string: $ => choice('"DPI-C"', '"DPI"'),
+  dpi_spec_string: $ => choice('"DPI-C"', '"DPI"'),
 
-  // dpi_function_import_property: $ => choice('context', 'pure'),
+  dpi_function_import_property: $ => choice('context', 'pure'),
 
-  // dpi_task_import_property: $ => 'context',
+  dpi_task_import_property: $ => 'context',
 
-  // dpi_function_proto: $ => $.function_prototype,
+  dpi_function_proto: $ => $.function_prototype,
 
-  // dpi_task_proto: $ => $.task_prototype,
+  dpi_task_proto: $ => $.task_prototype,
 
 
-  // // A.2.7 Task declarations
+  // A.2.7 Task declarations
 
   task_declaration: $ => seq(
     'task',
@@ -5138,7 +5142,10 @@ const rules = {
   // _array_identifier: $ => $._identifier,
   _block_identifier: $ => $._identifier,
   // _bin_identifier: $ => $._identifier,
-  // c_identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
+  // INFO: Set properly: Tried with both options but didn't work to recognize DPI properly
+  c_identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
+  // c_identifier: $ => token(/[a-zA-Z_][a-zA-Z0-9_]*/),
+  // End of INFO
   // cell_identifier: $ => alias($._identifier, $.cell_identifier),
   // checker_identifier: $ => alias($._identifier, $.checker_identifier),
   class_identifier: $ => alias($._identifier, $.class_identifier),
@@ -6373,6 +6380,12 @@ module.exports = grammar({
 
     // Constraints
     [$.class_method, $.constraint_prototype_qualifier],
+
+    // DPI
+    // 'import'  dpi_spec_string  'context'  •  c_identifier  …
+    // 1:  'import'  dpi_spec_string  (dpi_function_import_property  'context')  •  c_identifier  …
+    // 2:  'import'  dpi_spec_string  (dpi_task_import_property  'context')  •  c_identifier  …
+    [$.dpi_function_import_property, $.dpi_task_import_property],
 ],
 
 });
