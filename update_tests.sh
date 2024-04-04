@@ -59,6 +59,9 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    sv-tests/generic/preproc/preproc_test_2.sv
                    sv-tests/generic/typedef/typedef_test_26.sv
                    sv-tests/generic/typedef/typedef_test_27.sv
+                   # ifdef conditional compilation breaks seq_block declaration -> statements order
+                   uvm/1800.2-2020-2.0/src/base/uvm_traversal.svh
+                   uvm/1800.2-2020-2.0/src/tlm1/uvm_tlm_fifos.svh
                    # Doulos reference examples
                    doulos/117.1_\`define.sv
                    doulos/117.2_\`define.sv

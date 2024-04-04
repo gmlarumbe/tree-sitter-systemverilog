@@ -4577,7 +4577,11 @@ const rules = {
 
   _method_call_root: $ => prec('_method_call_root', choice(
     prec.dynamic(0, $.primary),
-    prec.dynamic(1, $.implicit_class_handle),
+    // INFO: Modified wrt LRM, the implicit_class_handle should be matched by the $.primary
+    // second condition. However there must be some precedences that prevent this from being
+    // detected. This workaround might complicate a bit more the parser but seems to work well.
+    prec.dynamic(1, seq($.implicit_class_handle, optional($.select1))),
+    // End of INFO
     $.class_type, // INFO: Out of LRM: Added to support calling parameterized static methods
     $.text_macro_usage,// INFO: Out of LRM, added to fix parsing errors in UVM
   )),
@@ -4798,10 +4802,18 @@ const rules = {
 
   primary: $ => prec('primary', choice(
     $.primary_literal,
-    seq(
-      optional(choice($.class_qualifier, $.package_scope)),
-      $.hierarchical_identifier,
-      optional($.select1)
+    choice(
+      seq( // INFO: This is the one in the LRM
+        optional(choice($.class_qualifier, $.package_scope)),
+        $.hierarchical_identifier,
+        optional($.select1)
+      ),
+      // INFO: The one below should be included in the one above, however it doesn't work well
+      // possibly because of some bad specified precedence/conflict. For the time being, adding
+      // the option below fixes things and seems to work well (at the expense of some more complexity
+      // in the parser)
+      seq($.implicit_class_handle, optional($.select1)), // INFO: Out of LRM, but used as a workaround
+      // seq(choice($.class_qualifier, $.package_scope), optional($.select1)), // Tried this instead of the one above, but broke things and didn't add anything new
     ),
     $.empty_unpacked_array_concatenation,
     seq($.concatenation, optional(seq('[', $.range_expression, ']'))),
@@ -6340,6 +6352,16 @@ module.exports = grammar({
 
     // After adding text_macro_usage to _method_call_root
     [$._directives, $._method_call_root],
+
+
+    // Fix error with method call with bit_select
+    [$.class_qualifier, $.select1],
+    [$.select1, $.hierarchical_identifier],
+    [$.constant_select1, $.hierarchical_identifier],
+    [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$._method_call_root, $.primary],
+    [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue],
+    [$._method_call_root, $.primary, $.class_qualifier],
 ],
 
 });
