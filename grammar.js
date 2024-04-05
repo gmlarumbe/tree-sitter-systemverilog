@@ -3495,7 +3495,7 @@ const rules = {
     // // seq($.clocking_drive, ';'),
     // // $.randsequence_statement,
     // // $.randcase_statement,
-    // $.expect_property_statement
+    $.expect_property_statement,
 
     // $.text_macro_usage, // INFO: Out of LRM
     $._directives, // INFO: This one is not in the LRM but adds good support for lots of stuff
