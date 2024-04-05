@@ -3492,9 +3492,9 @@ const rules = {
     $.seq_block,
     $.wait_statement,
     $._procedural_assertion_statement,
-    // // seq($.clocking_drive, ';'),
-    // // $.randsequence_statement,
-    // // $.randcase_statement,
+    seq($.clocking_drive, ';'),
+    // $.randsequence_statement,
+    // $.randcase_statement,
     $.expect_property_statement,
 
     // $.text_macro_usage, // INFO: Out of LRM
@@ -3930,9 +3930,12 @@ const rules = {
     $.delay_control
   ),
 
-  clocking_drive: $ => prec(PREC.ASSIGN, seq(
+  // clocking_drive: $ => prec(PREC.ASSIGN, seq(
+  //   $.clockvar_expression, '<=', optional($.cycle_delay), $.expression
+  // )),
+  clocking_drive: $ => seq(
     $.clockvar_expression, '<=', optional($.cycle_delay), $.expression
-  )),
+  ),
 
   // INFO: Original by drom
   // cycle_delay: $ => prec.left(seq('##', choice(
@@ -6510,6 +6513,11 @@ module.exports = grammar({
     // TODO: Add procedural assertion item probably these could be removed by inlining
     [$.concurrent_assertion_item, $._procedural_assertion_statement],
     [$.deferred_immediate_assertion_item, $._immediate_assertion_statement],
+
+    // TODO: Add clocking_drive to statement_item
+    [$.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.clockvar, $.variable_lvalue],
 ],
 
 });
