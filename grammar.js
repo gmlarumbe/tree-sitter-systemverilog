@@ -3491,7 +3491,7 @@ const rules = {
     $.procedural_timing_control_statement,
     $.seq_block,
     $.wait_statement,
-    // $._procedural_assertion_statement,
+    $._procedural_assertion_statement,
     // // seq($.clocking_drive, ';'),
     // // $.randsequence_statement,
     // // $.randcase_statement,
@@ -6506,6 +6506,10 @@ module.exports = grammar({
     [$.tf_call, $.ps_or_hierarchical_sequence_identifier],
     [$.tf_call, $.ps_or_hierarchical_property_identifier, $._sequence_identifier],
     [$.tf_call, $._sequence_identifier],
+
+    // TODO: Add procedural assertion item probably these could be removed by inlining
+    [$.concurrent_assertion_item, $._procedural_assertion_statement],
+    [$.deferred_immediate_assertion_item, $._immediate_assertion_statement],
 ],
 
 });
