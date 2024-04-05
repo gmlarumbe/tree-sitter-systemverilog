@@ -3493,7 +3493,7 @@ const rules = {
     $.wait_statement,
     $._procedural_assertion_statement,
     seq($.clocking_drive, ';'),
-    // $.randsequence_statement,
+    $.randsequence_statement,
     $.randcase_statement,
     $.expect_property_statement,
 
@@ -3960,37 +3960,62 @@ const rules = {
     optional($.select1)
   ),
 
-  // // A.6.12 Randsequence
+  // A.6.12 Randsequence
+  randsequence_statement: $ => seq(
+    'randsequence', '(', optional($.rs_production_identifier), ')',
+    repeat1($.rs_production),
+    'endsequence'
+  ),
 
-  // // randsequence_statement = randsequence ( [ production_identifier ] )
-  // // production { production }
-  // // endsequence
-  // // production
-  // //   = [ data_type_or_void ] production_identifier
-  // //  [ ( tf_port_list ) ] : rs_rule { | rs_rule } ;
-  // // rs_rule = rs_production_list [ := weight_specification [ rs_code_block ] ]
-  // // rs_production_list =
-  // // rs_prod { rs_prod }
-  // // | rand join [ ( expression ) ] production_item
-  // //   production_item { production_item }
-  // // weight_specification =
-  // // integral_number
-  // // | ps_identifier
-  // // | ( expression )
-  // // rs_code_block = { { data_declaration } { statement_or_null } }
-  // // rs_prod =
-  // // production_item
-  // // | rs_code_block
-  // // | rs_if_else
-  // // | rs_repeat
-  // // | rs_case
-  // // production_item = production_identifier [ ( list_of_arguments ) ]
-  // // rs_if_else = if ( expression ) production_item [ else production_item ]
-  // // rs_repeat = repeat ( expression ) production_item
-  // // rs_case = case ( case_expression ) rs_case_item { rs_case_item } endcase
-  // // rs_case_item =
-  // // case_item_expression { , case_item_expression } : production_item ;
-  // // | default [ : ] production_item ;
+  rs_production: $ => seq(
+    optional($.data_type_or_void), $.rs_production_identifier,
+    optional(seq('(', $.tf_port_list, ')')), ':', sepBy1('|', $.rs_rule), ';'
+  ),
+
+  rs_rule: $ => seq($.rs_production_list, optional(seq(':=', $.rs_weight_specification, optional($.rs_code_block)))),
+
+  rs_production_list: $ => choice(
+    repeat1($.rs_prod),
+    seq('rand', 'join', optional(seq('(', $.expression, ')')), $.rs_production_item, repeat1($.rs_production_item))
+  ),
+
+  rs_weight_specification: $ => choice(
+    $.integral_number,
+    $.ps_identifier,
+    seq('(', $.expression, ')')
+  ),
+
+  rs_code_block: $ => seq('{', repeat($.data_declaration), repeat($.statement_or_null), '}'),
+
+  rs_prod: $ => choice(
+    $.rs_production_item,
+    $.rs_code_block,
+    $.rs_if_else,
+    $.rs_repeat,
+    $.rs_case
+  ),
+
+  rs_production_item: $ => seq(
+    $.rs_production_identifier, optional(seq('(', optional($.list_of_arguments), ')'))
+  ),
+
+  rs_if_else: $ => seq(
+    'if', '(', $.expression, ')', $.rs_production_item, optional(seq('else', $.rs_production_item))
+  ),
+
+  rs_repeat: $ => seq(
+    'repeat', '(', $.expression, ')', $.rs_production_item
+  ),
+
+  rs_case: $ => seq(
+    'case', '(', $.case_expression, ')', repeat1($.rs_case_item), 'endcase'
+  ),
+
+  rs_case_item: $ => choice(
+    seq(sepBy1(',', $.case_item_expression), ":", $.rs_production_item, ';'),
+    seq('default', optional(':'), $.rs_production_item, ';')
+  ),
+
 
   // // A.7 Specify section
 
@@ -4900,7 +4925,7 @@ const rules = {
     $.cast,
     $.assignment_pattern_expression,
     $.streaming_concatenation,
-    // // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
+    // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
     'this',
     '$',
     'null',
@@ -5380,6 +5405,8 @@ const rules = {
     )),
     $._type_identifier
   )),
+
+  rs_production_identifier: $ => $._identifier,
 
   _sequence_identifier: $ => $._identifier,
 
@@ -6519,6 +6546,11 @@ module.exports = grammar({
 
     // TODO: Fixing the local:: class_qualifier
     [$._simple_type, $._assignment_pattern_expression_type, $.class_qualifier],
+
+
+    // TODO: Randsequence conflicts
+    [$.rs_production_list],
+    [$.rs_rule],
 ],
 
 });
