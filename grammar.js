@@ -4908,12 +4908,10 @@ const rules = {
     '\'{}',  // DANGER: Out of LRM but fixes errors in some UVM files
   )),
 
-  class_qualifier: $ => prec('class_qualifier', seq(
-    optional(seq('local', '::')),
-    choice( // TODO optional?
-      seq($.implicit_class_handle, '.'),
-      $.class_scope
-    ))),
+  class_qualifier: $ => prec('class_qualifier', choice( // Reordered to avoid matching empty string
+    seq('local', '::'),
+    seq(optional(seq('local', '::')), choice(seq($.implicit_class_handle, '.'), $.class_scope))
+  )),
 
   range_expression: $ => choice(
     $.expression,
@@ -6518,6 +6516,9 @@ module.exports = grammar({
     [$.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.clockvar, $.variable_lvalue],
+
+    // TODO: Fixing the local:: class_qualifier
+    [$._simple_type, $._assignment_pattern_expression_type, $.class_qualifier],
 ],
 
 });
