@@ -1114,7 +1114,7 @@ const rules = {
     seq(repeat($.attribute_instance), $._class_constraint),
     seq(repeat($.attribute_instance), $.class_declaration),
     seq(repeat($.attribute_instance), $.interface_class_declaration),
-    // seq(repeat($.attribute_instance), $.covergroup_declaration),
+    seq(repeat($.attribute_instance), $.covergroup_declaration),
     seq($._any_parameter_declaration, ';'),
     ';'
   ),
@@ -1313,7 +1313,7 @@ const rules = {
     $.interface_class_declaration,
     $.class_constructor_declaration,
     seq($._any_parameter_declaration, ';'),
-    // $.covergroup_declaration,
+    $.covergroup_declaration,
     $._assertion_item_declaration,
     ';',
     $._directives  // DANGER: Out of LRM
@@ -2515,217 +2515,241 @@ const rules = {
     ';'
   ),
 
-  // // A.2.11 Covergroup declarations
+  // A.2.11 Covergroup declarations
+  covergroup_declaration: $ => seq(
+    'covergroup',
+    choice(
+      seq(
+        $.covergroup_identifier,
+        optional(seq('(', optional($.tf_port_list), ')')),
+        optional($.coverage_event),
+      ),
+      seq('extends', $.covergroup_identifier)
+    ),
+    ';',
+    repeat($.coverage_spec_or_option),
+    'endgroup', optional(seq(':', $.covergroup_identifier))
+  ),
 
-  // covergroup_declaration: $ => seq(
-  //   'covergroup', $.covergroup_identifier,
-  //   optseq('(', optional($.tf_port_list), ')'),
-  //   optional($.coverage_event),
-  //   ';',
-  //   repeat($.coverage_spec_or_option),
-  //   'endgroup', optseq(':', $.covergroup_identifier)
-  // ),
+  coverage_spec_or_option: $ => choice(
+    seq(repeat($.attribute_instance), $._coverage_spec),
+    seq(repeat($.attribute_instance), $.coverage_option, ';')
+  ),
 
-  // coverage_spec_or_option: $ => choice(
-  //   seq(repeat($.attribute_instance), $._coverage_spec),
-  //   seq(repeat($.attribute_instance), $.coverage_option, ';')
-  // ),
+  coverage_option: $ => choice(
+    seq('option', '.', $.member_identifier, '=', $.expression),
+    seq('type_option', '.', $.member_identifier, '=', $.constant_expression)
+  ),
 
-  // coverage_option: $ => choice(
-  //   seq('option', '.', $.member_identifier, '=', $.expression),
-  //   seq('type_option', '.', $.member_identifier, '=', $.constant_expression)
-  // ),
+  _coverage_spec: $ => choice($.cover_point, $.cover_cross),
 
-  // _coverage_spec: $ => choice($.cover_point, $.cover_cross),
+  coverage_event: $ => choice(
+    $.clocking_event,
+    seq('with', 'function', 'sample', '(', optional($.tf_port_list), ')'),
+    seq('@@', '(', $.block_event_expression, ')')
+  ),
 
-  // coverage_event: $ => choice(
-  //   $.clocking_event,
-  //   seq('with', 'function', 'sample', '(', optional($.tf_port_list), ')'),
-  //   seq('@@', '(', $.block_event_expression, ')')
-  // ),
+  block_event_expression: $ => choice(
+    prec.left(PREC.or, seq($.block_event_expression, 'or', $.block_event_expression)),
+    seq('begin', $.hierarchical_btf_identifier),
+    seq('end', $.hierarchical_btf_identifier)
+  ),
 
-  // block_event_expression: $ => choice(
-  //   prec.left(PREC.or, seq($.block_event_expression, 'or', $.block_event_expression)),
-  //   seq('begin', $.hierarchical_btf_identifier),
-  //   seq('end', $.hierarchical_btf_identifier)
-  // ),
+  hierarchical_btf_identifier: $ => choice(
+    $._hierarchical_tf_identifier,
+    $._hierarchical_block_identifier,
+    // prec.left(PREC.PARENT, seq(
+    //   choice(seq($.hierarchical_identifier, '.'), $.class_scope),
+    //   $.method_identifier
+    // ))
+    seq(
+      optional(choice(seq($.hierarchical_identifier, '.'), $.class_scope)),
+      $.method_identifier
+    )
+  ),
 
-  // hierarchical_btf_identifier: $ => choice(
-  //   $._hierarchical_tf_identifier,
-  //   $._hierarchical_block_identifier,
-  //   prec.left(PREC.PARENT, seq(
-  //     choice(seq($.hierarchical_identifier, '.'), $.class_scope),
-  //     $.method_identifier
-  //   ))
-  // ),
+  cover_point: $ => seq(
+    optional(seq(optional($.data_type_or_implicit1), $.cover_point_identifier, ':')),
+    'coverpoint', $.expression,
+    // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')'))),
+    optional(seq('iff', '(', $.expression, ')')),
+    $.bins_or_empty
+  ),
 
-  // cover_point: $ => seq(
-  //   optseq(optional($.data_type_or_implicit1), $.cover_point_identifier, ':'),
-  //   'coverpoint', $.expression,
-  //   optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')'))),
-  //   $.bins_or_empty
-  // ),
+  bins_or_empty: $ => choice(
+    seq('{', repeat($.attribute_instance), repeat(seq($.bins_or_options, ';')), '}'),
+    ';'
+  ),
 
-  // bins_or_empty: $ => choice(
-  //   seq('{', repeat($.attribute_instance), repseq($.bins_or_options, ';'), '}'),
-  //   ';'
-  // ),
+  // TODO: Refactor: Last sentence is common, and first one is common in first 4 choices
+  bins_or_options: $ => choice(
+    $.coverage_option,
+    seq(
+      optional('wildcard'),
+      $.bins_keyword,
+      $._bin_identifier,
+      optional(seq('[', optional($._covergroup_expression), ']')),
+      '=',
+      '{', $.covergroup_range_list, '}',
+      optional(seq('with', '(', $._with_covergroup_expression, ')')),
+      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
+      optional(seq('iff', '(', $.expression, ')'))
+    ),
+    seq(
+      optional('wildcard'),
+      $.bins_keyword,
+      $._bin_identifier,
+      optional(seq('[', optional($._covergroup_expression), ']')),
+      '=',
+      $.cover_point_identifier,
+      'with', '(', $._with_covergroup_expression, ')',
+      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
+      optional(seq('iff', '(', $.expression, ')'))
+    ),
+    seq(
+      optional('wildcard'),
+      $.bins_keyword,
+      $._bin_identifier,
+      optional(seq('[', optional($._covergroup_expression), ']')),
+      '=',
+      $._set_covergroup_expression,
+      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
+      optional(seq('iff', '(', $.expression, ')'))
+    ),
+    seq(
+      optional('wildcard'),
+      $.bins_keyword,
+      $._bin_identifier,
+      optional(seq('[', ']')),
+      '=',
+      $.trans_list,
+      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
+      optional(seq('iff', '(', $.expression, ')'))
+    ),
+    seq(
+      $.bins_keyword,
+      $._bin_identifier,
+      optional(seq('[', optional($._covergroup_expression), ']')),
+      '=',
+      'default',
+      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
+      optional(seq('iff', '(', $.expression, ')'))
+    ),
+    seq(
+      $.bins_keyword,
+      $._bin_identifier,
+      '=',
+      'default',
+      'sequence',
+      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
+      optional(seq('iff', '(', $.expression, ')'))
+    )
+  ),
 
-  // bins_or_options: $ => choice(
-  //   $.coverage_option,
-  //   seq(
-  //     optional('wildcard'),
-  //     $.bins_keyword,
-  //     $._bin_identifier,
-  //     optseq('[', optional($._covergroup_expression), ']'),
-  //     '=',
-  //     '{', $.covergroup_range_list, '}',
-  //     optseq('with', '(', $._with_covergroup_expression, ')'),
-  //     optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-  //   ),
-  //   seq(
-  //     optional('wildcard'),
-  //     $.bins_keyword,
-  //     $._bin_identifier,
-  //     optseq('[', optional($._covergroup_expression), ']'),
-  //     '=',
-  //     $.cover_point_identifier,
-  //     'with', '(', $._with_covergroup_expression, ')',
-  //     optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-  //   ),
-  //   seq(
-  //     optional('wildcard'),
-  //     $.bins_keyword,
-  //     $._bin_identifier,
-  //     optseq('[', optional($._covergroup_expression), ']'),
-  //     '=',
-  //     $._set_covergroup_expression,
-  //     optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-  //   ),
-  //   seq(
-  //     optional('wildcard'),
-  //     $.bins_keyword,
-  //     $._bin_identifier,
-  //     optseq('[', ']'),
-  //     '=',
-  //     $.trans_list,
-  //     optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-  //   ),
-  //   seq(
-  //     $.bins_keyword,
-  //     $._bin_identifier,
-  //     optseq('[', optional($._covergroup_expression), ']'),
-  //     '=',
-  //     'default',
-  //     optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-  //   ),
-  //   seq(
-  //     $.bins_keyword,
-  //     $._bin_identifier,
-  //     '=',
-  //     'default',
-  //     'sequence',
-  //     optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-  //   )
-  // ),
+  bins_keyword: $ => choice('bins', 'illegal_bins', 'ignore_bins'),
 
-  // bins_keyword: $ => choice('bins', 'illegal_bins', 'ignore_bins'),
+  trans_list: $ => sepBy1(',', seq('(', $.trans_set, ')')),
 
-  // trans_list: $ => sep1(',', seq('(', $.trans_set, ')')),
+  trans_set: $ => sepBy1('=>', $.trans_range_list),
 
-  // trans_set: $ => sep1('=>', $.trans_range_list),
+  trans_range_list: $ => choice(
+    $.trans_item,
+    seq($.trans_item, '[*', $.repeat_range, ']'),
+    seq($.trans_item, '[–>', $.repeat_range, ']'),
+    seq($.trans_item, '[=', $.repeat_range, ']')
+  ),
 
-  // trans_range_list: $ => choice(
-  //   $.trans_item,
-  //   seq($.trans_item, '[*', $.repeat_range, ']'),
-  //   seq($.trans_item, '[–>', $.repeat_range, ']'),
-  //   seq($.trans_item, '[=', $.repeat_range, ']')
-  // ),
+  trans_item: $ => $.covergroup_range_list,
 
-  // trans_item: $ => $.covergroup_range_list,
+  repeat_range: $ => seq(
+    $._covergroup_expression, optional(seq(':', $._covergroup_expression))
+  ),
 
-  // repeat_range: $ => seq(
-  //   $._covergroup_expression, optseq(':', $._covergroup_expression)
-  // ),
+  cover_cross: $ => seq(
+    optional(seq($.cross_identifier, ':')),
+    'cross',
+    $.list_of_cross_items,
+    // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')'))),
+    optional(seq('iff', '(', $.expression, ')')),
+    $.cross_body
+  ),
 
-  // cover_cross: $ => seq(
-  //   optseq($.cross_identifier, ':'),
-  //   'cross',
-  //   $.list_of_cross_items,
-  //   optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')'))),
-  //   $.cross_body
-  // ),
+  list_of_cross_items: $ => seq($._cross_item, ',', sepBy1(',', $._cross_item)),
 
-  // list_of_cross_items: $ => seq($._cross_item, ',', sep1(',', $._cross_item)),
+  _cross_item: $ => choice(
+    $.cover_point_identifier,
+    $._variable_identifier
+  ),
 
-  // _cross_item: $ => choice(
-  //   $.cover_point_identifier
-  //   // $._variable_identifier
-  // ),
+  cross_body: $ => choice(
+    seq('{', repeat($.cross_body_item), '}'),
+    ';'
+  ),
 
-  // cross_body: $ => choice(
-  //   seq('{', repeat($.cross_body_item), '}'),
-  //   ';'
-  // ),
+  cross_body_item: $ => choice(
+    $.function_declaration,
+    seq($.bins_selection_or_option, ';')
+  ),
 
-  // cross_body_item: $ => choice(
-  //   $.function_declaration, // FIXME standard function_declaraton => function_declaration
-  //   seq($.bins_selection_or_option, ';')
-  // ),
+  bins_selection_or_option: $ => choice(
+    seq(repeat($.attribute_instance), $.coverage_option),
+    seq(repeat($.attribute_instance), $.bins_selection)
+  ),
 
-  // bins_selection_or_option: $ => choice(
-  //   seq(repeat($.attribute_instance), $.coverage_option),
-  //   seq(repeat($.attribute_instance), $.bins_selection)
-  // ),
+  bins_selection: $ => seq(
+    $.bins_keyword, $._bin_identifier, '=', $.select_expression,
+    // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
+    optional(seq('iff', '(', $.expression, ')'))
+  ),
 
-  // bins_selection: $ => seq(
-  //   $.bins_keyword, $._bin_identifier, '=', $.select_expression,
-  //   optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-  // ),
+  select_expression: $ => choice(
+    $.select_condition,
+    prec.left(PREC.UNARY, seq('!', $.select_condition)),
+    prec.left(PREC.LOGICAL_AND, seq($.select_expression, '&&', $.select_expression)),
+    prec.left(PREC.LOGICAL_OR, seq($.select_expression, '||', $.select_expression)),
+    prec.left(PREC.PARENT, seq('(', $.select_expression, ')')),
+    seq(
+      $.select_expression, 'with', '(', $._with_covergroup_expression, ')',
+      optional(seq('matches', $._integer_covergroup_expression))
+    ),
+    $.cross_identifier,
+    seq(
+      $._cross_set_expression,
+      optional(seq('matches', $._integer_covergroup_expression))
+    )
+  ),
 
-  // select_expression: $ => choice(
-  //   $.select_condition,
-  //   prec.left(PREC.UNARY, seq('!', $.select_condition)),
-  //   prec.left(PREC.LOGICAL_AND, seq($.select_expression, '&&', $.select_expression)),
-  //   prec.left(PREC.LOGICAL_OR, seq($.select_expression, '||', $.select_expression)),
-  //   prec.left(PREC.PARENT, seq('(', $.select_expression, ')')),
-  //   seq(
-  //     $.select_expression, 'with', '(', $._with_covergroup_expression, ')',
-  //     optseq('matches', $._integer_covergroup_expression)
-  //   ),
-  //   $.cross_identifier,
-  //   seq(
-  //     $._cross_set_expression,
-  //     optseq('matches', $._integer_covergroup_expression)
-  //   )
-  // ),
+  select_condition: $ => seq(
+    'binsof', '(', $.bins_expression, ')',
+    optional(seq('intersect', '{', $.covergroup_range_list, '}'))
+  ),
 
-  // select_condition: $ => seq(
-  //   'binsof', '(', $.bins_expression, ')',
-  //   optseq('intersect', '{', $.covergroup_range_list, '}')
-  // ),
+  bins_expression: $ => choice(
+    $._variable_identifier,
+    // prec.left(PREC.PARENT, seq($.cover_point_identifier, optseq('.', $._bin_identifier)))
+    seq($.cover_point_identifier, optional(seq('.', $._bin_identifier)))
+  ),
 
-  // bins_expression: $ => choice(
-  //   $._variable_identifier,
-  //   prec.left(PREC.PARENT, seq($.cover_point_identifier, optseq('.', $._bin_identifier)))
-  // ),
+  covergroup_range_list: $ => sepBy1(',', $.covergroup_value_range),
 
-  // covergroup_range_list: $ => sep1(',', $.covergroup_value_range),
+  covergroup_value_range: $ => choice(
+    $._covergroup_expression,
+    seq('[', $._covergroup_expression, ':', $._covergroup_expression, ']'),
+    seq('[', '$', ':', $._covergroup_expression, ']'),
+    seq('[', $._covergroup_expression, ':', '$', ']'),
+    seq('[', $._covergroup_expression, '+/-', $._covergroup_expression, ']'),
+    seq('[', $._covergroup_expression, '+%-', $._covergroup_expression, ']'),
+  ),
 
-  // covergroup_value_range: $ => choice(
-  //   $._covergroup_expression,
-  //   seq('[', $._covergroup_expression, ':', $._covergroup_expression, ']')
-  // ),
+  _with_covergroup_expression: $ => $._covergroup_expression,
 
-  // _with_covergroup_expression: $ => $._covergroup_expression,
+  _set_covergroup_expression: $ => $._covergroup_expression,
 
-  // _set_covergroup_expression: $ => $._covergroup_expression,
+  _integer_covergroup_expression: $ => choice($._covergroup_expression, '$'),
 
-  // _integer_covergroup_expression: $ => $._covergroup_expression,
+  _cross_set_expression: $ => $._covergroup_expression,
 
-  // _cross_set_expression: $ => $._covergroup_expression,
-
-  // _covergroup_expression: $ => $.expression,
+  _covergroup_expression: $ => $.expression,
 
   /* A.2.12 Let declarations */
   let_declaration: $ => seq(
@@ -5139,7 +5163,7 @@ const rules = {
 
   // _array_identifier: $ => $._identifier,
   _block_identifier: $ => $._identifier,
-  // _bin_identifier: $ => $._identifier,
+  _bin_identifier: $ => $._identifier,
   // INFO: Set properly: Tried with both options but didn't work to recognize DPI properly
   c_identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
   // c_identifier: $ => token(/[a-zA-Z_][a-zA-Z0-9_]*/),
@@ -5153,11 +5177,11 @@ const rules = {
   const_identifier: $ => alias($._identifier, $.const_identifier),
   constraint_identifier: $ => alias($._identifier, $.constraint_identifier),
 
-  // covergroup_identifier: $ => alias($._identifier, $.covergroup_identifier),
+  covergroup_identifier: $ => alias($._identifier, $.covergroup_identifier),
 
   // // covergroup_variable_identifier = _variable_identifier
-  // cover_point_identifier: $ => alias($._identifier, $.cover_point_identifier),
-  // cross_identifier: $ => alias($._identifier, $.cross_identifier),
+  cover_point_identifier: $ => alias($._identifier, $.cover_point_identifier),
+  cross_identifier: $ => alias($._identifier, $.cross_identifier),
   dynamic_array_variable_identifier: $ => alias($._variable_identifier, $.dynamic_array_variable_identifier),
   enum_identifier: $ => alias($._identifier, $.enum_identifier),
   escaped_identifier: $ => seq('\\', /[^\s]*/),
@@ -5366,7 +5390,7 @@ module.exports = grammar({
 
     $.parameter_identifier,
     $.class_identifier,
-  //   $.covergroup_identifier,
+    $.covergroup_identifier,
     $.enum_identifier,
     $.formal_port_identifier,
     $.genvar_identifier,
@@ -5397,8 +5421,8 @@ module.exports = grammar({
   //   // $.inout_port_identifier,
   //   // $.input_identifier,
   //   // $.output_identifier,
-  //   $.cover_point_identifier,
-  //   $.cross_identifier
+    $.cover_point_identifier,
+    $.cross_identifier,
 
     $._expression_or_cond_pattern,
     // $.pragma_keyword,
@@ -6384,6 +6408,17 @@ module.exports = grammar({
     // 1:  'import'  dpi_spec_string  (dpi_function_import_property  'context')  •  c_identifier  …
     // 2:  'import'  dpi_spec_string  (dpi_task_import_property  'context')  •  c_identifier  …
     [$.dpi_function_import_property, $.dpi_task_import_property],
+
+
+    // Coverage: TODO
+    [$._cross_item],
+    [$.hierarchical_identifier, $.method_identifier],
+    [$._covergroup_expression, $.cond_pattern],
+    [$._covergroup_expression, $.mintypmax_expression],
+    [$._covergroup_expression, $.concatenation],
+    [$.covergroup_value_range, $.primary],
+    [$.bins_expression],
+    [$._integer_covergroup_expression, $.primary],
 ],
 
 });
