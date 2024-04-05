@@ -3494,7 +3494,7 @@ const rules = {
     $._procedural_assertion_statement,
     seq($.clocking_drive, ';'),
     // $.randsequence_statement,
-    // $.randcase_statement,
+    $.randcase_statement,
     $.expect_property_statement,
 
     // $.text_macro_usage, // INFO: Out of LRM
@@ -3695,11 +3695,11 @@ const rules = {
 
   case_item_expression: $ => $.expression,
 
-  // randcase_statement: $ => seq(
-  //   'randcase', $.randcase_item, repeat($.randcase_item), 'endcase'
-  // ),
+  randcase_statement: $ => seq(
+    'randcase', $.randcase_item, repeat($.randcase_item), 'endcase'
+  ),
 
-  // randcase_item: $ => seq($.expression, ':', $.statement_or_null),
+  randcase_item: $ => seq($.expression, ':', $.statement_or_null),
 
   range_list: $ => sepBy1(',', $.value_range),
 
