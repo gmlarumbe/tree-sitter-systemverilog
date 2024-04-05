@@ -874,7 +874,7 @@ const rules = {
     $._module_or_generate_item_declaration,
   //   $.interface_instantiation,
   //   $.program_instantiation,
-  //   $._assertion_item,
+    $._assertion_item,
   //   $.bind_directive,
     $.continuous_assign,
   //   $.net_alias,
@@ -1047,7 +1047,7 @@ const rules = {
     seq(repeat($.attribute_instance), $._module_or_generate_item_declaration),
     seq(repeat($.attribute_instance), $.initial_construct),
     seq(repeat($.attribute_instance), $.final_construct),
-    // seq(repeat($.attribute_instance), $.concurrent_assertion_item), // TODO
+    seq(repeat($.attribute_instance), $.concurrent_assertion_item),
     $.timeunits_declaration,
     // $._program_generate_item
   ),
@@ -2206,59 +2206,61 @@ const rules = {
 
   import_export: $ => choice('import', 'export'),
 
-  // // A.2.10 Assertion declarations
+  // A.2.10 Assertion declarations
+  concurrent_assertion_item: $ => choice(
+    seq(
+      optional(seq($._block_identifier, ':')),
+      $._concurrent_assertion_statement
+    ),
+    // $.checker_instantiation // TODO: Remove temporarily to narrow conflicts
+  ),
 
-  // concurrent_assertion_item: $ => choice(
-  //   seq(
-  //     optseq($._block_identifier, ':'),
-  //     $._concurrent_assertion_statement
-  //   ),
-  //   // $.checker_instantiation // TODO: Remove temporarily to narrow conflicts
-  // ),
+  _concurrent_assertion_statement: $ => choice(
+    $.assert_property_statement,
+    $.assume_property_statement,
+    $.cover_property_statement,
+    $.cover_sequence_statement,
+    $.restrict_property_statement
+  ),
 
-  // _concurrent_assertion_statement: $ => choice(
-  //   $.assert_property_statement,
-  //   $.assume_property_statement,
-  //   $.cover_property_statement,
-  //   $.cover_sequence_statement,
-  //   $.restrict_property_statement
-  // ),
+  assert_property_statement: $ => seq(
+    'assert', 'property', '(', $.property_spec, ')', $.action_block
+  ),
 
-  // assert_property_statement: $ => seq(
-  //   'assert', 'property', '(', $.property_spec, ')', $.action_block
-  // ),
+  assume_property_statement: $ => seq(
+    'assume', 'property', '(', $.property_spec, ')', $.action_block
+  ),
 
-  // assume_property_statement: $ => seq(
-  //   'assume', 'property', '(', $.property_spec, ')', $.action_block
-  // ),
+  cover_property_statement: $ => seq(
+    'cover', 'property', '(', $.property_spec, ')', $.statement_or_null
+  ),
 
-  // cover_property_statement: $ => seq(
-  //   'cover', 'property', '(', $.property_spec, ')', $.statement_or_null
-  // ),
+  expect_property_statement: $ => seq(
+    'expect', '(', $.property_spec, ')', $.action_block
+  ),
 
-  // expect_property_statement: $ => seq(
-  //   'expect', '(', $.property_spec, ')', $.action_block
-  // ),
+  cover_sequence_statement: $ => seq(
+    'cover', 'sequence', '(',
+    optional($.clocking_event),
+    // optional(prec.right(PREC.iff, seq(
+    //   'disable', 'iff', '(', $.expression_or_dist, ')'
+    // ))),
+    optional(seq(
+      'disable', 'iff', '(', $.expression_or_dist, ')'
+    )),
+    $.sequence_expr,
+    ')',
+    $.statement_or_null
+  ),
 
-  // cover_sequence_statement: $ => seq(
-  //   'cover', 'sequence', '(',
-  //   optional($.clocking_event),
-  //   optional(prec.right(PREC.iff, seq(
-  //     'disable', 'iff', '(', $.expression_or_dist, ')'
-  //   ))),
-  //   $.sequence_expr,
-  //   ')',
-  //   $.statement_or_null
-  // ),
+  restrict_property_statement: $ => seq(
+    'restrict', 'property', '(', $.property_spec, ')', ';'
+  ),
 
-  // restrict_property_statement: $ => seq(
-  //   'restrict', 'property', '(', $.property_spec, ')', ';'
-  // ),
-
-  // property_instance: $ => seq(
-  //   $.ps_or_hierarchical_property_identifier,
-  //   optseq('(', optional($.property_list_of_arguments), ')')
-  // ),
+  property_instance: $ => seq(
+    $.ps_or_hierarchical_property_identifier,
+    optional(seq('(', optional($.property_list_of_arguments), ')'))
+  ),
 
   // property_list_of_arguments: $ => choice(
   //   seq(
@@ -2272,115 +2274,139 @@ const rules = {
   //   ))
   // ),
 
-  // _property_actual_arg: $ => choice(
-  //   $.property_expr,
-  //   $._sequence_actual_arg
-  // ),
+  // INFO: Copied from list_of_arguments
+  property_list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
+    // First case: mixing positional and named arguments
+    seq(
+      $.expression,
+      repeat(seq(',', optional($._property_actual_arg))),
+      repeat(seq(',', '.', $._identifier, '(', optional($._property_actual_arg), ')'))
+    ),
+    seq(
+      optional($._property_actual_arg),
+      repeat1(seq(',', optional($._property_actual_arg))),
+      repeat(seq(',', '.', $._identifier, '(', optional($._property_actual_arg), ')'))
+    ),
+    seq(
+      optional($._property_actual_arg),
+      repeat(seq(',', optional($._property_actual_arg))),
+      repeat1(seq(',', '.', $._identifier, '(', optional($._property_actual_arg), ')'))
+    ),
+    // Second case: using only named arguments
+    sepBy1(',', seq('.', $._identifier, '(', optional($._property_actual_arg), ')'))
+  )),
+
+  _property_actual_arg: $ => choice(
+    $.property_expr,
+    $._sequence_actual_arg
+  ),
 
   _assertion_item_declaration: $ => choice(
-    // $.property_declaration,
+    $.property_declaration,
     $.sequence_declaration,
     $.let_declaration
   ),
 
-  // property_declaration: $ => seq(
-  //   'property',
-  //   $.property_identifier,
-  //   optseq('(', optional($.property_port_list), ')'),
-  //   ';',
-  //   repeat($.assertion_variable_declaration),
-  //   $.property_spec,
-  //   optional(';'),
-  //   'endproperty', optseq(':', $.property_identifier)
-  // ),
+  property_declaration: $ => seq(
+    'property',
+    $.property_identifier,
+    optional(seq('(', optional($.property_port_list), ')')),
+    ';',
+    repeat($.assertion_variable_declaration),
+    $.property_spec,
+    optional(';'),
+    'endproperty', optional(seq(':', $.property_identifier))
+  ),
 
-  // property_port_list: $ => sep1(',', $.property_port_item),
+  property_port_list: $ => sepBy1(',', $.property_port_item),
 
-  // property_port_item: $ => seq(
-  //   repeat($.attribute_instance),
-  //   optseq(
-  //     'local',
-  //     optional($.property_lvar_port_direction)
-  //   ),
-  //   optional($.property_formal_type1),
-  //   $.formal_port_identifier,
-  //   repeat($._variable_dimension),
-  //   optseq('=', $._property_actual_arg)
-  // ),
+  property_port_item: $ => seq(
+    repeat($.attribute_instance),
+    optional(seq(
+      'local',
+      optional($.property_lvar_port_direction)
+    )),
+    optional($.property_formal_type1),
+    $.formal_port_identifier,
+    repeat($._variable_dimension),
+    optional(seq('=', $._property_actual_arg))
+  ),
 
-  // property_lvar_port_direction: $ => 'input',
+  property_lvar_port_direction: $ => 'input',
 
-  // property_formal_type1: $ => choice(
-  //   $.sequence_formal_type1,
-  //   'property'
-  // ),
+  property_formal_type1: $ => choice(
+    $.sequence_formal_type1,
+    'property'
+  ),
 
-  // property_spec: $ => seq(
-  //   optional($.clocking_event),
-  //   optional(prec.right(PREC.iff, seq(
-  //     'disable', 'iff', '(', $.expression_or_dist, ')'
-  //   ))),
-  //   $.property_expr
-  // ),
+  property_spec: $ => seq(
+    optional($.clocking_event),
+    // optional(prec.right(PREC.iff, seq(
+    //   'disable', 'iff', '(', $.expression_or_dist, ')'
+    // ))),
+    optional(seq(
+      'disable', 'iff', '(', $.expression_or_dist, ')'
+    )),
+    $.property_expr
+  ),
 
-  // property_expr: $ => choice(
-  //   $.sequence_expr,
-  //   seq('strong', '(', $.sequence_expr, ')'),
-  //   seq('weak', '(', $.sequence_expr, ')'),
-  //   prec.left(PREC.PARENT, seq('(', $.property_expr, ')')),
+  // TODO: Review/fix
+  property_expr: $ => choice(
+    $.sequence_expr,
+    seq('strong', '(', $.sequence_expr, ')'),
+    seq('weak', '(', $.sequence_expr, ')'),
+    prec.left(PREC.PARENT, seq('(', $.property_expr, ')')),
 
-  //   // FIXME no assosiativity rules per spec
-  //   prec.left(PREC.nexttime, seq('not', $.property_expr)),
-  //   prec.left(PREC.or, seq($.property_expr, 'or', $.property_expr)),
-  //   prec.left(PREC.and, seq($.property_expr, 'and', $.property_expr)),
+    // FIXME no assosiativity rules per spec
+    prec.left(PREC.nexttime, seq('not', $.property_expr)),
+    prec.left(PREC.or, seq($.property_expr, 'or', $.property_expr)),
+    prec.left(PREC.and, seq($.property_expr, 'and', $.property_expr)),
 
-  //   prec.right(PREC.INCIDENCE, seq($.sequence_expr, '|->', $.property_expr)),
-  //   prec.right(PREC.INCIDENCE, seq($.sequence_expr, '|=>', $.property_expr)),
+    prec.right(PREC.INCIDENCE, seq($.sequence_expr, '|->', $.property_expr)),
+    prec.right(PREC.INCIDENCE, seq($.sequence_expr, '|=>', $.property_expr)),
 
-  //   // FIXME no assosiativity rules per spec
-  //   prec.left(seq('if', '(', $.expression_or_dist, ')', $.property_expr, optseq('else', $.property_expr))), // FIXME spec bug ( ) are not red
+    // FIXME no assosiativity rules per spec
+    prec.left(seq('if', '(', $.expression_or_dist, ')', $.property_expr, optional(seq('else', $.property_expr)))), // FIXME spec bug ( ) are not red seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase'),  // FIXME spec bug ( ) are not red
+    prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#-#', $.property_expr)),
+    prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#=#', $.property_expr)),
 
-  //   seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase'),  // FIXME spec bug ( ) are not red
-  //   prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#-#', $.property_expr)),
-  //   prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#=#', $.property_expr)),
+    // FIXME no assosiativity rules per spec
+    prec.left(PREC.nexttime, seq('nexttime', $.property_expr)),
+    prec.left(PREC.nexttime, seq('nexttime', '[', $.constant_expression, ']', $.property_expr)), // FIXME spec bug constant _expression with the space
+    prec.left(PREC.nexttime, seq('s_nexttime', $.property_expr)),
+    prec.left(PREC.nexttime, seq('s_nexttime', '[', $.constant_expression, ']', $.property_expr)),
 
-  //   // FIXME no assosiativity rules per spec
-  //   prec.left(PREC.nexttime, seq('nexttime', $.property_expr)),
-  //   prec.left(PREC.nexttime, seq('nexttime', '[', $.constant_expression, ']', $.property_expr)), // FIXME spec bug constant _expression with the space
-  //   prec.left(PREC.nexttime, seq('s_nexttime', $.property_expr)),
-  //   prec.left(PREC.nexttime, seq('s_nexttime', '[', $.constant_expression, ']', $.property_expr)),
+    prec.left(PREC.always, seq('always', $.property_expr)),
+    prec.left(PREC.always, seq('always', '[', $.cycle_delay_const_range_expression, ']', $.property_expr)),
+    prec.left(PREC.always, seq('s_always', '[', $.constant_range, ']', $.property_expr)),
+    prec.left(PREC.always, seq('s_eventually', $.property_expr)),
+    prec.left(PREC.always, seq('eventually', '[', $.constant_range, ']', $.property_expr)),
+    prec.left(PREC.always, seq('s_eventually', '[', $.cycle_delay_const_range_expression, ']', $.property_expr)),
 
-  //   prec.left(PREC.always, seq('always', $.property_expr)),
-  //   prec.left(PREC.always, seq('always', '[', $.cycle_delay_const_range_expression, ']', $.property_expr)),
-  //   prec.left(PREC.always, seq('s_always', '[', $.constant_range, ']', $.property_expr)),
-  //   prec.left(PREC.always, seq('s_eventually', $.property_expr)),
-  //   prec.left(PREC.always, seq('eventually', '[', $.constant_range, ']', $.property_expr)),
-  //   prec.left(PREC.always, seq('s_eventually', '[', $.cycle_delay_const_range_expression, ']', $.property_expr)),
+    prec.right(PREC.until, seq($.property_expr,
+      choice('until', 's_until', 'until_with', 's_until_with', 'implies'),
+      $.property_expr
+    )),
 
-  //   prec.right(PREC.until, seq($.property_expr,
-  //     choice('until', 's_until', 'until_with', 's_until_with', 'implies'),
-  //     $.property_expr
-  //   )),
+    prec.right(PREC.iff,   seq($.property_expr, 'iff', $.property_expr)),
 
-  //   prec.right(PREC.iff,   seq($.property_expr, 'iff', $.property_expr)),
+    // FIXME no assosiativity rules per spec
+    prec.left(PREC.always, seq(
+      choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'),
+      '(', $.expression_or_dist, ')', $.property_expr
+    )),
+    // $.property_instance,
+    prec.left(seq($.clocking_event, $.property_expr)) // FIXME no assosiativity rules per spec
+  ),
 
-  //   // FIXME no assosiativity rules per spec
-  //   prec.left(PREC.always, seq(
-  //     choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'),
-  //     '(', $.expression_or_dist, ')', $.property_expr
-  //   )),
-  //   // $.property_instance,
-  //   prec.left(seq($.clocking_event, $.property_expr)) // FIXME no assosiativity rules per spec
-  // ),
-
-  // property_case_item: $ => choice(
-  //   seq(
-  //     sep1(',', $.expression_or_dist), ':', $.property_expr, ';'
-  //   ),
-  //   seq(
-  //     'default', optional(':'), $.property_expr, ';'
-  //   )
-  // ),
+  property_case_item: $ => choice(
+    seq(
+      sepBy1(',', $.expression_or_dist), ':', $.property_expr, ';'
+    ),
+    seq(
+      'default', optional(':'), $.property_expr, ';'
+    )
+  ),
 
   sequence_declaration: $ => seq(
     'sequence',
@@ -3712,8 +3738,7 @@ const rules = {
     '\'{', sepBy1(',', $.variable_lvalue), '}'
   ),
 
-  // // A.6.8 Looping statements
-
+  // A.6.8 Looping statements
   loop_statement: $ => choice(
     seq('forever', $.statement_or_null),
     seq('repeat', '(', $.expression, ')', $.statement_or_null),
@@ -3761,79 +3786,75 @@ const rules = {
     repeat(seq(',', optional($.index_variable_identifier)))
   ),
 
-  // // A.6.9 Subroutine call statements
-
+  // A.6.9 Subroutine call statements
   subroutine_call_statement: $ => choice(
     seq($.subroutine_call, ';'),
     seq('void\'', '(', $.function_subroutine_call, ')', ';')
   ),
 
-  // // A.6.10 Assertion statements
+  // A.6.10 Assertion statements
+  _assertion_item: $ => choice(
+    $.concurrent_assertion_item,
+    $.deferred_immediate_assertion_item
+  ),
 
-  // _assertion_item: $ => choice(
-  //   $.concurrent_assertion_item,
-  //   $.deferred_immediate_assertion_item
-  // ),
+  deferred_immediate_assertion_item: $ => seq(
+    optional(seq($._block_identifier, ':')),
+    $._deferred_immediate_assertion_statement
+  ),
 
-  // deferred_immediate_assertion_item: $ => seq(
-  //   optseq(
-  //     $._block_identifier, ':'
-  //   ),
-  //   $._deferred_immediate_assertion_statement
-  // ),
+  _procedural_assertion_statement: $ => choice(
+    $._concurrent_assertion_statement,
+    $._immediate_assertion_statement,
+    // $.checker_instantiation
+  ),
 
-  // _procedural_assertion_statement: $ => choice(
-  //   $._concurrent_assertion_statement,
-  //   $._immediate_assertion_statement,
-  //   // $.checker_instantiation
-  // ),
+  _immediate_assertion_statement: $ => choice(
+    $._simple_immediate_assertion_statement,
+    $._deferred_immediate_assertion_statement
+  ),
 
-  // _immediate_assertion_statement: $ => choice(
-  //   $._simple_immediate_assertion_statement,
-  //   $._deferred_immediate_assertion_statement
-  // ),
+  _simple_immediate_assertion_statement: $ => choice(
+    $.simple_immediate_assert_statement,
+    $.simple_immediate_assume_statement,
+    $.simple_immediate_cover_statement
+  ),
 
-  // _simple_immediate_assertion_statement: $ => choice(
-  //   $.simple_immediate_assert_statement,
-  //   $.simple_immediate_assume_statement,
-  //   $.simple_immediate_cover_statement
-  // ),
+  simple_immediate_assert_statement: $ => seq(
+    'assert', '(', $.expression, ')', $.action_block
+  ),
 
-  // simple_immediate_assert_statement: $ => seq(
-  //   'assert', '(', $.expression, ')', $.action_block
-  // ),
+  simple_immediate_assume_statement: $ => seq(
+    'assume', '(', $.expression, ')', $.action_block
+  ),
 
-  // simple_immediate_assume_statement: $ => seq(
-  //   'assume', '(', $.expression, ')', $.action_block
-  // ),
+  simple_immediate_cover_statement: $ => seq(
+    'cover', '(', $.expression, ')', $.statement_or_null
+  ),
 
-  // simple_immediate_cover_statement: $ => seq(
-  //   'cover', '(', $.expression, ')', $.statement_or_null
-  // ),
+  _deferred_immediate_assertion_statement: $ => choice(
+    $.deferred_immediate_assert_statement,
+    $.deferred_immediate_assume_statement,
+    $.deferred_immediate_cover_statement
+  ),
 
-  // _deferred_immediate_assertion_statement: $ => choice(
-  //   $.deferred_immediate_assert_statement,
-  //   $.deferred_immediate_assume_statement,
-  //   $.deferred_immediate_cover_statement
-  // ),
+  deferred_immediate_assert_statement: $ => seq(
+    'assert',
+    choice('#0', 'final'),
+    '(', $.expression, ')', $.action_block
+  ),
 
-  // deferred_immediate_assert_statement: $ => seq(
-  //   'assert',
-  //   choice('#0', 'final'),
-  //   '(', $.expression, ')', $.action_block
-  // ),
+  deferred_immediate_assume_statement: $ => seq(
+    'assume',
+    choice('#0', 'final'),
+    '(', $.expression, ')', $.action_block
+  ),
 
-  // deferred_immediate_assume_statement: $ => seq(
-  //   'assume',
-  //   choice('#0', 'final'),
-  //   '(', $.expression, ')', $.action_block
-  // ),
-
-  // deferred_immediate_cover_statement: $ => seq(
-  //   'cover',
-  //   choice('#0', 'final'),
-  //   '(', $.expression, ')', $.statement_or_null
-  // ),
+  deferred_immediate_cover_statement: $ => seq(
+    'cover',
+    choice('#0', 'final'),
+    '(', $.expression, ')', $.statement_or_null
+  ),
 
   /* A.6.11 Clocking block */
   clocking_declaration: $ => choice(
@@ -5214,7 +5235,7 @@ const rules = {
 
   _hierarchical_net_identifier: $ => $.hierarchical_identifier,
   _hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
-  // _hierarchical_property_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_property_identifier: $ => $.hierarchical_identifier,
   // _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
   _hierarchical_task_identifier: $ => $.hierarchical_identifier,
   _hierarchical_tf_identifier: $ => $.hierarchical_identifier,
@@ -5251,7 +5272,7 @@ const rules = {
   port_identifier: $ => alias($._identifier, $.port_identifier),
   // production_identifier: $ => alias($._identifier, $.production_identifier),
   program_identifier: $ => alias($._identifier, $.program_identifier),
-  // property_identifier: $ => alias($._identifier, $.property_identifier),
+  property_identifier: $ => alias($._identifier, $.property_identifier),
 
   // Set prec.left because of:
   // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '::'  …
@@ -5292,10 +5313,10 @@ const rules = {
     $._hierarchical_net_identifier
   ),
 
-  // ps_or_hierarchical_property_identifier: $ => choice(
-  //   seq(optional($.package_scope), $.property_identifier),
-  //   $._hierarchical_property_identifier
-  // ),
+  ps_or_hierarchical_property_identifier: $ => choice(
+    seq(optional($.package_scope), $.property_identifier),
+    $._hierarchical_property_identifier
+  ),
 
   // ps_or_hierarchical_sequence_identifier: $ => choice(
   //   seq(optional($.package_scope), $._sequence_identifier),
@@ -5376,7 +5397,7 @@ module.exports = grammar({
     $._hierarchical_variable_identifier,
     $._hierarchical_tf_identifier,
   //   $._hierarchical_sequence_identifier,
-  //   $._hierarchical_property_identifier,
+    $._hierarchical_property_identifier,
     $._hierarchical_block_identifier,
     $._hierarchical_task_identifier,
 
@@ -5418,7 +5439,7 @@ module.exports = grammar({
     $.port_identifier,
     $._block_identifier,
     $.instance_identifier,
-  //   $.property_identifier,
+    $.property_identifier,
   //   // $.input_port_identifier,
   //   // $.output_port_identifier,
   //   // $.inout_port_identifier,
@@ -6437,6 +6458,16 @@ module.exports = grammar({
     [$.covergroup_value_range, $.primary],
     [$.bins_expression],
     [$._integer_covergroup_expression, $.primary],
+
+
+    // TODO: sequences/properties/assertions
+    [$.concurrent_assertion_item, $.deferred_immediate_assertion_item, $.generate_block_identifier],
+    [$.expression_or_dist, $.mintypmax_expression],
+    [$.property_expr, $.sequence_expr],
+    [$.cover_sequence_statement, $.sequence_expr],
+    [$.property_spec, $.property_expr],
+    [$.property_expr, $._sequence_actual_arg],
+    [$.expression_or_dist, $.event_expression, $.mintypmax_expression],
 ],
 
 });

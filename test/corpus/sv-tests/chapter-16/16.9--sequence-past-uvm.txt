@@ -641,10 +641,10 @@ endmodule
                 (task_identifier
                   (simple_identifier)))))))))
   (module_declaration
-    (module_ansi_header
+    (module_nonansi_header
       (module_keyword)
       name: (simple_identifier)
-      (list_of_port_declarations))
+      (list_of_ports))
     (module_or_generate_item
       (package_or_generate_item_declaration
         (data_declaration
@@ -809,51 +809,58 @@ endmodule
                         (simple_identifier)
                         (simple_identifier)))))))))))
     (module_or_generate_item
-      (module_instantiation
-        instance_type: (simple_identifier)
-        (ERROR
-          (hierarchical_instance
-            (name_of_instance
-              instance_name: (instance_identifier
-                (simple_identifier)))
-            (list_of_port_connections
-              (ordered_port_connection
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier)))))))
-          (simple_identifier))
-        (hierarchical_instance
-          (name_of_instance
-            instance_name: (instance_identifier
-              (simple_identifier)))
-          (list_of_port_connections
-            (ordered_port_connection
-              (expression
-                (primary
-                  (hierarchical_identifier
-                    (simple_identifier)))))
-            (ordered_port_connection
-              (expression
-                (primary
-                  (function_subroutine_call
-                    (subroutine_call
-                      (system_tf_call
-                        (system_tf_identifier)
-                        (list_of_arguments
-                          (expression
-                            (primary
-                              (primary_literal
-                                (string_literal))))
-                          (expression
-                            (primary
-                              (hierarchical_identifier
-                                (simple_identifier)))))))))))
-            (ordered_port_connection
-              (expression
-                (primary
-                  (hierarchical_identifier
-                    (simple_identifier)))))))))
+      (concurrent_assertion_item
+        (assert_property_statement
+          (property_spec
+            (property_expr
+              (sequence_expr
+                (expression_or_dist
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier))))))))
+          (action_block
+            (statement_or_null
+              (statement
+                (statement_item
+                  (text_macro_usage
+                    (text_macro_identifier
+                      (simple_identifier))
+                    (text_macro_list_of_actual_arguments
+                      (text_macro_actual_argument
+                        (param_expression
+                          (mintypmax_expression
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier)))))))
+                      (text_macro_actual_argument
+                        (param_expression
+                          (mintypmax_expression
+                            (expression
+                              (primary
+                                (function_subroutine_call
+                                  (subroutine_call
+                                    (system_tf_call
+                                      (system_tf_identifier)
+                                      (list_of_arguments
+                                        (expression
+                                          (primary
+                                            (primary_literal
+                                              (string_literal))))
+                                        (expression
+                                          (primary
+                                            (hierarchical_identifier
+                                              (simple_identifier)))))))))))))
+                      (text_macro_actual_argument
+                        (param_expression
+                          (mintypmax_expression
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))))))
+    (module_or_generate_item
+      (package_or_generate_item_declaration))
     (module_or_generate_item
       (always_construct
         (always_keyword)
@@ -931,5 +938,3 @@ endmodule
                                                       (hierarchical_identifier
                                                         (simple_identifier)
                                                         (simple_identifier)))))))))))))))))))))))))))))
-
-(ERROR)
