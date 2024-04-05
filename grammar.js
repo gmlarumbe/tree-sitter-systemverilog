@@ -5204,7 +5204,10 @@ const rules = {
   // hierarchical_identifier: $ => seq( // TODO: Not sure if it's prec.left
   hierarchical_identifier: $ => prec('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
     optional(seq('$root', '.')),
-    repeat(prec('hierarchical_identifier', seq($._identifier, optional($.constant_bit_select1), '.'))),
+    // INFO: Slightly out of LRM to support use of macros as part of hierarchical identifiers
+    repeat(prec('hierarchical_identifier', seq(choice($._identifier, $.text_macro_usage), optional($.constant_bit_select1), '.'))),
+    // repeat(prec('hierarchical_identifier', seq($._identifier, optional($.constant_bit_select1), '.'))),
+    // End of INFO
     $._identifier
   )),
   // INFO: After removin the prec.left it allowed the ['constant_primary', 'primary'] conflict in precedences!!
@@ -5861,6 +5864,15 @@ module.exports = grammar({
     // 2:  'randomize'  'with'  '{'  expression  '–>'  (empty_unpacked_array_concatenation  '{'  '}')  •  '+'  …
     ['constraint_set', 'empty_unpacked_array_concatenation'],
 
+
+    // INFO: After adding text_macro support for hierarchical identifiers
+    // text_macro_usage  •  '['  …
+    // 1:  (_directives  text_macro_usage)  •  '['  …                                         (precedence: '_directives')
+    // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select1  '.')  (precedence: 'hierarchical_identifier')
+    ['hierarchical_identifier', '_directives'],
+    ['_method_call_root', '_directives'],
+
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header1'],
@@ -6408,6 +6420,12 @@ module.exports = grammar({
     // 1:  'import'  dpi_spec_string  (dpi_function_import_property  'context')  •  c_identifier  …
     // 2:  'import'  dpi_spec_string  (dpi_task_import_property  'context')  •  c_identifier  …
     [$.dpi_function_import_property, $.dpi_task_import_property],
+
+
+    // Text macros on hierarchical identifiers
+    // INFO: Seems that after this, hierarchical_identifier has a higher dynamic precedence over _method_call_root
+    [$._method_call_root, $.hierarchical_identifier],
+    [$._directives, $._method_call_root, $.hierarchical_identifier],
 
 
     // Coverage: TODO
