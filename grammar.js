@@ -2383,19 +2383,20 @@ const rules = {
     prec.left(PREC.always, seq('eventually', '[', $.constant_range, ']', $.property_expr)),
     prec.left(PREC.always, seq('s_eventually', '[', $.cycle_delay_const_range_expression, ']', $.property_expr)),
 
-    prec.right(PREC.until, seq($.property_expr,
+    prec.right(PREC.until, seq(
+      $.property_expr,
       choice('until', 's_until', 'until_with', 's_until_with', 'implies'),
       $.property_expr
     )),
 
-    prec.right(PREC.iff,   seq($.property_expr, 'iff', $.property_expr)),
+    prec.right(PREC.iff, seq($.property_expr, 'iff', $.property_expr)),
 
     // FIXME no assosiativity rules per spec
     prec.left(PREC.always, seq(
       choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'),
       '(', $.expression_or_dist, ')', $.property_expr
     )),
-    // $.property_instance,
+    $.property_instance,
     prec.left(seq($.clocking_event, $.property_expr)) // FIXME no assosiativity rules per spec
   ),
 
@@ -2457,14 +2458,14 @@ const rules = {
     repeat1(seq($.cycle_delay_range, $.sequence_expr)),
     seq($.sequence_expr, repeat1(seq($.cycle_delay_range, $.sequence_expr))),
     seq($.expression_or_dist, optional($._boolean_abbrev)),
-    // seq($.sequence_instance, optional($.sequence_abbrev)),
-    // prec.left(seq('(', $.sequence_expr, repseq(',', $._sequence_match_item), ')', optional($.sequence_abbrev))),
-    // prec.left(PREC.and, seq($.sequence_expr, 'and', $.sequence_expr)),
-    // prec.left(PREC.intersect, seq($.sequence_expr, 'intersect', $.sequence_expr)),
-    // prec.left(PREC.or, seq($.sequence_expr, 'or', $.sequence_expr)),
-    // seq('first_match', '(', $.sequence_expr, repseq(',', $._sequence_match_item), ')'),
-    // prec.right(PREC.throughout, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
-    // prec.left(PREC.within, seq($.sequence_expr, 'within', $.sequence_expr)),
+    seq($.sequence_instance, optional($.sequence_abbrev)),
+    seq('(', $.sequence_expr, repeat(seq(',', $._sequence_match_item)), ')', optional($.sequence_abbrev)),
+    prec.left(PREC.and, seq($.sequence_expr, 'and', $.sequence_expr)),
+    prec.left(PREC.intersect, seq($.sequence_expr, 'intersect', $.sequence_expr)),
+    prec.left(PREC.or, seq($.sequence_expr, 'or', $.sequence_expr)),
+    seq('first_match', '(', $.sequence_expr, repeat(seq(',', $._sequence_match_item)), ')'),
+    prec.right(PREC.throughout, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
+    prec.left(PREC.within, seq($.sequence_expr, 'within', $.sequence_expr)),
     seq($.clocking_event, $.sequence_expr)
   ),
 
@@ -2477,16 +2478,16 @@ const rules = {
 
   // sequence_method_call: $ => seq($.sequence_instance, '.', $.method_identifier),
 
-  // _sequence_match_item: $ => choice(
-  //   $.operator_assignment,
-  //   $.inc_or_dec_expression,
-  //   $.subroutine_call
-  // ),
+  _sequence_match_item: $ => choice(
+    $.operator_assignment,
+    $.inc_or_dec_expression,
+    $.subroutine_call
+  ),
 
-  // sequence_instance: $ => seq(
-  //   $.ps_or_hierarchical_sequence_identifier,
-  //   optseq('(', optional($.sequence_list_of_arguments), ')')
-  // ),
+  sequence_instance: $ => seq(
+    $.ps_or_hierarchical_sequence_identifier,
+    optional(seq('(', optional($.sequence_list_of_arguments), ')'))
+  ),
 
   // sequence_list_of_arguments: $ => choice(
   //   // seq(
@@ -2495,6 +2496,29 @@ const rules = {
   //   // ),
   //   sep1(',', seq('.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
   // ),
+
+  // INFO: Copied from list_of_arguments
+  sequence_list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
+    // First case: mixing positional and named arguments
+    seq(
+      $._sequence_actual_arg,
+      repeat(seq(',', optional($._sequence_actual_arg))),
+      repeat(seq(',', '.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
+    ),
+    seq(
+      optional($._sequence_actual_arg),
+      repeat1(seq(',', optional($._sequence_actual_arg))),
+      repeat(seq(',', '.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
+    ),
+    seq(
+      optional($._sequence_actual_arg),
+      repeat(seq(',', optional($._sequence_actual_arg))),
+      repeat1(seq(',', '.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
+    ),
+    // Second case: using only named arguments
+    sepBy1(',', seq('.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
+  )),
+
 
   _sequence_actual_arg: $ => prec('_sequence_actual_arg', choice(
     $.event_expression,
@@ -2508,7 +2532,7 @@ const rules = {
     $.goto_repetition
   ),
 
-  // sequence_abbrev: $ => $.consecutive_repetition,
+  sequence_abbrev: $ => $.consecutive_repetition,
 
   consecutive_repetition: $ => choice(
     seq('[*', $._const_or_range_expression, ']'),
@@ -5236,7 +5260,7 @@ const rules = {
   _hierarchical_net_identifier: $ => $.hierarchical_identifier,
   _hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
   _hierarchical_property_identifier: $ => $.hierarchical_identifier,
-  // _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
+  _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
   _hierarchical_task_identifier: $ => $.hierarchical_identifier,
   _hierarchical_tf_identifier: $ => $.hierarchical_identifier,
   _hierarchical_variable_identifier: $ => $.hierarchical_identifier,
@@ -5318,10 +5342,10 @@ const rules = {
     $._hierarchical_property_identifier
   ),
 
-  // ps_or_hierarchical_sequence_identifier: $ => choice(
-  //   seq(optional($.package_scope), $._sequence_identifier),
-  //   $._hierarchical_sequence_identifier
-  // ),
+  ps_or_hierarchical_sequence_identifier: $ => choice(
+    seq(optional($.package_scope), $._sequence_identifier),
+    $._hierarchical_sequence_identifier
+  ),
 
   ps_or_hierarchical_tf_identifier: $ => choice(
     seq(optional($.package_scope), $.tf_identifier),
@@ -5396,7 +5420,7 @@ module.exports = grammar({
     $._hierarchical_net_identifier,
     $._hierarchical_variable_identifier,
     $._hierarchical_tf_identifier,
-  //   $._hierarchical_sequence_identifier,
+    $._hierarchical_sequence_identifier,
     $._hierarchical_property_identifier,
     $._hierarchical_block_identifier,
     $._hierarchical_task_identifier,
@@ -6468,6 +6492,20 @@ module.exports = grammar({
     [$.property_spec, $.property_expr],
     [$.property_expr, $._sequence_actual_arg],
     [$.expression_or_dist, $.event_expression, $.mintypmax_expression],
+
+    [$.tf_call, $.ps_or_hierarchical_property_identifier],
+    [$.tf_call, $.primary, $.ps_or_hierarchical_property_identifier],
+    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier],
+    [$.property_list_of_arguments, $.expression_or_dist, $.event_expression],
+
+    [$.tf_call, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
+    [$.tf_call, $.primary, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
+    [$.tf_call, $.primary, $.ps_or_hierarchical_sequence_identifier],
+    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $._sequence_identifier],
+    [$.tf_call, $.hierarchical_identifier, $._sequence_identifier],
+    [$.tf_call, $.ps_or_hierarchical_sequence_identifier],
+    [$.tf_call, $.ps_or_hierarchical_property_identifier, $._sequence_identifier],
+    [$.tf_call, $._sequence_identifier],
 ],
 
 });
