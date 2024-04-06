@@ -7,6 +7,7 @@ TESTS=( $(find sv-tests -type d) )
 TESTS+=( $(find uvm -type d) )
 TESTS+=( $(find doulos -type d) )
 TESTS+=( $(find ucontroller -type d) )
+TESTS+=( $(find pulp_axi -type d) )
 
 for dir in ${TESTS[@]}; do
     mkdir -p test/corpus/$dir
@@ -21,6 +22,8 @@ FILES_SV+=( $(find doulos -type f -name "*.sv") )
 FILES_SV+=( $(find doulos -type f -name "*.svh") )
 FILES_SV+=( $(find ucontroller -type f -name "*.sv") )
 FILES_SV+=( $(find ucontroller -type f -name "*.svh") )
+FILES_SV+=( $(find pulp_axi -type f -name "*.sv") )
+FILES_SV+=( $(find pulp_axi -type f -name "*.svh") )
 
 # Declare variables
 DIR_FILENAME=
