@@ -4887,7 +4887,7 @@ const rules = {
     seq($.constant_function_call, optional(seq('[', $._constant_range_expression, ']'))),
     // $._constant_let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
     seq('(', $.constant_mintypmax_expression, ')'),
-    // // $.constant_cast,
+    $.constant_cast,
     $._constant_assignment_pattern_expression,
     $.type_reference,
 
@@ -5033,7 +5033,7 @@ const rules = {
     seq('[', $._constant_part_select_range, ']'),
   )),
 
-  // constant_cast: $ => seq($.casting_type, '\'', '(', $.constant_expression, ')'),
+  constant_cast: $ => seq($.casting_type, '\'', '(', $.constant_expression, ')'),
 
   _constant_let_expression: $ => $.let_expression,
 
