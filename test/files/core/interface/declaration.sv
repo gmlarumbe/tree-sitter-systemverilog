@@ -1,0 +1,2 @@
+interface foo;
+endinterface

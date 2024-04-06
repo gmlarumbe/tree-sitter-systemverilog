@@ -1,0 +1,426 @@
+============================================
+uvm/1800.2-2020-2.0/src/seq/uvm_push_sequencer
+============================================
+
+//------------------------------------------------------------------------------
+// Copyright 2007-2018 Cadence Design Systems, Inc.
+// Copyright 2007-2011 Mentor Graphics Corporation
+// Copyright 2014-2022 NVIDIA Corporation
+// Copyright 2018 Synopsys, Inc.
+//   All Rights Reserved Worldwide
+//
+//   Licensed under the Apache License, Version 2.0 (the
+//   "License"); you may not use this file except in
+//   compliance with the License.  You may obtain a copy of
+//   the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+//   Unless required by applicable law or agreed to in
+//   writing, software distributed under the License is
+//   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+//   CONDITIONS OF ANY KIND, either express or implied.  See
+//   the License for the specific language governing
+//   permissions and limitations under the License.
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+//
+// CLASS -- NODOCS -- uvm_push_sequencer #(REQ,RSP)
+//
+//------------------------------------------------------------------------------
+
+// @uvm-ieee 1800.2-2020 auto 15.6.1
+class uvm_push_sequencer #(type REQ=uvm_sequence_item, RSP=REQ)
+                                   extends uvm_sequencer_param_base #(REQ, RSP);
+
+  typedef uvm_push_sequencer #( REQ , RSP) this_type;
+
+  // Port -- NODOCS -- req_port
+  //
+  // The push sequencer requires access to a blocking put interface.
+  // A continuous stream of sequence items are sent out this port, based on
+  // the list of available sequences loaded into this sequencer.
+  //
+  uvm_blocking_put_port #(REQ) req_port;
+
+
+
+  // @uvm-ieee 1800.2-2020 auto 15.6.3.2
+  function new (string name, uvm_component parent=null);
+    super.new(name, parent);
+    req_port = new ("req_port", this);
+  endfunction 
+
+
+  // Task -- NODOCS -- run_phase
+  //
+  // The push sequencer continuously selects from its list of available
+  // sequences and sends the next item from the selected sequence out its
+  // <req_port> using req_port.put(item). Typically, the req_port would be
+  // connected to the req_export on an instance of a
+  // <uvm_push_driver #(REQ,RSP)>, which would be responsible for
+  // executing the item.
+  //
+  // @uvm-ieee 1800.2-2020 auto 15.6.3.3
+  task run_phase(uvm_phase phase);
+    REQ t;
+    int selected_sequence;
+
+    fork
+      super.run_phase(phase);
+      forever
+        begin
+          m_safe_select_item(0, t);
+          sequence_item_requested = 0;
+          req_port.put(t);
+          m_wait_for_item_sequence_id = t.get_sequence_id();
+          m_wait_for_item_transaction_id = t.get_transaction_id();
+        end
+    join
+  endtask
+
+  protected virtual function int  m_find_number_driver_connections();
+    return req_port.size();
+  endfunction
+
+endclass
+
+----
+
+(source_file
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (comment)
+  (package_or_generate_item_declaration
+    (class_declaration
+      (class_identifier
+        (simple_identifier))
+      (parameter_port_list
+        (parameter_port_declaration
+          (list_of_type_assignments
+            (type_assignment
+              (simple_identifier)
+              (data_type
+                (simple_identifier)))
+            (type_assignment
+              (simple_identifier)
+              (data_type
+                (simple_identifier))))))
+      (class_type
+        (class_identifier
+          (simple_identifier))
+        (parameter_value_assignment
+          (list_of_parameter_value_assignments
+            (ordered_parameter_assignment
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (ordered_parameter_assignment
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier))))))))))
+      (class_item
+        (class_property
+          (data_declaration
+            (type_declaration
+              (data_type_or_incomplete_class_scoped_type
+                (data_type
+                  (class_type
+                    (class_identifier
+                      (simple_identifier))
+                    (parameter_value_assignment
+                      (list_of_parameter_value_assignments
+                        (ordered_parameter_assignment
+                          (param_expression
+                            (mintypmax_expression
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier)))))))
+                        (ordered_parameter_assignment
+                          (param_expression
+                            (mintypmax_expression
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier))))))))))))
+              (simple_identifier)))))
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (class_item
+        (class_property
+          (data_declaration
+            (data_type_or_implicit1
+              (data_type
+                (class_type
+                  (class_identifier
+                    (simple_identifier))
+                  (parameter_value_assignment
+                    (list_of_parameter_value_assignments
+                      (ordered_parameter_assignment
+                        (param_expression
+                          (mintypmax_expression
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))
+            (list_of_variable_decl_assignments
+              (variable_decl_assignment
+                (simple_identifier))))))
+      (comment)
+      (class_item
+        (class_method
+          (class_constructor_declaration
+            (class_constructor_arg_list
+              (class_constructor_arg
+                (tf_port_item1
+                  (data_type_or_implicit1
+                    (data_type))
+                  (port_identifier
+                    (simple_identifier))))
+              (class_constructor_arg
+                (tf_port_item1
+                  (data_type_or_implicit1
+                    (data_type
+                      (simple_identifier)))
+                  (port_identifier
+                    (simple_identifier))
+                  (expression
+                    (primary)))))
+            (list_of_arguments
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (function_statement_or_null
+              (function_statement
+                (statement
+                  (statement_item
+                    (blocking_assignment
+                      (simple_identifier)
+                      (class_new
+                        (list_of_arguments
+                          (expression
+                            (primary
+                              (primary_literal
+                                (string_literal))))
+                          (expression
+                            (primary))))))))))))
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (comment)
+      (class_item
+        (class_method
+          (task_declaration
+            (task_body_declaration
+              (task_identifier
+                (task_identifier
+                  (simple_identifier)))
+              (tf_port_list
+                (tf_port_item1
+                  (data_type_or_implicit1
+                    (data_type
+                      (simple_identifier)))
+                  (port_identifier
+                    (simple_identifier))))
+              (block_item_declaration
+                (data_declaration
+                  (data_type_or_implicit1
+                    (data_type
+                      (simple_identifier)))
+                  (list_of_variable_decl_assignments
+                    (variable_decl_assignment
+                      (simple_identifier)))))
+              (block_item_declaration
+                (data_declaration
+                  (data_type_or_implicit1
+                    (data_type
+                      (integer_atom_type)))
+                  (list_of_variable_decl_assignments
+                    (variable_decl_assignment
+                      (simple_identifier)))))
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (par_block
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (subroutine_call_statement
+                              (subroutine_call
+                                (method_call
+                                  (implicit_class_handle)
+                                  (method_call_body
+                                    (method_identifier
+                                      (method_identifier
+                                        (simple_identifier)))
+                                    (list_of_arguments
+                                      (expression
+                                        (primary
+                                          (hierarchical_identifier
+                                            (simple_identifier))))))))))))
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (loop_statement
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (seq_block
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (subroutine_call_statement
+                                              (subroutine_call
+                                                (tf_call
+                                                  (hierarchical_identifier
+                                                    (simple_identifier))
+                                                  (list_of_arguments
+                                                    (expression
+                                                      (primary
+                                                        (primary_literal
+                                                          (integral_number
+                                                            (decimal_number
+                                                              (unsigned_number))))))
+                                                    (expression
+                                                      (primary
+                                                        (hierarchical_identifier
+                                                          (simple_identifier)))))))))))
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (blocking_assignment
+                                              (operator_assignment
+                                                (variable_lvalue
+                                                  (hierarchical_identifier
+                                                    (simple_identifier)))
+                                                (assignment_operator)
+                                                (expression
+                                                  (primary
+                                                    (primary_literal
+                                                      (integral_number
+                                                        (decimal_number
+                                                          (unsigned_number)))))))))))
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (subroutine_call_statement
+                                              (subroutine_call
+                                                (tf_call
+                                                  (hierarchical_identifier
+                                                    (simple_identifier)
+                                                    (simple_identifier))
+                                                  (list_of_arguments
+                                                    (expression
+                                                      (primary
+                                                        (hierarchical_identifier
+                                                          (simple_identifier)))))))))))
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (blocking_assignment
+                                              (operator_assignment
+                                                (variable_lvalue
+                                                  (hierarchical_identifier
+                                                    (simple_identifier)))
+                                                (assignment_operator)
+                                                (expression
+                                                  (primary
+                                                    (function_subroutine_call
+                                                      (subroutine_call
+                                                        (tf_call
+                                                          (hierarchical_identifier
+                                                            (simple_identifier)
+                                                            (simple_identifier))))))))))))
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (blocking_assignment
+                                              (operator_assignment
+                                                (variable_lvalue
+                                                  (hierarchical_identifier
+                                                    (simple_identifier)))
+                                                (assignment_operator)
+                                                (expression
+                                                  (primary
+                                                    (function_subroutine_call
+                                                      (subroutine_call
+                                                        (tf_call
+                                                          (hierarchical_identifier
+                                                            (simple_identifier)
+                                                            (simple_identifier))))))))))))))))))))
+                      (join_keyword)))))))))
+      (class_item
+        (class_method
+          (method_qualifier
+            (class_item_qualifier))
+          (method_qualifier)
+          (function_declaration
+            (function_body_declaration
+              (function_data_type_or_implicit1
+                (data_type_or_void
+                  (data_type
+                    (integer_atom_type))))
+              (function_identifier
+                (function_identifier
+                  (simple_identifier)))
+              (function_statement_or_null
+                (function_statement
+                  (statement
+                    (statement_item
+                      (jump_statement
+                        (expression
+                          (primary
+                            (function_subroutine_call
+                              (subroutine_call
+                                (tf_call
+                                  (hierarchical_identifier
+                                    (simple_identifier)
+                                    (simple_identifier)))))))))))))))))))

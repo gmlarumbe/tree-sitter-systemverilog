@@ -3,37 +3,22 @@
 PATTERN=$1
 
 # First create the directory structure to prevent copy errors
-TESTS=( $(find sv-tests -type d) )
-TESTS+=( $(find uvm -type d) )
-TESTS+=( $(find doulos -type d) )
-TESTS+=( $(find ucontroller -type d) )
-TESTS+=( $(find pulp_axi -type d) )
+TEST_DIR=test/files
+TEST_SUBDIRS=( $(find $TEST_DIR -type d -exec realpath --relative-to $TEST_DIR {} \;) )
 
-for dir in ${TESTS[@]}; do
-    mkdir -p test/corpus/$dir
+for dir in ${TEST_SUBDIRS[@]}; do
+    mkdir -p test/corpus/$dir &
 done
+wait
 
-# Retrieve all the test files
-FILES_SV=( $(find sv-tests -type f -name "*.sv") )
-FILES_SV+=( $(find sv-tests -type f -name "*.svh") )
-FILES_SV+=( $(find uvm -type f -name "*.sv") )
-FILES_SV+=( $(find uvm -type f -name "*.svh") )
-FILES_SV+=( $(find doulos -type f -name "*.sv") )
-FILES_SV+=( $(find doulos -type f -name "*.svh") )
-FILES_SV+=( $(find ucontroller -type f -name "*.sv") )
-FILES_SV+=( $(find ucontroller -type f -name "*.svh") )
-FILES_SV+=( $(find pulp_axi -type f -name "*.sv") )
-FILES_SV+=( $(find pulp_axi -type f -name "*.svh") )
+# Find all SystemVerilog test files in test directory
+FILES_SV=( $( cd $TEST_DIR && find * -type f -name "*.sv" -o -name "*.svh" -o -name "*.v" -o -name "*.vh") )
 
-# Declare variables
-DIR_FILENAME=
-BASE_FILENAME=
-FILENAME_NO_EXT=
-DEST_FILE=
-LAST_FILE_LINE=
 
 # Expected failure tests
-EXPECTED_FAIL_FILELIST=(sv-tests/chapter-5/5.6--wrong-identifiers.sv
+EXPECTED_FAIL_FILELIST=(core/subroutines/call_method_cond_expr_rhs_assignment_ERROR.sv
+                        core/subroutines/randomize_cond_expr_rhs_assignment_ERROR.sv
+                        sv-tests/chapter-5/5.6--wrong-identifiers.sv
                         sv-tests/chapter-5/5.7.1--integers-signed-illegal.sv
                         sv-tests/chapter-5/5.7.1--integers-unsized-illegal.sv
                         sv-tests/chapter-5/5.7.2-real-constants-illegal.sv
@@ -55,7 +40,7 @@ EXPECTED_FAIL_FILELIST=(sv-tests/chapter-5/5.6--wrong-identifiers.sv
                         doulos/73.3_number.sv
                        )
 
-# Exclude tests
+# Excluded tests
 EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-macro_0.sv # No intention of supporting preprocessing
                    sv-tests/chapter-5/5.10-structure-arrays-illegal.sv                   # No intention of detecting the /* C-like assignment is illegal */ for struct initialization
                    sv-tests/chapter-11/11.4.14.3--unpack_stream_inv.sv                   # No intention of parse the width of the streaming assignment target
@@ -86,30 +71,33 @@ if [[ -n "$PATTERN" ]]; then
     echo "Filtering with regexp: $PATTERN"
 fi
 
+
 process_file(){
-    file=$1
+    local FILE=$1
+    local INPUT_FILE=$TEST_DIR/$file
 
-    DIR_FILENAME=$(dirname $file)
-    BASE_FILENAME=$(basename $file)
-    FILENAME_NO_EXT=${BASE_FILENAME%.sv}
-    DEST_FILE=test/corpus/$DIR_FILENAME/${FILENAME_NO_EXT}.txt
+    local DIR_FILENAME=$(dirname $FILE)
+    local BASE_FILENAME=$(basename $FILE)
+    local FILENAME_NO_EXT="${BASE_FILENAME%.*}"
+    local DEST_FILE=test/corpus/$DIR_FILENAME/${FILENAME_NO_EXT}.txt
+    local LAST_FILE_LINE=
 
-    if [[ "${EXCLUDED_FILELIST[@]}" =~ "$file" ]]; then
-        echo "Excluding $file ..."
-        cat $file > $DEST_FILE
+    if [[ "${EXCLUDED_FILELIST[@]}" =~ "$FILE" ]]; then
+        echo "Excluding $FILE ..."
+        cat $INPUT_FILE > $DEST_FILE
     else
         echo "============================================" > $DEST_FILE
         echo "$DIR_FILENAME/$FILENAME_NO_EXT" >> $DEST_FILE
-        [[ "${EXPECTED_FAIL_FILELIST[@]}" =~ "$file" ]] && echo ":error" >> $DEST_FILE
+        [[ "${EXPECTED_FAIL_FILELIST[@]}" =~ "$FILE" ]] && echo ":error" >> $DEST_FILE
         echo "============================================" >> $DEST_FILE
         echo "" >> $DEST_FILE
 
-        cat $file >> $DEST_FILE
+        cat $INPUT_FILE >> $DEST_FILE
         echo "" >> $DEST_FILE
         echo "----" >> $DEST_FILE
         echo "" >> $DEST_FILE
 
-        tree-sitter parse $file >> $DEST_FILE
+        tree-sitter parse $INPUT_FILE >> $DEST_FILE
         sed -i -E 's/ \[[0-9]+, [0-9]+\] - \[[0-9]+, [0-9]+\]//g' $DEST_FILE # Remove brackets with node positions
 
         # Check if file has errors and reformat expected file in that case (remove last line)
@@ -128,7 +116,7 @@ process_file(){
 }
 
 
-# Create tests in parallel
+# Create and process tests in parallel
 for file in "${FILES_SV[@]}"; do
     process_file $file &
 done
