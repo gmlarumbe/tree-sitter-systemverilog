@@ -4869,20 +4869,19 @@ const rules = {
 
   _genvar_expression: $ => $.constant_expression,
 
-  // /* A.8.4 Primaries */
+  /* A.8.4 Primaries */
 
-
-
-  // // FIXME FIXME FIXME
-
+  // TODO: Probably the ones with prec.dynamic below can be grouped with some aliases/inlining or whatever
+  // option, since they match the same path as the ps_parameter_identifier, but in different contexts (and
+  // tree-sitter is not aware of them )
   constant_primary: $ => prec('constant_primary', choice(
     $.primary_literal,
     seq($.ps_parameter_identifier, optional($.constant_select1)),
     // // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')),
-    // // $.genvar_identifier,
-    // // seq($.formal_port_identifier, optional($.constant_select1)),
-    // // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier),
-    seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))), // TODO: Yields wrong parsing on 11.4.14.3
+    // prec.dynamic(-1, $.genvar_identifier), // TODO: No need to add, matched by the ps_parameter [constant_select] above
+    // prec.dynamic(-1, seq($.formal_port_identifier, optional($.constant_select1))), // TODO: No need to add, same syntax as the ps_parameter_identifier constant_select1 above
+    // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier), // TODO: No need to add, also matched by the ps_parameter_identifier branch above
+    seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
     seq($.constant_multiple_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
     seq($.constant_function_call, optional(seq('[', $._constant_range_expression, ']'))),
     // $._constant_let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
@@ -5072,7 +5071,8 @@ const rules = {
     seq(
       optional(choice(
         seq($.implicit_class_handle, '.'),
-        $.package_scope
+        $.package_scope,
+        $.class_qualifier // INFO: Out of LRM, needed for static class access in LHS
       )),
       $._hierarchical_variable_identifier,
       optional($.select1)
@@ -6559,8 +6559,14 @@ module.exports = grammar({
     [$.bind_target_scope],
     [$.bind_target_scope, $.hierarchical_identifier],
 
-    // TODO: module_declaration conflict, needed to detect extern module overrides
+    // module_declaration conflict, needed to detect extern module overrides
     [$.module_declaration, $._module_header1],
+
+    // TODO: Adding branches on constant_primary
+    [$.constant_primary],
+
+    // TODO: After adding nested static class access on LHS
+    [$._assignment_pattern_expression_type, $.class_qualifier],
 ],
 
 });
