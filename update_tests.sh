@@ -63,6 +63,10 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    doulos/135.5_sequence.sv                  # Multiclock assertion with syntax errors
                    doulos/35.2_export_\"dpi-c\".sv           # Don't parse C code
                    doulos/52.2_import_\"dpi-c\".sv           # Don't parse C code
+                   # Pulp AXI
+                   pulp_axi/src/axi_demux_simple.sv     # Not supporting |-> on macro usage (line 505)
+                   pulp_axi/src/axi_interleaved_xbar.sv # Preprocessing on the last parameter/port, too much effort on handling the comma
+                   pulp_axi/src/axi_xbar.sv             # Preprocessing on the last parameter/port, too much effort on handling the comma
                   )
 
 # Filter tests, if there was an argument provided

@@ -4882,7 +4882,7 @@ const rules = {
     // // $.genvar_identifier,
     // // seq($.formal_port_identifier, optional($.constant_select1)),
     // // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier),
-    // seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))), // TODO: Yields wrong parsing on 11.4.14.3
+    seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))), // TODO: Yields wrong parsing on 11.4.14.3
     seq($.constant_multiple_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
     seq($.constant_function_call, optional(seq('[', $._constant_range_expression, ']'))),
     // $._constant_let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
