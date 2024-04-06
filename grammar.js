@@ -3021,7 +3021,8 @@ const rules = {
   ordered_parameter_assignment: $ => $.param_expression,
 
   named_parameter_assignment: $ => seq(
-    '.', $.parameter_identifier, '(', optional($.param_expression), ')'
+    // INFO: optional directives out of LRM, supports e.g. ifdefs in parameter lists
+    optional($._directives), '.', $.parameter_identifier, '(', optional($.param_expression), ')'
   ),
 
   hierarchical_instance: $ => seq(
@@ -3053,7 +3054,8 @@ const rules = {
   named_port_connection: $ => seq(
     repeat($.attribute_instance),
     choice(
-      seq('.', $.port_identifier, optional(seq('(', optional($.expression), ')'))),
+      // INFO: optional directives out of LRM, supports e.g. ifdefs in parameter lists
+      seq(optional($._directives), '.', $.port_identifier, optional(seq('(', optional($.expression), ')'))),
       '.*'
     )
   ),
