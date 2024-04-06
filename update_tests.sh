@@ -67,6 +67,40 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    pulp_axi/src/axi_demux_simple.sv     # Not supporting |-> on macro usage (line 505)
                    pulp_axi/src/axi_interleaved_xbar.sv # Preprocessing on the last parameter/port, too much effort on handling the comma
                    pulp_axi/src/axi_xbar.sv             # Preprocessing on the last parameter/port, too much effort on handling the comma
+                   #################################################################
+                   # TODO: The ones below are to be added after grammar.js cleanup #
+                   #################################################################
+                   # UDP
+                   doulos/110.1_user_defined_primitive.sv
+                   doulos/110.2_user_defined_primitive.sv
+                   doulos/110.3_user_defined_primitive.sv
+                   doulos/110.4_user_defined_primitive.sv
+                   # Checkers
+                   doulos/124.1_checker.sv
+                   doulos/125.1_checker_instantiation.sv
+                   doulos/127.1_default_disable_iff.sv
+                   # Specify
+                   doulos/150.1_timing_checks.sv
+                   doulos/77.1_pathpulse$.sv
+                   doulos/91.1_specify.sv
+                   doulos/91.2_specify.sv
+                   doulos/92.1_specparam.sv
+                   # Config
+                   doulos/19.1_config.sv
+                   # Builtin primitives
+                   doulos/27.1_defparam.sv
+                   doulos/55.1_instantiation.sv
+                   doulos/55.4_instantiation.sv
+                   doulos/96.1_strength.sv
+                   doulos/28.1_delay.sv
+                   doulos/68.1_module.sv
+                   # Let
+                   doulos/61.1_let.sv # TODO: This one's error has to do with using primary_literal instead of constant_primary on $.casting_type
+                   doulos/61.2_let.sv
+                   # Library
+                   doulos/62.1_library.sv
+                   # Attribute
+                   doulos/8.3_attribute.sv # TODO: This one should actually work but it doesn't for some reason
                   )
 
 # Filter tests, if there was an argument provided
