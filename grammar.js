@@ -2706,7 +2706,7 @@ const rules = {
   trans_range_list: $ => choice(
     $.trans_item,
     seq($.trans_item, '[*', $.repeat_range, ']'),
-    seq($.trans_item, '[–>', $.repeat_range, ']'),
+    seq($.trans_item, '[->', $.repeat_range, ']'),
     seq($.trans_item, '[=', $.repeat_range, ']')
   ),
 
