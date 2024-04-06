@@ -95,8 +95,7 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    doulos/28.1_delay.sv
                    doulos/68.1_module.sv
                    # Let
-                   doulos/61.1_let.sv # TODO: This one's error has to do with using primary_literal instead of constant_primary on $.casting_type
-                   doulos/61.2_let.sv
+                   doulos/61.2_let.sv # Complex let construct, macro-like
                    # Library
                    doulos/62.1_library.sv
                    # Attribute

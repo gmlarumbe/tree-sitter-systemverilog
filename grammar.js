@@ -1552,11 +1552,7 @@ const rules = {
 
   casting_type: $ => prec('casting_type', choice(
     $._simple_type,
-    // TODO: For some reason, the constant_primary stuff gives many errors
-    // Replace temporarily with $.primary_literal
-    // $.constant_primary,
-    $.primary_literal,
-    // End of TODO
+    $.constant_primary,
     $._signing,
     'string',
     'const'
@@ -6567,6 +6563,13 @@ module.exports = grammar({
 
     // TODO: After adding nested static class access on LHS
     [$._assignment_pattern_expression_type, $.class_qualifier],
+
+    // TODO: Fixing constant_primary on casting_type
+    [$.interface_port_declaration, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $._sequence_identifier],
+    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $._sequence_identifier],
+    [$.port_reference, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.select_expression, $.tf_call, $.constant_primary, $.hierarchical_identifier],
 ],
 
 });
