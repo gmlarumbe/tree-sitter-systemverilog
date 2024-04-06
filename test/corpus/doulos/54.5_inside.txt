@@ -4,41 +4,52 @@ doulos/54.5_inside
 
 // Section 54.5: Inside
 
+initial begin
 string I;
-I inside {["abc":"def"]}       // I between "abc" and "def"
-
+a = I inside {["abc":"def"]};       // I between "abc" and "def"
+end
 
 
 ----
 
 (source_file
   (comment)
-  (package_or_generate_item_declaration
-    (data_declaration
-      (data_type_or_implicit1
-        (data_type))
-      (list_of_variable_decl_assignments
-        (variable_decl_assignment
-          (simple_identifier)))))
-  (ERROR
-    (port_declaration
-      (interface_port_declaration
-        (interface_identifier
-          (simple_identifier))
-        (list_of_interface_identifiers
-          (interface_identifier
-            (simple_identifier))
-          (ERROR)
-          (unpacked_dimension
-            (constant_range
-              (constant_expression
-                (constant_primary
-                  (primary_literal
-                    (string_literal))))
-              (constant_expression
-                (constant_primary
-                  (primary_literal
-                    (string_literal))))))))))
-  (comment))
-
-(ERROR)
+  (module_or_generate_item
+    (initial_construct
+      (statement_or_null
+        (statement
+          (statement_item
+            (seq_block
+              (block_item_declaration
+                (data_declaration
+                  (data_type_or_implicit1
+                    (data_type))
+                  (list_of_variable_decl_assignments
+                    (variable_decl_assignment
+                      (simple_identifier)))))
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (blocking_assignment
+                      (operator_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)))
+                        (assignment_operator)
+                        (expression
+                          (inside_expression
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))
+                            (range_list
+                              (value_range
+                                (expression
+                                  (primary
+                                    (primary_literal
+                                      (string_literal))))
+                                (expression
+                                  (primary
+                                    (primary_literal
+                                      (string_literal)))))))))))))
+              (comment))))))))

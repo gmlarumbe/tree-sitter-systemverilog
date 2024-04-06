@@ -11,7 +11,8 @@ interface I2 (input bit clock2);  /*...*/ endinterface
 module tf(I1 A, I2 B);
   clocking cb1 @(posedge A.clock1);
     default input #2 output #5;
-    input A.address;
+    // input A.address; // INFO: Not supported by most tools
+    input address = A.address;
     output data = A.data;
   endclocking
 
@@ -21,18 +22,19 @@ module tf(I1 A, I2 B);
   endclocking
 
   initial begin : Test
-    cb1.data <= 1;        
+    cb1.data <= 1;
     /*...*/
   end
 
   module CtrlMod;
-    default clocking cb1; // Clocking block cb1 set as default 
+    default clocking cb1; // Clocking block cb1 set as default
                           // inside CtrlMod module
     initial begin
         if (cb1.data == 1)
-        ## 10;            // Delays execution by 10 cycles using the 
+        ## 10;            // Delays execution by 10 cycles using the
                           // default clocking (A.clock1)
         /*...*/
+    end
   endmodule
 endmodule
 
@@ -69,7 +71,7 @@ endmodule
           (port_identifier
             (simple_identifier)))))
     (comment))
-  (ERROR
+  (module_declaration
     (module_ansi_header
       (module_keyword)
       name: (simple_identifier)
@@ -109,13 +111,17 @@ endmodule
               (delay_control
                 (delay_value
                   (unsigned_number))))))
+        (comment)
         (clocking_item
           (clocking_direction)
-          (ERROR
-            (simple_identifier))
           (list_of_clocking_decl_assign
             (clocking_decl_assign
-              (simple_identifier))))
+              (simple_identifier)
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)
+                    (simple_identifier)))))))
         (clocking_item
           (clocking_direction)
           (list_of_clocking_decl_assign
@@ -188,45 +194,48 @@ endmodule
                                 (decimal_number
                                   (unsigned_number))))))))))
                 (comment)))))))
-    (module_ansi_header
-      (module_keyword)
-      name: (simple_identifier))
-    (module_or_generate_item
-      (clocking_identifier
+    (module_declaration
+      (module_ansi_header
+        (module_keyword)
+        name: (simple_identifier))
+      (module_or_generate_item
         (clocking_identifier
-          (simple_identifier))))
-    (comment)
-    (comment)
-    (statement_or_null
-      (statement
-        (statement_item
-          (conditional_statement
-            (cond_predicate
-              (expression
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier)
-                      (simple_identifier))))
-                (expression
-                  (primary
-                    (primary_literal
-                      (integral_number
-                        (decimal_number
-                          (unsigned_number))))))))
-            (statement_or_null
-              (statement
-                (statement_item
-                  (procedural_timing_control_statement
-                    (cycle_delay
-                      (integral_number
-                        (decimal_number
-                          (unsigned_number))))
-                    (statement_or_null)))))))))
-    (comment)
-    (comment)
-    (comment)
-    (simple_identifier)
-    (simple_identifier)))
-
-(ERROR)
+          (clocking_identifier
+            (simple_identifier))))
+      (comment)
+      (comment)
+      (module_or_generate_item
+        (initial_construct
+          (statement_or_null
+            (statement
+              (statement_item
+                (seq_block
+                  (statement_or_null
+                    (statement
+                      (statement_item
+                        (conditional_statement
+                          (cond_predicate
+                            (expression
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier)
+                                    (simple_identifier))))
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (integral_number
+                                      (decimal_number
+                                        (unsigned_number))))))))
+                          (statement_or_null
+                            (statement
+                              (statement_item
+                                (procedural_timing_control_statement
+                                  (cycle_delay
+                                    (integral_number
+                                      (decimal_number
+                                        (unsigned_number))))
+                                  (statement_or_null)))))))))
+                  (comment)
+                  (comment)
+                  (comment))))))))))

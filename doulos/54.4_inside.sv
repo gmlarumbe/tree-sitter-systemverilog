@@ -1,5 +1,8 @@
 // Section 54.4: Inside
 
-a inside {[0:5], [8:15]};
+initial begin
+if (a inside {[0:5], [8:15]})
+    ;
+end
 
 

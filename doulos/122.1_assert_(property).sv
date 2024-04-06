@@ -4,7 +4,7 @@
 module FlipFlop (input logic clk, D, output logic Q);
   property P2;
     int d;
-    @(posedge clk) (1,(d=D)) |-> ##1 (Q == d);
+    @(posedge clk) (1,d=D) |-> ##1 (Q == d);
   endproperty
 
   Label2: assert property (P2);

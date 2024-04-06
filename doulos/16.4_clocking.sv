@@ -7,7 +7,8 @@ interface I2 (input bit clock2);  /*...*/ endinterface
 module tf(I1 A, I2 B);
   clocking cb1 @(posedge A.clock1);
     default input #2 output #5;
-    input A.address;
+    // input A.address; // INFO: Not supported by most tools
+    input address = A.address;
     output data = A.data;
   endclocking
 
@@ -17,18 +18,19 @@ module tf(I1 A, I2 B);
   endclocking
 
   initial begin : Test
-    cb1.data <= 1;        
+    cb1.data <= 1;
     /*...*/
   end
 
   module CtrlMod;
-    default clocking cb1; // Clocking block cb1 set as default 
+    default clocking cb1; // Clocking block cb1 set as default
                           // inside CtrlMod module
     initial begin
         if (cb1.data == 1)
-        ## 10;            // Delays execution by 10 cycles using the 
+        ## 10;            // Delays execution by 10 cycles using the
                           // default clocking (A.clock1)
         /*...*/
+    end
   endmodule
 endmodule
 

@@ -70,6 +70,11 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    # Doulos reference examples
                    doulos/117.1_\`define.sv
                    doulos/117.2_\`define.sv
+                   doulos/11.1_bind_\(operator_overload\).sv # Deprecated in 1800-2017
+                   doulos/135.5_sequence.sv                  # Multiclock assertion with syntax errors
+                   doulos/135.5_sequence.sv                  # Multiclock assertion with syntax errors
+                   doulos/35.2_export_\"dpi-c\".sv           # Don't parse C code
+                   doulos/52.2_import_\"dpi-c\".sv           # Don't parse C code
                   )
 
 # Filter tests, if there was an argument provided

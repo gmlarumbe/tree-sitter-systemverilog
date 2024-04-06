@@ -8,7 +8,7 @@ doulos/122.1_assert_(property)
 module FlipFlop (input logic clk, D, output logic Q);
   property P2;
     int d;
-    @(posedge clk) (1,(d=D)) |-> ##1 (Q == d);
+    @(posedge clk) (1,d=D) |-> ##1 (Q == d);
   endproperty
 
   Label2: assert property (P2);
@@ -58,54 +58,55 @@ endmodule
               (variable_decl_assignment
                 (simple_identifier))))
           (property_spec
-            (clocking_event
-              (event_expression
-                (edge_identifier)
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier))))))
             (property_expr
-              (sequence_expr
-                (sequence_expr
-                  (expression_or_dist
-                    (expression
-                      (primary
-                        (primary_literal
-                          (integral_number
-                            (decimal_number
-                              (unsigned_number))))))))
-                (ERROR
-                  (primary
-                    (mintypmax_expression
-                      (expression
-                        (primary
-                          (hierarchical_identifier
-                            (simple_identifier)))))
-                    (ERROR
-                      (simple_identifier)))))
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier))))))
               (property_expr
                 (sequence_expr
-                  (cycle_delay_range
-                    (constant_primary
-                      (primary_literal
-                        (integral_number
-                          (decimal_number
-                            (unsigned_number))))))
                   (sequence_expr
                     (expression_or_dist
                       (expression
                         (primary
-                          (mintypmax_expression
-                            (expression
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))
+                  (operator_assignment
+                    (variable_lvalue
+                      (hierarchical_identifier
+                        (simple_identifier)))
+                    (assignment_operator)
+                    (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))))
+                (property_expr
+                  (sequence_expr
+                    (cycle_delay_range
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number))))))
+                    (sequence_expr
+                      (expression_or_dist
+                        (expression
+                          (primary
+                            (mintypmax_expression
                               (expression
-                                (primary
-                                  (hierarchical_identifier
-                                    (simple_identifier))))
-                              (expression
-                                (primary
-                                  (hierarchical_identifier
-                                    (simple_identifier)))))))))))))))))
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier))))
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier))))))))))))))))))
     (module_or_generate_item
       (concurrent_assertion_item
         (simple_identifier)
@@ -143,5 +144,3 @@ endmodule
                         (primary
                           (hierarchical_identifier
                             (simple_identifier)))))))))))))))
-
-(ERROR)

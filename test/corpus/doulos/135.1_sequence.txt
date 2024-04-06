@@ -4,23 +4,31 @@ doulos/135.1_sequence
 
 // Section 135.1: Sequence
 
-a ##N b;    // a must be true on the current clock tick, and b on the Nth 
+property p;
+a ##N b;    // a must be true on the current clock tick, and b on the Nth
             // clock tick after a is true
-a ##[2:5] b // a must be true on the current clock tick, and b must be true 
+endproperty
+
+property p;
+a ##[2:5] b // a must be true on the current clock tick, and b must be true
             // on some clock tick between 2 and 5 after a is true
+endproperty
+
 sequence s1;
   a ##1 b;
 endsequence
 
 sequence s2;
   @(posedge clk2)
-  // Reference s1 in s2. s1 starts one clock cycle after the occurrence 
+  // Reference s1 in s2. s1 starts one clock cycle after the occurrence
   // of d in sequence s2
   c ##1 d ##1 s1 ##1 f;   // Equivalent to c ##1 d ##1 a ##1 b ##1 f;
+endsequence
 
-  // Use ended method in s2. Now  s1 must end successfully one clock tick 
+sequence s3;
+  // Use ended method in s2. Now  s1 must end successfully one clock tick
   // after d
-  c ##1 d ##1 s1.ended ##1 f;   
+  c ##1 d ##1 s1.ended ##1 f;
 endsequence
 
 
@@ -29,47 +37,56 @@ endsequence
 
 (source_file
   (comment)
-  (ERROR
-    (simple_identifier))
-  (statement_or_null
-    (statement
-      (statement_item
-        (procedural_timing_control_statement
-          (cycle_delay
-            (simple_identifier))
-          (statement_or_null
-            (statement
-              (statement_item
-                (subroutine_call_statement
-                  (subroutine_call
-                    (tf_call
-                      (hierarchical_identifier
-                        (simple_identifier))))))))))))
-  (comment)
-  (comment)
   (package_or_generate_item_declaration
-    (data_declaration
-      (data_type_or_implicit1
-        (data_type
-          (simple_identifier)
-          (ERROR)
-          (packed_dimension
-            (constant_range
-              (constant_expression
-                (constant_primary
-                  (primary_literal
-                    (integral_number
-                      (decimal_number
-                        (unsigned_number))))))
-              (constant_expression
-                (constant_primary
-                  (primary_literal
-                    (integral_number
-                      (decimal_number
-                        (unsigned_number))))))))))
-      (list_of_variable_decl_assignments
-        (variable_decl_assignment
-          (simple_identifier)))
+    (property_declaration
+      (property_identifier
+        (simple_identifier))
+      (property_spec
+        (property_expr
+          (sequence_expr
+            (sequence_expr
+              (sequence_instance
+                (ps_or_hierarchical_sequence_identifier
+                  (simple_identifier))))
+            (cycle_delay_range
+              (constant_primary
+                (parameter_identifier
+                  (simple_identifier))))
+            (sequence_expr
+              (sequence_instance
+                (ps_or_hierarchical_sequence_identifier
+                  (simple_identifier)))))))
+      (comment)
+      (comment)))
+  (package_or_generate_item_declaration
+    (property_declaration
+      (property_identifier
+        (simple_identifier))
+      (property_spec
+        (property_expr
+          (sequence_expr
+            (sequence_expr
+              (sequence_instance
+                (ps_or_hierarchical_sequence_identifier
+                  (simple_identifier))))
+            (cycle_delay_range
+              (cycle_delay_const_range_expression
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))
+            (sequence_expr
+              (sequence_instance
+                (ps_or_hierarchical_sequence_identifier
+                  (simple_identifier)))))))
       (comment)
       (comment)))
   (package_or_generate_item_declaration
@@ -107,47 +124,52 @@ endsequence
               (comment)
               (comment)
               (sequence_expr
-                (sequence_expr
-                  (sequence_expr
-                    (sequence_expr
-                      (sequence_instance
-                        (ps_or_hierarchical_sequence_identifier
-                          (simple_identifier))))
-                    (cycle_delay_range
-                      (constant_primary
-                        (primary_literal
-                          (integral_number
-                            (decimal_number
-                              (unsigned_number))))))
-                    (sequence_expr
-                      (sequence_instance
-                        (ps_or_hierarchical_sequence_identifier
-                          (simple_identifier)))))
-                  (cycle_delay_range
-                    (constant_primary
-                      (primary_literal
-                        (integral_number
-                          (decimal_number
-                            (unsigned_number))))))
-                  (sequence_expr
-                    (sequence_instance
-                      (ps_or_hierarchical_sequence_identifier
-                        (simple_identifier)))))
-                (cycle_delay_range
-                  (constant_primary
-                    (primary_literal
-                      (integral_number
-                        (decimal_number
-                          (unsigned_number))))))
-                (sequence_expr
-                  (sequence_instance
-                    (ps_or_hierarchical_sequence_identifier
-                      (simple_identifier))))))
-            (ERROR
-              (comment)
-              (comment)
-              (comment)
-              (simple_identifier))
+                (sequence_instance
+                  (ps_or_hierarchical_sequence_identifier
+                    (simple_identifier)))))
+            (cycle_delay_range
+              (constant_primary
+                (primary_literal
+                  (integral_number
+                    (decimal_number
+                      (unsigned_number))))))
+            (sequence_expr
+              (sequence_instance
+                (ps_or_hierarchical_sequence_identifier
+                  (simple_identifier)))))
+          (cycle_delay_range
+            (constant_primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number))))))
+          (sequence_expr
+            (sequence_instance
+              (ps_or_hierarchical_sequence_identifier
+                (simple_identifier)))))
+        (cycle_delay_range
+          (constant_primary
+            (primary_literal
+              (integral_number
+                (decimal_number
+                  (unsigned_number))))))
+        (sequence_expr
+          (sequence_instance
+            (ps_or_hierarchical_sequence_identifier
+              (simple_identifier)))))
+      (comment)))
+  (package_or_generate_item_declaration
+    (sequence_declaration
+      (simple_identifier)
+      (comment)
+      (comment)
+      (sequence_expr
+        (sequence_expr
+          (sequence_expr
+            (sequence_expr
+              (sequence_instance
+                (ps_or_hierarchical_sequence_identifier
+                  (simple_identifier))))
             (cycle_delay_range
               (constant_primary
                 (primary_literal
@@ -180,5 +202,3 @@ endsequence
           (sequence_instance
             (ps_or_hierarchical_sequence_identifier
               (simple_identifier))))))))
-
-(ERROR)

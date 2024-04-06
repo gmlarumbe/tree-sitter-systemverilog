@@ -472,7 +472,7 @@ const rules = {
     $.program_declaration,
     $.package_declaration,
     seq(repeat($.attribute_instance), $._package_item),
-    // seq(repeat($.attribute_instance), $.bind_directive)
+    seq(repeat($.attribute_instance), $.bind_directive),
     // $.config_declaration,
     // End of TODO
 
@@ -527,14 +527,14 @@ const rules = {
     seq('extern', $.module_ansi_header)
   )),
 
-  _module_header1: $ => prec.left(seq(
+  _module_header1: $ => seq(
     repeat($.attribute_instance),
     $.module_keyword,
     optional($.lifetime),
     field('name', $._module_identifier),
     repeat($.package_import_declaration),
     optional($.parameter_port_list)
-  )),
+  ),
 
   module_nonansi_header: $ => seq(
     $._module_header1,
@@ -870,12 +870,12 @@ const rules = {
 
   // finish_number: $ => choice('0', '1', '2'),
 
-  _module_common_item: $ => choice(
+  _module_common_item: $ => prec('_module_common_item', choice(
     $._module_or_generate_item_declaration,
   //   $.interface_instantiation,
   //   $.program_instantiation,
     $._assertion_item,
-  //   $.bind_directive,
+    $.bind_directive,
     $.continuous_assign,
   //   $.net_alias,
     $.initial_construct,
@@ -884,7 +884,7 @@ const rules = {
     $.loop_generate_construct,
     $.conditional_generate_construct,
     // $.elaboration_system_task // INFO: Not in LRM, is it allowed here? Without procedural block?
-  ),
+  )),
 
   _module_item: $ => choice(
     seq($.port_declaration, ';'),
@@ -916,9 +916,9 @@ const rules = {
     $.module_or_generate_item,
     // $.specify_block,
     // seq(repeat($.attribute_instance), $.specparam_declaration), // TODO: Make it simpler
-    $.program_declaration, // TODO: Don't support nested program/modules
-    $.module_declaration,  // TODO: Don't support nested program/modules
-    $.interface_declaration, // TODO: Don't support nested program/modules
+    $.program_declaration,
+    $.module_declaration,
+    $.interface_declaration,
     $.timeunits_declaration
   )),
 
@@ -928,37 +928,37 @@ const rules = {
     ';'
   ),
 
-  // bind_directive: $ => seq(
-  //   'bind',
-  //   choice(
-  //     seq(
-  //       $.bind_target_scope,
-  //       optseq(':', $.bind_target_instance_list)
-  //     ),
-  //     $.bind_target_instance
-  //   ),
-  //   $._bind_instantiation,
-  //   ';'
-  // ),
+  bind_directive: $ => seq(
+    'bind',
+    choice(
+      seq(
+        $.bind_target_scope,
+        optional(seq(':', $.bind_target_instance_list))
+      ),
+      $.bind_target_instance
+    ),
+    $._bind_instantiation,
+    // ';' // INFO: bug in spec, colon already included in $._bind_instantiation
+  ),
 
-  // bind_target_scope: $ => choice(
-  //   $._module_identifier
-  //   // $.interface_identifier
-  // ),
+  bind_target_scope: $ => choice(
+    $._module_identifier,
+    $.interface_identifier
+  ),
 
-  // bind_target_instance: $ => seq(
-  //   $.hierarchical_identifier,
-  //   optional($.constant_bit_select1)
-  // ),
+  bind_target_instance: $ => seq(
+    $.hierarchical_identifier,
+    optional($.constant_bit_select1)
+  ),
 
-  // bind_target_instance_list: $ => sep1(',', $.bind_target_instance),
+  bind_target_instance_list: $ => sepBy1(',', $.bind_target_instance),
 
-  // _bind_instantiation: $ => choice(
-  //   $.program_instantiation,
-  //   $.module_instantiation,
-  //   $.interface_instantiation,
-  //   // $.checker_instantiation // TODO: Remove temporarily to narrow conflicts
-  // ),
+  _bind_instantiation: $ => choice(
+    // $.program_instantiation, // TODO: Remove temporarily to narrow conflicts
+    $.module_instantiation,
+    // $.interface_instantiation, // TODO: Remove temporarily to narrow conflicts
+    // $.checker_instantiation // TODO: Remove temporarily to narrow conflicts
+  ),
 
   // /* A.1.5 Configuration source text */
 
@@ -1297,7 +1297,7 @@ const rules = {
   _package_item: $ => prec('_package_item', choice(
     $.package_or_generate_item_declaration,
     // $.anonymous_program,
-    // $.package_export_declaration,
+    $.package_export_declaration,
     // $.timeunits_declaration
   )),
 
@@ -1445,9 +1445,9 @@ const rules = {
     $.package_identifier, '::', choice($._identifier, '*')
   ),
 
-  // package_export_declaration: $ => seq(
-  //   'export', choice('*::*', sep1(',', $.package_import_item)), ';'
-  // ),
+  package_export_declaration: $ => seq(
+    'export', choice('*::*', sepBy1(',', $.package_import_item)), ';'
+  ),
 
   genvar_declaration: $ => seq(
     'genvar', $.list_of_genvar_identifiers, ';'
@@ -2367,6 +2367,7 @@ const rules = {
 
     // FIXME no assosiativity rules per spec
     prec.left(seq('if', '(', $.expression_or_dist, ')', $.property_expr, optional(seq('else', $.property_expr)))), // FIXME spec bug ( ) are not red seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase'),  // FIXME spec bug ( ) are not red
+    prec.left(seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase')),
     prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#-#', $.property_expr)),
     prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#=#', $.property_expr)),
 
@@ -5516,6 +5517,7 @@ module.exports = grammar({
     ['_non_port_module_item', 'package_or_generate_item_declaration', '_description'],
     ['statement_item', 'package_or_generate_item_declaration', '_description'],
     ['_package_item', '_module_or_generate_item_declaration'],
+    ['_module_common_item', '_description'],
 
 
     // module_nonansi_header  'input'  data_type  •  simple_identifier  …
@@ -6547,10 +6549,16 @@ module.exports = grammar({
     // TODO: Fixing the local:: class_qualifier
     [$._simple_type, $._assignment_pattern_expression_type, $.class_qualifier],
 
-
     // TODO: Randsequence conflicts
     [$.rs_production_list],
     [$.rs_rule],
+
+    // TODO: bind
+    [$.bind_target_scope],
+    [$.bind_target_scope, $.hierarchical_identifier],
+
+    // TODO: module_declaration conflict, needed to detect extern module overrides
+    [$.module_declaration, $._module_header1],
 ],
 
 });

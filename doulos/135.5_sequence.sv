@@ -1,6 +1,6 @@
 // Section 135.5: Sequence
 
-// Clock flow 
+// Clock flow
 property P;
   @(posedge clk) x ##1 y |=>
   if (z)
@@ -8,5 +8,4 @@ property P;
   else                       // x, y, z, j, m are clocked at posedge clk
     m |=> @(posedge clk2) n; // n is clocked at posedge clk2
 endproperty
-
 

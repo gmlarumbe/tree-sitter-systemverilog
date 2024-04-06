@@ -10,7 +10,7 @@ module CheckAddr (input bit[7:0] Addr, Max);
         else $error("Address is out of range");
 endmodule
 
-module RAM (input bit[7:0] Addr, Data, /*...*/);
+module RAM (input bit[7:0] Addr, Data /*...*/);
   /*...*/
 endmodule
 

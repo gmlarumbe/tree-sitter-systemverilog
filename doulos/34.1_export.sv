@@ -12,5 +12,5 @@ endpackage : Q
 
 module m;
   import Q::*; // P::a, P::b and Q::c are all potentially visible
-
+endmodule
 

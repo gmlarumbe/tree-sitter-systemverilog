@@ -13,10 +13,9 @@ Q2 = Q2[1:$-1];                 // Delete the first and last items
 Q.delete(i);                     // Equiv. to: Q = '{Q[0:i-1], Q[i+1,$]}
 Q1 = Q2;                        // Copy Q2 in Q1
 Q2 = '{Q2, 3};                  // Insert 3 at the end
-Q2 = '{Q2[0:i-1], j, Q2[i,$] }; // Insert j at position i
-Q2 = '{Q2[0:i], j, Q2[i+1,$] }; // Insert j after position i
+Q2 = '{Q2[0:i-1], j, Q2[i:$] }; // Insert j at position i
+Q2 = '{Q2[0:i], j, Q2[i+1:$] }; // Insert j after position i
 e = Q.pop_front();               // Equiv. to: e = Q[0]; Q = Q[1,$]
 e = Q.pop_back();                // Equiv. to: e = Q[$]; Q = Q[0,$-1]
 Q.push_front(e);                 // Equiv. to: Q = '{e, Q}
 end
-

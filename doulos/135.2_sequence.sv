@@ -1,26 +1,49 @@
 // Section 135.2: Sequence
 
 // Consecutive repetition
-a ##1 b ##1 b ##1 b ##1 c;
+sequence s1;
+    a ##1 b ##1 b ##1 b ##1 c;
+endsequence
 
 // Equivalent to:
-a ##1 b [*3] ##1 c; 		
+sequence s2;
+    a ##1 b [*3] ##1 c;
+endsequence
 
-a [*3];	               // Equiv. to a ##1 a ##1 a
 
-(a[*0:2] ##1 b ##1 c);
+sequence s3;
+    a [*3];                // Equiv. to a ##1 a ##1 a
+endsequence
+
+
+sequence s4;
+    (a[*0:2] ##1 b ##1 c);
+endsequence
+
 
 // Equivalent to:
-(b ##1 c) or (a ##1 b ##1 c) or (a ##1 a ##1 b ##1 c);
+sequence s5;
+    (b ##1 c) or (a ##1 b ##1 c) or (a ##1 a ##1 b ##1 c);
+endsequence
+
 
 // Goto repetition
-a ##1 b[->1:9] ##1 c // a followed by at most 9 occurrences of b, 
-                     // followed by c
+sequence s6;
+    a ##1 b[->1:9] ##1 c; // a followed by at most 9 occurrences of b,
+                         // followed by c
+endsequence
+
 
 // Non-consecutive repetition
-a ##1 b [=1:9] ##1 c
+sequence s7;
+    a ##1 b [=1:9] ##1 c;
+endsequence
+
 
 // Equivalent to:
-a ##1 ((!b [*0:$] ##1 b)) [*1:9]) ##1 !b[*0:$] ##1 c
+sequence s8;
+    a ##1 ((!b [*0:$] ##1 b)) [*1:9] ##1 !b[*0:$] ##1 c;
+endsequence
+
 
 

@@ -14,7 +14,7 @@ module CheckAddr (input bit[7:0] Addr, Max);
         else $error("Address is out of range");
 endmodule
 
-module RAM (input bit[7:0] Addr, Data, /*...*/);
+module RAM (input bit[7:0] Addr, Data /*...*/);
   /*...*/
 endmodule
 
@@ -157,10 +157,7 @@ bind RAM: RAM_inst CheckAddr CA_inst(Addr, Data);
         (ansi_port_declaration
           (port_identifier
             (simple_identifier)))
-        (comment)
-        (ansi_port_declaration
-          (port_identifier
-            (simple_identifier)))))
+        (comment)))
     (comment))
   (module_declaration
     (module_ansi_header
@@ -187,84 +184,74 @@ bind RAM: RAM_inst CheckAddr CA_inst(Addr, Data);
                     (simple_identifier))))))
           (comment)))))
   (comment)
-  (port_declaration
-    (interface_port_declaration
-      (interface_identifier
-        (simple_identifier))
-      (list_of_interface_identifiers
-        (interface_identifier
-          (simple_identifier)))))
   (module_or_generate_item
-    (module_instantiation
-      instance_type: (simple_identifier)
-      (hierarchical_instance
-        (name_of_instance
-          instance_name: (instance_identifier
-            (simple_identifier)))
-        (list_of_port_connections
-          (ordered_port_connection
-            (expression
-              (primary
-                (hierarchical_identifier
-                  (simple_identifier)))))
-          (ordered_port_connection
-            (expression
-              (primary
-                (hierarchical_identifier
-                  (simple_identifier)))))))))
+    (bind_directive
+      (bind_target_scope
+        (simple_identifier))
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (instance_identifier
+              (simple_identifier)))
+          (list_of_port_connections
+            (ordered_port_connection
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (ordered_port_connection
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))))))))
   (comment)
-  (port_declaration
-    (interface_port_declaration
-      (interface_identifier
-        (simple_identifier))
-      (ERROR
-        (simple_identifier))
-      (modport_identifier
-        (modport_identifier
+  (module_or_generate_item
+    (bind_directive
+      (bind_target_instance
+        (hierarchical_identifier
+          (simple_identifier)
           (simple_identifier)))
-      (list_of_interface_identifiers
-        (interface_identifier
-          (simple_identifier)))))
-  (statement_or_null
-    (statement
-      (statement_item
-        (subroutine_call_statement
-          (subroutine_call
-            (tf_call
-              (hierarchical_identifier
-                (simple_identifier))
-              (list_of_arguments
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier))))
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier)))))))))))
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (instance_identifier
+              (simple_identifier)))
+          (list_of_port_connections
+            (ordered_port_connection
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (ordered_port_connection
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))))))))
   (comment)
-  (statement_or_null
-    (statement
-      block_name: (simple_identifier)
-      (ERROR
+  (module_or_generate_item
+    (bind_directive
+      (bind_target_scope
         (simple_identifier))
-      (statement_item
-        (subroutine_call_statement
-          (subroutine_call
-            (tf_call
-              (hierarchical_identifier
-                (simple_identifier))
-              (ERROR
-                (simple_identifier)
-                (simple_identifier))
-              (list_of_arguments
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier))))
-                (expression
-                  (primary
-                    (hierarchical_identifier
-                      (simple_identifier))))))))))))
-
-(MISSING simple_identifier)
+      (bind_target_instance_list
+        (bind_target_instance
+          (hierarchical_identifier
+            (simple_identifier))))
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (instance_identifier
+              (simple_identifier)))
+          (list_of_port_connections
+            (ordered_port_connection
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (ordered_port_connection
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))))
