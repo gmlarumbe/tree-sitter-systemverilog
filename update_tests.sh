@@ -74,7 +74,7 @@ fi
 
 process_file(){
     local FILE=$1
-    local INPUT_FILE=$TEST_DIR/$file
+    local INPUT_FILE=$TEST_DIR/$FILE
 
     local DIR_FILENAME=$(dirname $FILE)
     local BASE_FILENAME=$(basename $FILE)
