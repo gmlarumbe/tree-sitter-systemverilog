@@ -9,9 +9,10 @@ module m;
     endclocking;
 
     property p1(logic psig);
-      /*...*/
+        a |-> b;
+        /*...*/
     endproperty : p1
-  
+
     assert1: assert property (p1(.psig(test_sig)));
   endchecker: Check1
 endmodule : m

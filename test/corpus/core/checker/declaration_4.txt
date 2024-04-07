@@ -1,0 +1,69 @@
+============================================
+core/checker/declaration_4
+============================================
+
+module m;
+    default clocking @clk1; endclocking
+    default disable iff rst1;
+    checker c1;
+        // Inherits @clk1 and rst1
+        // ...
+    endchecker : c1
+    checker c2;
+        // Explicitly redefines its default values
+        default clocking @clk2; endclocking
+        default disable iff rst2;
+        // ...
+    endchecker : c2
+    // ...
+endmodule : m
+
+----
+
+(source_file
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier))
+    (module_or_generate_item
+      (clocking_declaration
+        (clocking_event
+          (hierarchical_identifier
+            (simple_identifier)))))
+    (module_or_generate_item
+      (expression_or_dist
+        (expression
+          (primary
+            (hierarchical_identifier
+              (simple_identifier))))))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (checker_declaration
+          name: (_checker_identifier
+            (simple_identifier))
+          (comment)
+          (comment)
+          (_checker_identifier
+            (simple_identifier)))))
+    (module_or_generate_item
+      (package_or_generate_item_declaration
+        (checker_declaration
+          name: (_checker_identifier
+            (simple_identifier))
+          (comment)
+          (checker_or_generate_item_declaration
+            (clocking_declaration
+              (clocking_event
+                (hierarchical_identifier
+                  (simple_identifier)))))
+          (checker_or_generate_item_declaration
+            (expression_or_dist
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))))
+          (comment)
+          (_checker_identifier
+            (simple_identifier)))))
+    (comment)
+    (simple_identifier)))

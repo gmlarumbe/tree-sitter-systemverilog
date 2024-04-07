@@ -1,6 +1,11 @@
 #!/bin/bash
 
-PATTERN=$1
+while getopts :p:t opts; do
+    case ${opts} in
+        p) PATTERN=${OPTARG} ;;
+        t) TREE_SITTER_TEST=true ;;
+    esac
+done
 
 # First create the directory structure to prevent copy errors
 TEST_DIR=test/files
@@ -76,9 +81,9 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    doulos/110.3_user_defined_primitive.sv
                    doulos/110.4_user_defined_primitive.sv
                    # Checkers
-                   doulos/124.1_checker.sv
-                   doulos/125.1_checker_instantiation.sv
-                   doulos/127.1_default_disable_iff.sv
+                   # doulos/124.1_checker.sv
+                   # doulos/125.1_checker_instantiation.sv
+                   # doulos/127.1_default_disable_iff.sv
                    # Specify
                    doulos/150.1_timing_checks.sv
                    doulos/77.1_pathpulse$.sv
@@ -160,4 +165,21 @@ done
 
 wait
 echo "Finished!"
+echo ""
 
+if [[ -n "$TREE_SITTER_TEST" ]]; then
+    echo "Running tree-sitter tests..."
+    tree-sitter test -f "$PATTERN" > test.log
+    if [[ $? -eq 0 ]]; then
+        echo "All tests passed"
+    else
+        echo "Some tests failed!!"
+        cat test.log
+    fi
+fi
+
+
+echo ""
+echo "List of changed files:"
+git status --porcelain -uno test/corpus
+echo ""

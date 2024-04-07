@@ -13,7 +13,7 @@ endchecker: c2
 
 module m (logic clk, logic a);
   always @(posedge clk) begin
-    c2: c2_proc(posedge clk, a); // procedural
+    c2 c2_proc(posedge clk, a); // procedural
   end
 endmodule : m
 

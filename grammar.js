@@ -60,27 +60,32 @@ function sepBy1prec(sep, precedence, rule) {
   return seq(rule, repeat(prec(precedence, seq(sep, rule))))
 }
 
-// /**
-//  *
-//  * @param {(Rule|string|RegExp)[]} rules
-//  *
-//  * @return {ChoiceRule}
-//  *
-//  */
-// function optseq(...rules) {
-//   return optional(prec.left(seq(...rules)));
-// }
+/**
+ *
+ * @param {(Rule|string|RegExp)[]} rules
+ *
+ * @return {ChoiceRule}
+ *
+ */
+function optseq(...rules) {
+  return optional(seq(...rules));
+}
 
-// /**
-//  *
-//  * @param {(Rule|string|RegExp)[]} rules
-//  *
-//  * @return {RepeatRule}
-//  *
-//  */
-// function repseq(...rules) {
-//   return repeat(prec.left(seq(...rules)));
-// }
+function enclosing(keyword, identifier) {
+  return seq(keyword, optseq(':', identifier));
+}
+
+
+/**
+ *
+ * @param {(Rule|string|RegExp)[]} rules
+ *
+ * @return {RepeatRule}
+ *
+ */
+function repseq(...rules) {
+  return repeat(seq(...rules));
+}
 
 // /**
 //  * Creates a rule to match one or more of the rules separated by the separator
@@ -156,296 +161,9 @@ function directive(command) {
 */
 
 const rules = {
+  // Tree-sitter entry point
   source_file: $ => repeat($._description), // TODO: What about [timeunits_declaration]
   // source_file: $ => seq(optional($.timeunits_declaration), repeat($._description)), // TODO: What about [timeunits_declaration]
-
-  /* 20.2 Simulation control system tasks */
-  simulation_control_task: $ => seq(
-    choice('$stop', '$finish', '$exit'),
-    optional(seq('(', optional($.list_of_arguments), ')')),
-    ';'
-  ),
-
-  /* 22. Compiler directives */
-  // `__FILE__ [22.13]
-  // `__LINE__ [22.13]
-  // `begin_keywords [22.14]
-  // `celldefine [22.10]
-  // `default_nettype [22.8]
-  // `define [22.5.1]
-  // `else [22.6]
-  // `elsif [22.6]
-  // `end_keywords [22.14]
-  // `endcelldefine [22.10]
-  // `endif [22.6]
-  // `ifdef [22.6]
-  // `ifndef [22.6]
-  // `include [22.4]
-  // `line [22.12]
-  // `nounconnected_drive [22.9]
-  // `pragma [22.11]
-  // `resetall [22.3]
-  // `timescale [22.7]
-  // `unconnected_drive [22.9]
-  // `undef [22.5.2]
-  // `undefineall [22.5.3]
-
-  _directives: $ => prec('_directives', choice(
-    $.resetall_compiler_directive,
-    $.include_compiler_directive,
-    $.text_macro_definition,
-    $.text_macro_usage,
-    $.undefine_compiler_directive,
-    $.undefineall_compiler_directive,
-    $.conditional_compilation_directive,
-    $.timescale_compiler_directive,
-    $.default_nettype_compiler_directive,
-    $.unconnected_drive_compiler_directive,
-    $.celldefine_compiler_directive,
-    $.endcelldefine_compiler_directive,
-    $.pragma,
-    $.line_compiler_directive,
-    $.file_or_line_compiler_directive,
-    $.keywords_directive,
-    $.endkeywords_directive
-  )),
-
-
-  /* 22-3 `resetall */
-  resetall_compiler_directive: $ => directive('resetall'),
-
-
-  /* 22-4 `include */
-  double_quoted_string: $ => seq(
-    '"', token.immediate(prec(1, /[^\\"\n]+/)), '"'
-  ),
-
-  include_compiler_directive_standard: $ => seq(
-    '<', token.immediate(prec(1, /[^\\>\n]+/)), '>'
-  ),
-
-  include_compiler_directive: $ => seq(
-    directive('include'),
-    choice(
-      $.double_quoted_string,
-      $.include_compiler_directive_standard,
-      $.text_macro_usage,// INFO: Out of LRM (test sv-tests/chapter-22/22.5.1--include-define-expansion)
-    )
-  ),
-
-
-  /* 22.5 `define, `undef, and `undefineall */
-  default_text: $ => /\w+/,
-
-  macro_text: $ => /(\\(.|\r?\n)|[^\\\n])*/,
-
-  text_macro_definition: $ => seq(
-    directive('define'),
-    $.text_macro_name,
-    optional($.macro_text),
-    '\n'
-  ),
-
-  text_macro_name: $ => seq(
-    $.text_macro_identifier,
-    optional(seq('(', $.text_macro_list_of_formal_arguments, ')'))
-  ),
-
-  text_macro_list_of_formal_arguments: $ => sepBy1(',', $.text_macro_formal_argument),
-
-  text_macro_formal_argument: $ => seq(
-    $.simple_identifier,
-    optional(seq('=', $.default_text))
-  ),
-
-  text_macro_identifier: $ => $._identifier,
-
-  text_macro_usage: $ => prec.right('text_macro_usage', seq(
-    '`',
-    $.text_macro_identifier,
-    optional(seq('(', optional($.text_macro_list_of_actual_arguments), ')'))
-  )),
-
-  // text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
-  // text_macro_list_of_actual_arguments: $ => $.list_of_arguments, // INFO: Out of LRM, but needed to support empty actual argument between commas in macros
-  text_macro_list_of_actual_arguments: $ => prec.left(PREC.PARENT, choice(  // INFO: Out of LRM, but needed to support empty actual argument between commas in macros, and to support data_types as arguments
-    // First case: mixing positional and named arguments
-    seq(
-      $.text_macro_actual_argument,
-      repeat(seq(',', optional($.text_macro_actual_argument))),
-      repeat(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
-    ),
-    seq(
-      optional($.text_macro_actual_argument),
-      repeat1(seq(',', optional($.text_macro_actual_argument))),
-      repeat(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
-    ),
-    seq(
-      optional($.text_macro_actual_argument),
-      repeat(seq(',', optional($.text_macro_actual_argument))),
-      repeat1(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
-    ),
-    // Second case: using only named arguments
-    sepBy1(',', seq('.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
-  )),
-
-  // text_macro_actual_argument: $ => $.expression,
-  text_macro_actual_argument: $ => $.param_expression, // INFO: Out of LRM, but needed to support parameterized data types as macro args (used in the UVM)
-
-  undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
-
-  undefineall_compiler_directive: $ => directive('undefineall'),
-
-
-  // DANGER: Remove this?
-  // TODO missing arguments, empty list of arguments
-
-  // To use a macro defined with arguments, the name of the text macro shall be
-  // followed by a list of actual arguments in parentheses, separated by
-  // commas. Actual arguments and defaults shall not contain comma or right
-  // parenthesis characters outside matched pairs of left and right parentheses
-  // (), square brackets [], braces {}, double quotes "", or an escaped
-  // identifier.
-  // End of DANGER
-
-  // _actual_argument: $ => choice(
-  //   // $.expression, // TODO: Comment to avoid parsing syntax of macros as it might make things more complicated for the time being
-  //   // $.data_type // INFO: Many UVM macros require a class type as an argument
-  //   // $.macro_text // TODO: Gave many conflicts and errors, but should be the correct one,  or at least an option (with less precedence)?
-  // ),
-
-
-  /* 22.6 `ifdef, `else, `elsif, `endif, `ifndef */
-  // conditional_compilation_directive ::=
-  //   ifdef_or_ifndef ifdef_condition block_of_text
-  //   { `elsif ifdef_condition block_of_text }
-  //   [ `else block_of_text ]
-  //   `endif
-
-  conditional_compilation_directive: $ => choice( // Rearranged, don't parse preprocessed code
-    seq($.ifdef_or_ifndef, $.ifdef_condition),
-    seq(directive('elsif'), $.ifdef_condition),
-    directive('else'),
-    directive('endif')
-  ),
-
-  ifdef_or_ifndef: $ => choice(directive('ifdef'), directive('ifndef')),
-
-  ifdef_condition: $ => choice(
-    $.text_macro_identifier,
-    seq('(', $.ifdef_macro_expression, ')')
-  ),
-
-  ifdef_macro_expression: $ => prec.left(choice(
-    $.text_macro_identifier,
-    seq($.ifdef_macro_expression, $.binary_logical_operator, $.ifdef_macro_expression),
-    seq('!', $.ifdef_macro_expression),
-    seq('(', $.ifdef_macro_expression, ')')
-  )),
-
-  binary_logical_operator: $ => choice('&&', '||', '->', '<->'),
-
-  // zero_directive: $ => choice(
-  //   directive('resetall'), /* 22-3 */
-  //   directive('undefineall'), /* 22-5-3 */
-  //   directive('endif'),
-  //   directive('else'),
-  //   directive('nounconnected_drive'),
-  //   directive('celldefine'), /* 22-10 */
-  //   directive('endcelldefine'),
-  //   directive('end_keywords') /* 22.14 */
-  // ),
-
-  /* 22-7 timescale */
-  timescale_compiler_directive: $ => seq(
-    directive('timescale'),
-    $.time_literal, // time_unit,
-    '/',
-    $.time_literal, // time_precision
-    '\n' // TODO: Are newlines required?
-  ),
-
-  /* 22-8 default_nettype */
-  default_nettype_compiler_directive: $ => seq(
-    directive('default_nettype'),
-    $.default_nettype_value,
-    // '\n' ; DANGER:
-  ),
-
-  default_nettype_value: $ => choice('wire', 'tri', 'tri0', 'tri1', 'wand', 'triand', 'wor', 'trior', 'trireg', 'uwire', 'none'),
-
-  /* 22-9 */
-  unconnected_drive_compiler_directive: $ => seq(
-    directive('unconnected_drive'),
-    choice('pull0', 'pull1'),
-    '\n'
-  ),
-
-  /* 22.10 `celldefine and `endcelldefine */
-  celldefine_compiler_directive: $ => directive('celldefine'),
-  endcelldefine_compiler_directive: $ => directive('endcelldefine'),
-
-
-  /* 22.11 `pragma */
-  pragma: $ => prec.right(seq(
-    directive('pragma'),
-    $.pragma_name,
-    sepBy(',', $.pragma_expression),
-  )),
-
-  pragma_name: $ => $.simple_identifier,
-
-  pragma_expression: $ => choice(
-    $.pragma_keyword,
-    seq($.pragma_keyword, '=', $.pragma_value),
-    $.pragma_value,
-  ),
-
-  pragma_value: $ => choice(
-    seq('(', sepBy1(',', $.pragma_expression) , ')'),
-    $._number,
-    $.string_literal,
-    $._identifier,
-  ),
-
-  pragma_keyword: $ => $.simple_identifier,
-
-  /* 22-12 `line */
-  line_compiler_directive: $ => seq(
-    directive('line'),
-    $.unsigned_number,
-    $.double_quoted_string,
-    token(/[0-2]/),
-    // $.unsigned_number,
-    '\n'
-  ),
-
-  /* 22.13 `__FILE__ and `__LINE__ */
-  file_or_line_compiler_directive: $ => choice(
-    directive('__FILE__'),
-    directive('__LINE__'),
-  ),
-
-  /* 22.14 */
-  keywords_directive: $ => seq(
-    directive('begin_keywords'),
-    '\"', $.version_specifier, '\"'
-  ),
-
-  version_specifier: $ => choice(
-    '1800-2023',
-    '1800-2017',
-    '1800-2012',
-    '1800-2009',
-    '1800-2005',
-    '1364-2005',
-    '1364-2001',
-    '1364-2001-noconfig',
-    '1364-1995',
-  ),
-
-  endkeywords_directive: $ => directive('end_keywords'),
-
 
   /* A.1.1 Library source text */
 
@@ -468,73 +186,24 @@ const rules = {
 
   // include_statement: $ => seq('include', $.file_path_spec, ';'),
 
-  // /* A.1.2 SystemVerilog source text */
-
+  /* A.1.2 SystemVerilog source text */
   _description: $ => prec('_description', choice(
-    $._directives, // DANGER: This one is not in the LRM but adds good support for lots of stuff
     $.module_declaration,
-    // TODO: Simplifying debugging
-    // $.udp_declaration,
+    // $.udp_declaration, // TODO: Simplifying debugging
     $.interface_declaration,
     $.program_declaration,
     $.package_declaration,
-    seq(repeat($.attribute_instance), $._package_item),
-    seq(repeat($.attribute_instance), $.bind_directive),
-    // $.config_declaration,
-    // End of TODO
-
-    // DANGER: Out of the LRM, have them here to parse snippets
-    $.statement_or_null,
+    seq(repeat($.attribute_instance), choice($._package_item, $.bind_directive)),
+    // $.config_declaration, // TODO: Simplifying debugging
+    // DANGER: Out of the LRM
+    $._directives,
+    $.statement_or_null, // have them here to parse snippets
     $._module_item,
     // End of DANGER
   )),
 
-  // module_nonansi_header: $ =>
-  //   { attribute_instance } module_keyword [ lifetime ] _module_identifier
-  //     { package_import_declaration } [ parameter_port_list ] list_of_ports ';'
-  //
-  // module_ansi_header: $ =>
-  //   { attribute_instance } module_keyword [ lifetime ] _module_identifier
-  //     { package_import_declaration } [ parameter_port_list ] [ list_of_port_declarations ] ';'
-  //
-  // module_declaration: $ =>
-  //   module_nonansi_header [ timeunits_declaration ] { module_item }
-  //     'endmodule' [ ':' _module_identifier ]
-  // | module_ansi_header [ timeunits_declaration ] { non_port_module_item }
-  //     'endmodule' [ ':' _module_identifier ]
-  // | { attribute_instance } module_keyword [ lifetime ] _module_identifier '(' '.*' ')' ';'
-  //   [ timeunits_declaration ] { module_item } 'endmodule' [ ':' _module_identifier ]
-  // | 'extern' module_nonansi_header
-  // | 'extern' module_ansi_header
-
-  module_declaration: $ => prec('module_declaration', choice(
-    seq(
-      $.module_nonansi_header,
-      optional($.timeunits_declaration),
-      repeat($._module_item),
-      'endmodule', optional(seq(':', $._module_identifier))
-    ),
-    seq(
-      $.module_ansi_header,
-      optional($.timeunits_declaration),
-      repeat($._non_port_module_item),
-      'endmodule', optional(seq(':', $._module_identifier))
-    ),
-    seq(
-      repeat($.attribute_instance),
-      $.module_keyword,
-      optional($.lifetime),
-      $._module_identifier,
-      '(', '.*', ')', ';',
-      optional($.timeunits_declaration),
-      repeat($._module_item),
-      'endmodule', optional(seq(':', $._module_identifier))
-    ),
-    seq('extern', $.module_nonansi_header),
-    seq('extern', $.module_ansi_header)
-  )),
-
-  _module_header1: $ => seq(
+  // Not in LRM, groups common tokens of module headers
+  _module_header: $ => seq(
     repeat($.attribute_instance),
     $.module_keyword,
     optional($.lifetime),
@@ -544,16 +213,44 @@ const rules = {
   ),
 
   module_nonansi_header: $ => seq(
-    $._module_header1,
+    $._module_header,
     $.list_of_ports,
     ';'
   ),
 
   module_ansi_header: $ => seq(
-    $._module_header1,
+    $._module_header,
     optional($.list_of_port_declarations),
     ';'
   ),
+
+  module_declaration: $ => prec('module_declaration', choice(
+    seq( // ANSI
+      $.module_nonansi_header,
+      optional($.timeunits_declaration),
+      repeat($._module_item),
+      enclosing('endmodule', $._module_identifier)
+    ),
+    seq( // nonANSI
+      $.module_ansi_header,
+      optional($.timeunits_declaration),
+      repeat($._non_port_module_item),
+      enclosing('endmodule', $._module_identifier)
+
+    ),
+    seq( // extern module with dot star as the ports of the module (23.5)
+      repeat($.attribute_instance),
+      $.module_keyword,
+      optional($.lifetime),
+      $._module_identifier,
+      '(', '.*', ')', ';',
+      optional($.timeunits_declaration),
+      repeat($._module_item),
+      enclosing('endmodule', $._module_identifier)
+    ),
+    seq('extern', $.module_nonansi_header),
+    seq('extern', $.module_ansi_header)
+  )),
 
   module_keyword: $ => choice('module', 'macromodule'),
 
@@ -562,13 +259,13 @@ const rules = {
       $.interface_nonansi_header,
       optional($.timeunits_declaration),
       repeat($.interface_item),
-      'endinterface', optional(seq(':', $.interface_identifier))
+      enclosing('endinterface', $.interface_identifier)
     ),
     seq(
       $.interface_ansi_header,
       optional($.timeunits_declaration),
       repeat($._non_port_interface_item),
-      'endinterface', optional(seq(':', $.interface_identifier))
+      enclosing('endinterface', $.interface_identifier)
     ),
     seq(
       repeat($.attribute_instance),
@@ -577,29 +274,30 @@ const rules = {
       '(', '.*', ')', ';',
       optional($.timeunits_declaration),
       repeat($.interface_item),
-      'endinterface', optional(seq(':', $.interface_identifier))
+      enclosing('endinterface', $.interface_identifier)
     ),
     seq('extern', $.interface_nonansi_header),
     seq('extern', $.interface_ansi_header)
   ),
 
-  _interface_header1: $ => prec.left(seq(
+  // Not in LRM, groups common tokens of interface headers
+  _interface_header: $ => seq(
     repeat($.attribute_instance),
     'interface',
     optional($.lifetime),
     field('name', $.interface_identifier),
     repeat($.package_import_declaration),
     optional($.parameter_port_list)
-  )),
+  ),
 
   interface_nonansi_header: $ => seq(
-    $._interface_header1,
+    $._interface_header,
     $.list_of_ports,
     ';'
   ),
 
   interface_ansi_header: $ => seq(
-    $._interface_header1,
+    $._interface_header,
     optional($.list_of_port_declarations),
     ';'
   ),
@@ -609,13 +307,13 @@ const rules = {
       $.program_nonansi_header,
       optional($.timeunits_declaration),
       repeat($.program_item),
-      'endprogram', optional(seq(':', $.program_identifier))
+      enclosing('endprogram', $.program_identifier)
     ),
     seq(
       $.program_ansi_header,
       optional($.timeunits_declaration),
       repeat($.non_port_program_item),
-      'endprogram', optional(seq(':', $.program_identifier))
+      enclosing('endprogram', $.program_identifier)
     ),
     seq(
       repeat($.attribute_instance),
@@ -624,44 +322,41 @@ const rules = {
       '(', '.*', ')', ';',
       optional($.timeunits_declaration),
       repeat($.program_item),
-      'endprogram', optional(seq(':', $.program_identifier))
+      enclosing('endprogram', $.program_identifier)
     ),
     seq('extern', $.program_nonansi_header),
     seq('extern', $.program_ansi_header)
   ),
 
-  _program_header1: $ => prec.left(seq(
+  _program_header: $ => seq(
     repeat($.attribute_instance),
     'program',
     optional($.lifetime),
     field('name', $.program_identifier),
     repeat($.package_import_declaration),
     optional($.parameter_port_list)
-  )),
+  ),
 
   program_nonansi_header: $ => seq(
-    $._program_header1,
+    $._program_header,
     $.list_of_ports,
     ';'
   ),
 
   program_ansi_header: $ => seq(
-    $._program_header1,
+    $._program_header,
     optional($.list_of_port_declarations),
     ';'
   ),
 
-  // checker_declaration: $ => seq(
-  //   'checker',
-  //   $.checker_identifier,
-  //   optseq('(', optional($.checker_port_list), ')'),
-  //   ';',
-  //   repseq(
-  //     repeat($.attribute_instance),
-  //     $._checker_or_generate_item
-  //   ),
-  //   'endchecker', optseq(':', $.checker_identifier)
-  // ),
+  checker_declaration: $ => seq(
+    'checker',
+    field('name', $._checker_identifier),
+    optseq('(', optional($.checker_port_list), ')'),
+    ';',
+    repseq(repeat($.attribute_instance), $._checker_or_generate_item),
+    enclosing('endchecker', $._checker_identifier)
+  ),
 
   class_declaration: $ => seq(
     optional('virtual'),
@@ -1060,50 +755,55 @@ const rules = {
     // $._elaboration_severity_system_task
   ),
 
-  // /* A.1.8 Checker items */
+  /* A.1.8 Checker items */
+  checker_port_list: $ => sepBy1(',', $.checker_port_item),
 
-  // checker_port_list: $ => sep1(',', $.checker_port_item),
+  checker_port_item: $ => seq( // TODO
+    repeat($.attribute_instance),
+    optional($.checker_port_direction),
+    optional($.property_formal_type1),
+    $.formal_port_identifier,
+    repeat($._variable_dimension),
+    optseq('=', $._property_actual_arg)
+  ),
 
-  // checker_port_item: $ => seq(
-  //   repeat($.attribute_instance),
-  //   optional($.checker_port_direction),
-  //   optional($.property_formal_type1),
-  //   $.formal_port_identifier,
-  //   repeat($._variable_dimension),
-  //   optseq('=', $._property_actual_arg)
-  // ),
+  checker_port_direction: $ => choice('input', 'output'),
 
-  // checker_port_direction: $ => choice('input', 'output'),
+  _checker_or_generate_item: $ => choice(
+    $.checker_or_generate_item_declaration,
+    $.initial_construct,
+    $.always_construct,
+    $.final_construct,
+    $._assertion_item,
+    $.continuous_assign,
+    $._checker_generate_item,
+    // INFO: Out of LRM: This is a workaround to support checker_instantiations and
+    // avoid multiple conflicts with module/interface/program instantiations.
+    // The proper way to do it would be uncommenting the $.checker_instantiation
+    // in $.concurrent_assertion_item and removing the one below
+    $.checker_instantiation
+  ),
 
-  // _checker_or_generate_item: $ => choice(
-  //   $.checker_or_generate_item_declaration,
-  //   $.initial_construct,
-  //   $.always_construct,
-  //   $.final_construct,
-  //   $._assertion_item,
-  //   $.continuous_assign,
-  //   $._checker_generate_item
-  // ),
+  checker_or_generate_item_declaration: $ => choice(
+    seq(optional('rand'), $.data_declaration),
+    $.function_declaration,
+    $.checker_declaration,
+    $._assertion_item_declaration,
+    $.covergroup_declaration,
+    $.genvar_declaration,
+    $.clocking_declaration,
+    seq('default', 'clocking', $.clocking_identifier, ';'),
+    // prec.right(PREC.iff, seq('default', 'disable', 'iff', $.expression_or_dist, ';')),
+    seq('default', 'disable', 'iff', $.expression_or_dist, ';'),
+    ';'
+  ),
 
-  // checker_or_generate_item_declaration: $ => choice(
-  //   seq(optional('rand'), $.data_declaration),
-  //   $.function_declaration,
-  //   $.checker_declaration,
-  //   $._assertion_item_declaration,
-  //   $.covergroup_declaration,
-  //   $.genvar_declaration,
-  //   $.clocking_declaration,
-  //   seq('default', 'clocking', $.clocking_identifier, ';'),
-  //   prec.right(PREC.iff, seq('default', 'disable', 'iff', $.expression_or_dist, ';')),
-  //   ';'
-  // ),
-
-  // _checker_generate_item: $ => choice(
-  //   $.loop_generate_construct,
-  //   $.conditional_generate_construct,
-  //   $.generate_region,
-  //   $._elaboration_severity_system_task
-  // ),
+  _checker_generate_item: $ => choice(
+    $.loop_generate_construct,
+    $.conditional_generate_construct,
+    $.generate_region,
+    $._elaboration_severity_system_task
+  ),
 
   // /* A.1.9 Class items */
 
@@ -1306,7 +1006,7 @@ const rules = {
     prec.dynamic(1, $.data_declaration),
     $.task_declaration,
     $.function_declaration,
-    // $.checker_declaration,
+    $.checker_declaration,
     $.dpi_import_export,
     $.extern_constraint_declaration,
     $.class_declaration,
@@ -1394,11 +1094,11 @@ const rules = {
     )
   ),
 
-  interface_port_declaration: $ => seq(
+  interface_port_declaration: $ => prec('interface_port_declaration', seq(
     $.interface_identifier,
     optional(seq('.', $.modport_identifier)),
     $.list_of_interface_identifiers
-  ),
+  )),
 
   ref_declaration: $ => seq(
     'ref', $._variable_port_type, $.list_of_variable_identifiers
@@ -1925,14 +1625,14 @@ const rules = {
 
   _variable_dimension: $ => prec('_variable_dimension', choice(
     $.unsized_dimension,
-    $.unpacked_dimension,
+    prec.dynamic(0, $.unpacked_dimension),
     $.associative_dimension,
-    $.queue_dimension
+    prec.dynamic(1, $.queue_dimension)
   )),
 
-  queue_dimension: $ => seq(
+  queue_dimension: $ => prec('queue_dimension', seq(
     '[', '$', optional(seq(':', $.constant_expression)), ']'
-  ),
+  )),
 
   unsized_dimension: $ => seq('[', ']'),
 
@@ -2203,13 +1903,10 @@ const rules = {
   import_export: $ => choice('import', 'export'),
 
   // A.2.10 Assertion declarations
-  concurrent_assertion_item: $ => choice(
-    seq(
-      optional(seq($._block_identifier, ':')),
-      $._concurrent_assertion_statement
-    ),
-    // $.checker_instantiation // TODO: Remove temporarily to narrow conflicts
-  ),
+  concurrent_assertion_item: $ => prec('concurrent_assertion_item', choice(
+    seq(optional(seq($._block_identifier, ':')), $._concurrent_assertion_statement),
+    // $.checker_instantiation
+  )),
 
   _concurrent_assertion_statement: $ => choice(
     $.assert_property_statement,
@@ -3021,9 +2718,9 @@ const rules = {
     optional($._directives), '.', $.parameter_identifier, '(', optional($.param_expression), ')'
   ),
 
-  hierarchical_instance: $ => seq(
+  hierarchical_instance: $ => prec('hierarchical_instance', seq(
     $.name_of_instance, '(', optional($.list_of_port_connections), ')'
-  ),
+  )),
 
   name_of_instance: $ => seq(
     field('instance_name', $.instance_identifier),
@@ -3056,31 +2753,52 @@ const rules = {
     )
   ),
 
-  // /* A.4.1.2 Interface instantiation */
-
-  // interface_instantiation: $ => seq(
-  //   $.interface_identifier,
-  //   optional($.parameter_value_assignment),
-  //   sep1(',', $.hierarchical_instance),
-  //   ';'
-  // ),
+  /* A.4.1.2 Interface instantiation */
+  interface_instantiation: $ => prec('interface_instantiation', seq(
+    $.interface_identifier,
+    optional($.parameter_value_assignment),
+    sepBy1(',', $.hierarchical_instance),
+    ';'
+  )),
 
   // /* A.4.1.3 Program instantiation */
+  program_instantiation: $ => prec('program_instantiation', seq(
+    $.program_identifier,
+    optional($.parameter_value_assignment),
+    sepBy1(',', $.hierarchical_instance),
+    ';'
+  )),
 
-  // program_instantiation: $ => seq(
-  //   $.program_identifier,
-  //   optional($.parameter_value_assignment),
-  //   sep1(',', $.hierarchical_instance),
-  //   ';'
-  // ),
+  /* A.4.1.4 Checker instantiation */
+  checker_instantiation: $ => prec('checker_instantiation', seq(
+    $.ps_checker_identifier,
+    $.name_of_instance,
+    '(',
+    optional($.list_of_checker_port_connections),
+    ')',
+    ';'
+  )),
 
-  // /* A.4.1.4 Checker instantiation */
+  list_of_checker_port_connections: $ => choice(
+    sepBy1(',', $.ordered_checker_port_connection),
+    sepBy1(',', $.named_checker_port_connection)
+  ),
 
-  // checker_instantiation: $ => seq(
-  //   $.ps_checker_identifier,
-  //   $.name_of_instance,
-  //   '(',
-  //   // optional($.list_of_checker_port_connections),
+  ordered_checker_port_connection: $ => seq(
+    repeat($.attribute_instance),
+    $._property_actual_arg
+  ),
+
+  named_checker_port_connection: $ => choice( // TODO: Could be rewritten the same as named_port_connection, or even aliased
+    seq(
+      repeat($.attribute_instance), '.', $.formal_port_identifier,
+      optseq('(', optional($._property_actual_arg), ')')
+    ),
+    seq(
+      repeat($.attribute_instance), '.*'
+    )
+  ),
+
   //   choice(
   //     sep1(',', optseq(
   //       repeat($.attribute_instance),
@@ -3101,25 +2819,7 @@ const rules = {
   //   ';'
   // ),
 
-  // // list_of_checker_port_connections1: $ => choice(
-  // //   sep1(',', optional($.ordered_checker_port_connection1)),
-  // //   sep1(',', $.named_checker_port_connection)
-  // // ),
 
-  // // ordered_checker_port_connection: $ => seq(
-  // //   repeat($.attribute_instance),
-  // //   optional($._property_actual_arg)
-  // // ),
-
-  // // named_checker_port_connection: $ => choice(
-  // //   seq(
-  // //     repeat($.attribute_instance), '.', $.formal_port_identifier,
-  // //     optseq('(', optional($._property_actual_arg), ')')
-  // //   ),
-  // //   seq(
-  // //     repeat($.attribute_instance, '.*')
-  // //   )
-  // // ),
 
   /* A.4.2 Generated instantiation */
   generate_region: $ => seq(
@@ -3831,7 +3531,7 @@ const rules = {
   _procedural_assertion_statement: $ => choice(
     $._concurrent_assertion_statement,
     $._immediate_assertion_statement,
-    // $.checker_instantiation
+    $.checker_instantiation
   ),
 
   _immediate_assertion_statement: $ => choice(
@@ -5241,7 +4941,7 @@ const rules = {
   // c_identifier: $ => token(/[a-zA-Z_][a-zA-Z0-9_]*/),
   // End of INFO
   // cell_identifier: $ => alias($._identifier, $.cell_identifier),
-  // checker_identifier: $ => alias($._identifier, $.checker_identifier),
+  _checker_identifier: $ => alias($._identifier, $._checker_identifier),
   class_identifier: $ => alias($._identifier, $.class_identifier),
   class_variable_identifier: $ => $._variable_identifier,
   clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
@@ -5338,9 +5038,9 @@ const rules = {
   //   optional($.package_scope), $.covergroup_identifier
   // ),
 
-  // ps_checker_identifier: $ => seq(
-  //   optional($.package_scope), $.checker_identifier
-  // ),
+  ps_checker_identifier: $ => seq(
+    optional($.package_scope), $._checker_identifier
+  ),
 
   ps_identifier: $ => prec('ps_identifier', seq(
     optional($.package_scope), $._identifier
@@ -5430,11 +5130,289 @@ const rules = {
   // topmodule_identifier: $ => alias($._identifier, $.topmodule_identifier),
   _type_identifier: $ => $._identifier,
   // _udp_identifier: $ => $._identifier,
-  _variable_identifier: $ => $._identifier
+  _variable_identifier: $ => $._identifier,
 
   // /* A.9.4 White space */
 
   // // white_space: $ => space | tab | newline | eof};
+
+
+
+  /* 20.2 Simulation control system tasks */
+  simulation_control_task: $ => seq(
+    choice('$stop', '$finish', '$exit'),
+    optional(seq('(', optional($.list_of_arguments), ')')),
+    ';'
+  ),
+
+  /* 22. Compiler directives */
+  // `__FILE__ [22.13]
+  // `__LINE__ [22.13]
+  // `begin_keywords [22.14]
+  // `celldefine [22.10]
+  // `default_nettype [22.8]
+  // `define [22.5.1]
+  // `else [22.6]
+  // `elsif [22.6]
+  // `end_keywords [22.14]
+  // `endcelldefine [22.10]
+  // `endif [22.6]
+  // `ifdef [22.6]
+  // `ifndef [22.6]
+  // `include [22.4]
+  // `line [22.12]
+  // `nounconnected_drive [22.9]
+  // `pragma [22.11]
+  // `resetall [22.3]
+  // `timescale [22.7]
+  // `unconnected_drive [22.9]
+  // `undef [22.5.2]
+  // `undefineall [22.5.3]
+
+  _directives: $ => prec('_directives', choice(
+    $.resetall_compiler_directive,
+    $.include_compiler_directive,
+    $.text_macro_definition,
+    $.text_macro_usage,
+    $.undefine_compiler_directive,
+    $.undefineall_compiler_directive,
+    $.conditional_compilation_directive,
+    $.timescale_compiler_directive,
+    $.default_nettype_compiler_directive,
+    $.unconnected_drive_compiler_directive,
+    $.celldefine_compiler_directive,
+    $.endcelldefine_compiler_directive,
+    $.pragma,
+    $.line_compiler_directive,
+    $.file_or_line_compiler_directive,
+    $.keywords_directive,
+    $.endkeywords_directive
+  )),
+
+
+  /* 22-3 `resetall */
+  resetall_compiler_directive: $ => directive('resetall'),
+
+
+  /* 22-4 `include */
+  double_quoted_string: $ => seq(
+    '"', token.immediate(prec(1, /[^\\"\n]+/)), '"'
+  ),
+
+  include_compiler_directive_standard: $ => seq(
+    '<', token.immediate(prec(1, /[^\\>\n]+/)), '>'
+  ),
+
+  include_compiler_directive: $ => seq(
+    directive('include'),
+    choice(
+      $.double_quoted_string,
+      $.include_compiler_directive_standard,
+      $.text_macro_usage,// INFO: Out of LRM (test sv-tests/chapter-22/22.5.1--include-define-expansion)
+    )
+  ),
+
+
+  /* 22.5 `define, `undef, and `undefineall */
+  default_text: $ => /\w+/,
+
+  macro_text: $ => /(\\(.|\r?\n)|[^\\\n])*/,
+
+  text_macro_definition: $ => seq(
+    directive('define'),
+    $.text_macro_name,
+    optional($.macro_text),
+    '\n'
+  ),
+
+  text_macro_name: $ => seq(
+    $.text_macro_identifier,
+    optional(seq('(', $.text_macro_list_of_formal_arguments, ')'))
+  ),
+
+  text_macro_list_of_formal_arguments: $ => sepBy1(',', $.text_macro_formal_argument),
+
+  text_macro_formal_argument: $ => seq(
+    $.simple_identifier,
+    optional(seq('=', $.default_text))
+  ),
+
+  text_macro_identifier: $ => $._identifier,
+
+  text_macro_usage: $ => prec.right('text_macro_usage', seq(
+    '`',
+    $.text_macro_identifier,
+    optional(seq('(', optional($.text_macro_list_of_actual_arguments), ')'))
+  )),
+
+  // text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
+  // text_macro_list_of_actual_arguments: $ => $.list_of_arguments, // INFO: Out of LRM, but needed to support empty actual argument between commas in macros
+  text_macro_list_of_actual_arguments: $ => prec.left(PREC.PARENT, choice(  // INFO: Out of LRM, but needed to support empty actual argument between commas in macros, and to support data_types as arguments
+    // First case: mixing positional and named arguments
+    seq(
+      $.text_macro_actual_argument,
+      repeat(seq(',', optional($.text_macro_actual_argument))),
+      repeat(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
+    ),
+    seq(
+      optional($.text_macro_actual_argument),
+      repeat1(seq(',', optional($.text_macro_actual_argument))),
+      repeat(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
+    ),
+    seq(
+      optional($.text_macro_actual_argument),
+      repeat(seq(',', optional($.text_macro_actual_argument))),
+      repeat1(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
+    ),
+    // Second case: using only named arguments
+    sepBy1(',', seq('.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
+  )),
+
+  // text_macro_actual_argument: $ => $.expression,
+  text_macro_actual_argument: $ => $.param_expression, // INFO: Out of LRM, but needed to support parameterized data types as macro args (used in the UVM)
+
+  undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
+
+  undefineall_compiler_directive: $ => directive('undefineall'),
+
+
+  // DANGER: Remove this?
+  // TODO missing arguments, empty list of arguments
+
+  // To use a macro defined with arguments, the name of the text macro shall be
+  // followed by a list of actual arguments in parentheses, separated by
+  // commas. Actual arguments and defaults shall not contain comma or right
+  // parenthesis characters outside matched pairs of left and right parentheses
+  // (), square brackets [], braces {}, double quotes "", or an escaped
+  // identifier.
+  // End of DANGER
+
+  // _actual_argument: $ => choice(
+  //   // $.expression, // TODO: Comment to avoid parsing syntax of macros as it might make things more complicated for the time being
+  //   // $.data_type // INFO: Many UVM macros require a class type as an argument
+  //   // $.macro_text // TODO: Gave many conflicts and errors, but should be the correct one,  or at least an option (with less precedence)?
+  // ),
+
+
+  /* 22.6 `ifdef, `else, `elsif, `endif, `ifndef */
+  // conditional_compilation_directive ::=
+  //   ifdef_or_ifndef ifdef_condition block_of_text
+  //   { `elsif ifdef_condition block_of_text }
+  //   [ `else block_of_text ]
+  //   `endif
+
+  conditional_compilation_directive: $ => choice( // Rearranged, don't parse preprocessed code
+    seq($.ifdef_or_ifndef, $.ifdef_condition),
+    seq(directive('elsif'), $.ifdef_condition),
+    directive('else'),
+    directive('endif')
+  ),
+
+  ifdef_or_ifndef: $ => choice(directive('ifdef'), directive('ifndef')),
+
+  ifdef_condition: $ => choice(
+    $.text_macro_identifier,
+    seq('(', $.ifdef_macro_expression, ')')
+  ),
+
+  ifdef_macro_expression: $ => prec.left(choice(
+    $.text_macro_identifier,
+    seq($.ifdef_macro_expression, $.binary_logical_operator, $.ifdef_macro_expression),
+    seq('!', $.ifdef_macro_expression),
+    seq('(', $.ifdef_macro_expression, ')')
+  )),
+
+  binary_logical_operator: $ => choice('&&', '||', '->', '<->'),
+
+  /* 22-7 timescale */
+  timescale_compiler_directive: $ => seq(
+    directive('timescale'),
+    $.time_literal, // time_unit,
+    '/',
+    $.time_literal, // time_precision
+    '\n' // TODO: Are newlines required?
+  ),
+
+  /* 22-8 default_nettype */
+  default_nettype_compiler_directive: $ => seq(
+    directive('default_nettype'),
+    $.default_nettype_value,
+    // '\n' ; DANGER:
+  ),
+
+  default_nettype_value: $ => choice('wire', 'tri', 'tri0', 'tri1', 'wand', 'triand', 'wor', 'trior', 'trireg', 'uwire', 'none'),
+
+  /* 22-9 */
+  unconnected_drive_compiler_directive: $ => seq(
+    directive('unconnected_drive'),
+    choice('pull0', 'pull1'),
+    '\n'
+  ),
+
+  /* 22.10 `celldefine and `endcelldefine */
+  celldefine_compiler_directive: $ => directive('celldefine'),
+  endcelldefine_compiler_directive: $ => directive('endcelldefine'),
+
+
+  /* 22.11 `pragma */
+  pragma: $ => prec.right(seq(
+    directive('pragma'),
+    $.pragma_name,
+    sepBy(',', $.pragma_expression),
+  )),
+
+  pragma_name: $ => $.simple_identifier,
+
+  pragma_expression: $ => choice(
+    $.pragma_keyword,
+    seq($.pragma_keyword, '=', $.pragma_value),
+    $.pragma_value,
+  ),
+
+  pragma_value: $ => choice(
+    seq('(', sepBy1(',', $.pragma_expression) , ')'),
+    $._number,
+    $.string_literal,
+    $._identifier,
+  ),
+
+  pragma_keyword: $ => $.simple_identifier,
+
+  /* 22-12 `line */
+  line_compiler_directive: $ => seq(
+    directive('line'),
+    $.unsigned_number,
+    $.double_quoted_string,
+    token(/[0-2]/),
+    // $.unsigned_number,
+    '\n'
+  ),
+
+  /* 22.13 `__FILE__ and `__LINE__ */
+  file_or_line_compiler_directive: $ => choice(
+    directive('__FILE__'),
+    directive('__LINE__'),
+  ),
+
+  /* 22.14 */
+  keywords_directive: $ => seq(
+    directive('begin_keywords'),
+    '\"', $.version_specifier, '\"'
+  ),
+
+  version_specifier: $ => choice(
+    '1800-2023',
+    '1800-2017',
+    '1800-2012',
+    '1800-2009',
+    '1800-2005',
+    '1364-2005',
+    '1364-2001',
+    '1364-2001-noconfig',
+    '1364-1995',
+  ),
+
+  endkeywords_directive: $ => directive('end_keywords'),
 
 };
 
@@ -5463,7 +5441,7 @@ module.exports = grammar({
   //   $.ps_covergroup_identifier,
     $.ps_parameter_identifier,
     $.ps_type_identifier,
-  //   $.ps_checker_identifier,
+    $.ps_checker_identifier,
 
     $.parameter_identifier,
     $.class_identifier,
@@ -5487,7 +5465,7 @@ module.exports = grammar({
   //   $.sequence_identifier,
     $._net_identifier,
     $.program_identifier,
-  //   $.checker_identifier,
+    $._checker_identifier,
     $.member_identifier,
     $.port_identifier,
     $._block_identifier,
@@ -5955,6 +5933,18 @@ module.exports = grammar({
     ['subroutine_call_statement', '_module_common_item'],
 
 
+    // Make checkers less important
+    ['hierarchical_instance', 'checker_instantiation'],
+    ['module_instantiation', 'concurrent_assertion_item'],
+
+    // Real conflict after adding the $ as a constant_primary, needed to index queues (e.g. a[0:$-1])
+    //
+    // 'input'  _identifier  '['  '$'  •  ':'  …
+    // 1:  'input'  _identifier  '['  (constant_primary  '$')  •  ':'  …                        (precedence: 'constant_primary')
+    // 2:  'input'  _identifier  (queue_dimension  '['  '$'  •  ':'  constant_expression  ']')
+    ['queue_dimension', 'constant_primary'],
+
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header1'],
@@ -5991,6 +5981,12 @@ module.exports = grammar({
     ['select1'],
 
     ['module_declaration'],
+    ['checker_instantiation'],
+    ['program_instantiation'],
+    ['interface_instantiation'],
+    ['hierarchical_instance'],
+    ['concurrent_assertion_item'],
+    ['interface_port_declaration'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -6341,7 +6337,6 @@ module.exports = grammar({
     [$.param_expression, $.primary],
     [$.value_range, $.primary],
     [$.constant_param_expression, $.constant_primary],
-    [$.queue_dimension, $.constant_primary],
 
     // Tagged union
     [$.tagged_union_expression],
@@ -6564,8 +6559,11 @@ module.exports = grammar({
     [$.bind_target_scope],
     [$.bind_target_scope, $.hierarchical_identifier],
 
+    // INFO: These ones need to be here:
     // module_declaration conflict, needed to detect extern module overrides
-    [$.module_declaration, $._module_header1],
+    [$.module_declaration, $._module_header],
+    [$.interface_declaration, $._interface_header],
+    [$.program_declaration, $._program_header],
 
     // TODO: Adding branches on constant_primary
     [$.constant_primary],
@@ -6579,7 +6577,15 @@ module.exports = grammar({
     [$.tf_call, $.constant_primary, $.hierarchical_identifier, $._sequence_identifier],
     [$.port_reference, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.select_expression, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-],
+
+
+    // TODO: After adding checkers
+    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.checker_instantiation],
+    [$.data_type, $.class_type, $.checker_instantiation],
+    [$.named_port_connection, $.named_checker_port_connection],
+    [$.expression_or_dist, $.ordered_port_connection, $.event_expression],
+    [$.expression_or_dist, $.named_port_connection, $.event_expression],
+  ],
 
 });
 
