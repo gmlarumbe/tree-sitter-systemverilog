@@ -202,12 +202,11 @@ const rules = {
     // End of DANGER
   )),
 
-  // Not in LRM, groups common tokens of module headers
-  _module_header: $ => seq(
+  _module_header: $ => seq( // Not in LRM, groups common tokens of module headers
     repeat($.attribute_instance),
     $.module_keyword,
     optional($.lifetime),
-    field('name', $._module_identifier),
+    field('name', $.module_identifier),
     repeat($.package_import_declaration),
     optional($.parameter_port_list)
   ),
@@ -229,24 +228,23 @@ const rules = {
       $.module_nonansi_header,
       optional($.timeunits_declaration),
       repeat($._module_item),
-      enclosing('endmodule', $._module_identifier)
+      enclosing('endmodule', $.module_identifier)
     ),
     seq( // nonANSI
       $.module_ansi_header,
       optional($.timeunits_declaration),
       repeat($._non_port_module_item),
-      enclosing('endmodule', $._module_identifier)
-
+      enclosing('endmodule', $.module_identifier)
     ),
     seq( // extern module with dot star as the ports of the module (23.5)
       repeat($.attribute_instance),
       $.module_keyword,
       optional($.lifetime),
-      $._module_identifier,
+      field('name', $.module_identifier),
       '(', '.*', ')', ';',
       optional($.timeunits_declaration),
       repeat($._module_item),
-      enclosing('endmodule', $._module_identifier)
+      enclosing('endmodule', $.module_identifier)
     ),
     seq('extern', $.module_nonansi_header),
     seq('extern', $.module_ansi_header)
@@ -270,7 +268,7 @@ const rules = {
     seq(
       repeat($.attribute_instance),
       'interface',
-      $.interface_identifier,
+      field('name', $.interface_identifier),
       '(', '.*', ')', ';',
       optional($.timeunits_declaration),
       repeat($.interface_item),
@@ -318,7 +316,7 @@ const rules = {
     seq(
       repeat($.attribute_instance),
       'program',
-      $.program_identifier,
+      field('name', $.program_identifier),
       '(', '.*', ')', ';',
       optional($.timeunits_declaration),
       repeat($.program_item),
@@ -351,76 +349,54 @@ const rules = {
 
   checker_declaration: $ => seq(
     'checker',
-    field('name', $._checker_identifier),
+    field('name', $.checker_identifier),
     optseq('(', optional($.checker_port_list), ')'),
     ';',
     repseq(repeat($.attribute_instance), $._checker_or_generate_item),
-    enclosing('endchecker', $._checker_identifier)
+    enclosing('endchecker', $.checker_identifier)
   ),
 
   class_declaration: $ => seq(
     optional('virtual'),
     'class',
     optional($.final_specifier),
-    $.class_identifier,
+    field('name', $.class_identifier),
     optional($.parameter_port_list),
-    optional(seq(
+    optseq(
       'extends',
       $.class_type,
-      optional(seq('(', choice(optional($.list_of_arguments), 'default'), ')'))
-    )),
-    optional(seq('implements', sepBy1(',', $.interface_class_type))),
+      optseq('(', choice(optional($.list_of_arguments), 'default'), ')')
+    ),
+    optseq('implements', sepBy1(',', $.interface_class_type)),
     ';',
     repeat($.class_item),
-    'endclass', optional(seq(':', $.class_identifier))
-  ),
-
-  interface_class_type: $ => seq(
-    $.ps_class_identifier,
-    optional($.parameter_value_assignment)
+    enclosing('endclass', $.class_identifier)
   ),
 
   interface_class_declaration: $ => seq(
-    'interface', 'class', $.class_identifier, optional($.parameter_port_list),
-    optional(seq('extends', optional(sepBy1(',', $.interface_class_type)), ';')),
+    'interface', 'class',
+    field('name', $.class_identifier),
+    optional($.parameter_port_list),
+    optseq('extends', optional(sepBy1(',', $.interface_class_type)), ';'),
     repeat($.interface_class_item),
-    'endclass', optional(seq(':', $.class_identifier))
+    enclosing('endclass',$.class_identifier)
   ),
-
-  interface_class_item: $ => choice(
-    $.type_declaration,
-    seq(repeat($.attribute_instance), $.interface_class_method),
-    seq($._any_parameter_declaration, ';'),
-    ';'
-  ),
-
-  interface_class_method: $ => seq('pure', 'virtual', $._method_prototype, ';'),
 
   package_declaration: $ => seq(
     repeat($.attribute_instance),
-    'package', optional($.lifetime), $.package_identifier, ';',
+    'package', optional($.lifetime),
+    field('name', $.package_identifier), ';',
     optional($.timeunits_declaration),
-    repeat(seq(repeat($.attribute_instance), $._package_item)),
-    'endpackage', optional(seq(':', $.package_identifier))
+    repseq(repeat($.attribute_instance), $._package_item),
+    enclosing('endpackage',$.package_identifier)
   ),
 
-  // INFO: Original one
-  // timeunits_declaration: $ => choice(
-  //   prec.left(seq('timeunit', $.time_literal, optseq('/', $.time_literal), ';')),
-  //   prec.left(seq('timeprecision', $.time_literal, ';')),
-  //   prec.left(seq('timeunit', $.time_literal, ';', 'timeprecision', $.time_literal, ';')),
-  //   prec.left(seq('timeprecision', $.time_literal, ';', 'timeunit', $.time_literal, ';'))
-  // ),
-  // End of INFO
-
-  // INFO: Larumbe's one
   timeunits_declaration: $ => choice(
-    seq('timeunit', $.time_literal, optional(seq('/', $.time_literal)), ';'),
+    seq('timeunit', $.time_literal, optseq('/', $.time_literal), ';'),
     seq('timeprecision', $.time_literal, ';'),
     seq('timeunit', $.time_literal, ';', 'timeprecision', $.time_literal, ';'),
     seq('timeprecision', $.time_literal, ';', 'timeunit', $.time_literal, ';')
   ),
-  // End of INFO
 
   // /* A.1.3 Module parameters and ports */
 
@@ -637,7 +613,7 @@ const rules = {
   ),
 
   bind_target_scope: $ => choice(
-    $._module_identifier,
+    $.module_identifier,
     $.interface_identifier
   ),
 
@@ -850,6 +826,15 @@ const rules = {
   class_constructor_arg_list: $ => sepBy1(',', $.class_constructor_arg),
 
   class_constructor_arg: $ => choice($.tf_port_item1, 'default'),
+
+  interface_class_item: $ => choice(
+    $.type_declaration,
+    seq(repeat($.attribute_instance), $.interface_class_method),
+    seq($._any_parameter_declaration, ';'),
+    ';'
+  ),
+
+  interface_class_method: $ => seq('pure', 'virtual', $._method_prototype, ';'),
 
   _class_constraint: $ => choice(
     $.constraint_prototype,
@@ -1327,6 +1312,11 @@ const rules = {
     optional($.parameter_value_assignment),
     repeat(prec('class_type', seq('::', $.class_identifier, optional($.parameter_value_assignment))))
   )),
+
+  interface_class_type: $ => seq(
+    $.ps_class_identifier,
+    optional($.parameter_value_assignment)
+  ),
 
   _integer_type: $ => choice(
     $.integer_vector_type,
@@ -2694,7 +2684,7 @@ const rules = {
   // // A.4.1.1 Module instantiation
 
   module_instantiation: $ => prec('module_instantiation', seq(
-    field('instance_type', $._module_identifier),
+    field('instance_type', $.module_identifier),
     optional($.parameter_value_assignment),
     sepBy1(',', $.hierarchical_instance),
     ';'
@@ -4941,8 +4931,8 @@ const rules = {
   // c_identifier: $ => token(/[a-zA-Z_][a-zA-Z0-9_]*/),
   // End of INFO
   // cell_identifier: $ => alias($._identifier, $.cell_identifier),
-  _checker_identifier: $ => alias($._identifier, $._checker_identifier),
-  class_identifier: $ => alias($._identifier, $.class_identifier),
+  checker_identifier: $ => $._identifier,
+  class_identifier: $ => $._identifier,
   class_variable_identifier: $ => $._variable_identifier,
   clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
   // config_identifier: $ => alias($._identifier, $.config_identifier),
@@ -4998,7 +4988,7 @@ const rules = {
   ),
 
   index_variable_identifier: $ => alias($._identifier, $.index_variable_identifier),
-  interface_identifier: $ => alias($._identifier, $.interface_identifier),
+  interface_identifier: $ => $._identifier,
   // interface_instance_identifier: $ => alias($._identifier, $.interface_instance_identifier),
   interface_port_identifier: $ => alias($._identifier, $.interface_port_identifier),
   // inout_port_identifier: $ => alias($._identifier, $.inout_port_identifier),
@@ -5008,11 +4998,11 @@ const rules = {
   member_identifier: $ => alias($._identifier, $.member_identifier),
   method_identifier: $ => alias($._identifier, $.method_identifier),
   modport_identifier: $ => alias($._identifier, $.modport_identifier),
-  _module_identifier: $ => $._identifier,
+  module_identifier: $ => $._identifier,
   _net_identifier: $ => $._identifier,
   _net_type_identifier: $ => $._identifier,
   // output_port_identifier: $ => alias($._identifier, $.output_port_identifier),
-  package_identifier: $ => alias($._identifier, $.package_identifier),
+  package_identifier: $ => $._identifier,
 
   package_scope: $ => prec('package_scope', choice(
     seq($.package_identifier, '::'),
@@ -5022,7 +5012,7 @@ const rules = {
   parameter_identifier: $ => alias($._identifier, $.parameter_identifier),
   port_identifier: $ => alias($._identifier, $.port_identifier),
   // production_identifier: $ => alias($._identifier, $.production_identifier),
-  program_identifier: $ => alias($._identifier, $.program_identifier),
+  program_identifier: $ => $._identifier,
   property_identifier: $ => alias($._identifier, $.property_identifier),
 
   // Set prec.left because of:
@@ -5039,7 +5029,7 @@ const rules = {
   // ),
 
   ps_checker_identifier: $ => seq(
-    optional($.package_scope), $._checker_identifier
+    optional($.package_scope), $.checker_identifier
   ),
 
   ps_identifier: $ => prec('ps_identifier', seq(
@@ -5423,6 +5413,16 @@ module.exports = grammar({
   extras: $ => [/\s/, $.comment],
 
   inline: $ => [
+    // Reviewed
+    $.module_identifier,
+    $.interface_identifier,
+    $.program_identifier,
+    $.checker_identifier,
+    $.class_identifier,
+    $.package_identifier,
+
+    // TODO: Not reviewed
+
     // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
     $._hierarchical_net_identifier,
     $._hierarchical_variable_identifier,
@@ -5444,7 +5444,6 @@ module.exports = grammar({
     $.ps_checker_identifier,
 
     $.parameter_identifier,
-    $.class_identifier,
     $.covergroup_identifier,
     $.enum_identifier,
     $.formal_port_identifier,
@@ -5455,17 +5454,12 @@ module.exports = grammar({
     $._net_type_identifier,
     $._variable_identifier,
   //   $._udp_identifier,
-    $.package_identifier,
     $.dynamic_array_variable_identifier,
     $.class_variable_identifier,
   //   $.interface_instance_identifier,
-    $.interface_identifier,
-    $._module_identifier,
     $.let_identifier,
   //   $.sequence_identifier,
     $._net_identifier,
-    $.program_identifier,
-    $._checker_identifier,
     $.member_identifier,
     $.port_identifier,
     $._block_identifier,
@@ -5526,31 +5520,31 @@ module.exports = grammar({
     ['list_of_port_identifiers', 'list_of_variable_port_identifiers'],
 
 
-    // module_keyword  _module_identifier  '('  _identifier  •  ')'  …
-    //   1:  module_keyword  _module_identifier  '('  (ansi_port_declaration  _identifier)  •  ')'  …
-    //   2:  module_keyword  _module_identifier  '('  (port_reference  _identifier)  •  ')'  …
+    // module_keyword  module_identifier  '('  _identifier  •  ')'  …
+    //   1:  module_keyword  module_identifier  '('  (ansi_port_declaration  _identifier)  •  ')'  …
+    //   2:  module_keyword  module_identifier  '('  (port_reference  _identifier)  •  ')'  …
     ['port_reference', 'ansi_port_declaration'],
 
 
     // For ANSI port declaration, if there is no builtin net type assume it's an interface identifier and not a net
-    // module_keyword  _module_identifier  '('  _identifier  •  simple_identifier  …
-    //   1:  module_keyword  _module_identifier  '('  (interface_port_header  _identifier)  •  simple_identifier  …
-    //   2:  module_keyword  _module_identifier  '('  (net_port_type1  _identifier)  •  simple_identifier  …
+    // module_keyword  module_identifier  '('  _identifier  •  simple_identifier  …
+    //   1:  module_keyword  module_identifier  '('  (interface_port_header  _identifier)  •  simple_identifier  …
+    //   2:  module_keyword  module_identifier  '('  (net_port_type1  _identifier)  •  simple_identifier  …
     ['interface_port_header', 'net_port_type1'],
 
 
     // This one doesn't make much sense, but prioritize ansi_port_declaration
-    // module_keyword  _module_identifier  '('  _identifier  unpacked_dimension  •  ')'  …
-    //   1:  module_keyword  _module_identifier  '('  _identifier  (_variable_dimension  unpacked_dimension)  •  ')'  …            (precedence: '_variable_dimension')
-    //   2:  module_keyword  _module_identifier  '('  _identifier  (ansi_port_declaration_repeat1  unpacked_dimension)  •  ')'  …
+    // module_keyword  module_identifier  '('  _identifier  unpacked_dimension  •  ')'  …
+    //   1:  module_keyword  module_identifier  '('  _identifier  (_variable_dimension  unpacked_dimension)  •  ')'  …            (precedence: '_variable_dimension')
+    //   2:  module_keyword  module_identifier  '('  _identifier  (ansi_port_declaration_repeat1  unpacked_dimension)  •  ')'  …
     ['ansi_port_declaration', '_variable_dimension'],
 
 
     // This one doesn't seem to make much sense for module declarations, but port1
     // will be used in module instantiation with unconnected ports, so prioritize it.
-    // module_keyword  _module_identifier  '('  '.'  _identifier  '('  ')'  •  ')'  …
-    //   1:  module_keyword  _module_identifier  '('  (ansi_port_declaration  '.'  _identifier  '('  ')')  •  ')'  …  (precedence: 'ansi_port_declaration')
-    //   2:  module_keyword  _module_identifier  '('  (port1  '.'  _identifier  '('  ')')  •  ')'  …
+    // module_keyword  module_identifier  '('  '.'  _identifier  '('  ')'  •  ')'  …
+    //   1:  module_keyword  module_identifier  '('  (ansi_port_declaration  '.'  _identifier  '('  ')')  •  ')'  …  (precedence: 'ansi_port_declaration')
+    //   2:  module_keyword  module_identifier  '('  (port1  '.'  _identifier  '('  ')')  •  ')'  …
     ['port1', 'ansi_port_declaration'],
 
 
@@ -5588,13 +5582,13 @@ module.exports = grammar({
     // Case 1 is for non-ansi port with constant_part_select.
     // Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
     //
-    //   module_keyword  _module_identifier  '('  _identifier  '['  constant_range  •  ']'  …
-    //     1:  module_keyword  _module_identifier  '('  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …
-    //     2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_range  •  ']')
+    //   module_keyword  module_identifier  '('  _identifier  '['  constant_range  •  ']'  …
+    //     1:  module_keyword  module_identifier  '('  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …
+    //     2:  module_keyword  module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_range  •  ']')
     ['unpacked_dimension', '_constant_part_select_range'],
-    //   module_keyword  _module_identifier  '('  _identifier  '['  constant_expression  ']'  •  ')'  …
-    //     1:  module_keyword  _module_identifier  '('  _identifier  (constant_bit_select1_repeat1  '['  constant_expression  ']')  •  ')'  …
-    //     2:  module_keyword  _module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_expression  ']')  •  ')'  …            (precedence: 'unpacked_dimension')
+    //   module_keyword  module_identifier  '('  _identifier  '['  constant_expression  ']'  •  ')'  …
+    //     1:  module_keyword  module_identifier  '('  _identifier  (constant_bit_select1_repeat1  '['  constant_expression  ']')  •  ')'  …
+    //     2:  module_keyword  module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_expression  ']')  •  ')'  …            (precedence: 'unpacked_dimension')
     ['unpacked_dimension', 'constant_bit_select1'],
 
 
@@ -5604,9 +5598,9 @@ module.exports = grammar({
     ['clocking_event', 'ps_identifier'],
 
 
-    // module_keyword  _module_identifier  '('  '.'  _identifier  '('  _identifier  •  ')'  …
-    //   1:  module_keyword  _module_identifier  '('  '.'  _identifier  '('  (port_reference  _identifier)  •  ')'  …  (precedence: 'port_reference')
-    //   2:  module_keyword  _module_identifier  '('  '.'  _identifier  '('  (primary  _identifier)  •  ')'  …         (precedence: 0, associativity: Left)
+    // module_keyword  module_identifier  '('  '.'  _identifier  '('  _identifier  •  ')'  …
+    //   1:  module_keyword  module_identifier  '('  '.'  _identifier  '('  (port_reference  _identifier)  •  ')'  …  (precedence: 'port_reference')
+    //   2:  module_keyword  module_identifier  '('  '.'  _identifier  '('  (primary  _identifier)  •  ')'  …         (precedence: 0, associativity: Left)
     ['port_reference', 'primary'],
 
 
@@ -5907,7 +5901,7 @@ module.exports = grammar({
 
 
     // module_nonansi_header  timeunits_declaration  •  'resetall_compiler_directive_token1'  …
-    // 1:  (module_declaration  module_nonansi_header  timeunits_declaration  •  module_declaration_repeat1  'endmodule'  ':'  _module_identifier)  (precedence: 'module_declaration')
+    // 1:  (module_declaration  module_nonansi_header  timeunits_declaration  •  module_declaration_repeat1  'endmodule'  ':'  module_identifier)  (precedence: 'module_declaration')
     // 2:  (module_declaration  module_nonansi_header  timeunits_declaration  •  module_declaration_repeat1  'endmodule')                           (precedence: 'module_declaration')
     // 3:  module_nonansi_header  (_non_port_module_item  timeunits_declaration)  •  'resetall_compiler_directive_token1'  …                        (precedence: '_non_port_module_item')
     ['module_declaration', '_non_port_module_item'],
@@ -5994,25 +5988,25 @@ module.exports = grammar({
   conflicts: $ => [
     // Help differentiate between many parameters and list of parameters:
     //
-    //   module_keyword  _module_identifier  '#'  '('  param_assignment  •  ','  …
-    //   1:  module_keyword  _module_identifier  '#'  '('  (list_of_param_assignments  param_assignment  •  list_of_param_assignments_repeat1)
-    //   2:  module_keyword  _module_identifier  '#'  '('  (list_of_param_assignments  param_assignment)  •  ','  …
+    //   module_keyword  module_identifier  '#'  '('  param_assignment  •  ','  …
+    //   1:  module_keyword  module_identifier  '#'  '('  (list_of_param_assignments  param_assignment  •  list_of_param_assignments_repeat1)
+    //   2:  module_keyword  module_identifier  '#'  '('  (list_of_param_assignments  param_assignment)  •  ','  …
     [$.list_of_param_assignments],
 
 
     // Help differentiate between many types and list of types:
     //
-    //   module_keyword  _module_identifier  '#'  '('  'type'  type_assignment  •  ','  …
-    //   1:  module_keyword  _module_identifier  '#'  '('  'type'  (list_of_type_assignments  type_assignment  •  list_of_type_assignments_repeat1)
-    //   2:  module_keyword  _module_identifier  '#'  '('  'type'  (list_of_type_assignments  type_assignment)  •  ','  …
+    //   module_keyword  module_identifier  '#'  '('  'type'  type_assignment  •  ','  …
+    //   1:  module_keyword  module_identifier  '#'  '('  'type'  (list_of_type_assignments  type_assignment  •  list_of_type_assignments_repeat1)
+    //   2:  module_keyword  module_identifier  '#'  '('  'type'  (list_of_type_assignments  type_assignment)  •  ','  …
     [$.list_of_type_assignments],
 
 
     // Differentiate between nonANSI/ANSI header for empty port list with parenthesis:
     //
-    //   module_keyword  _module_identifier  '('  ')'  •  ';'  …
-    //     1:  module_keyword  _module_identifier  (list_of_port_declarations  '('  ')')  •  ';'  …
-    //     2:  module_keyword  _module_identifier  (list_of_ports  '('  ')')  •  ';'  …
+    //   module_keyword  module_identifier  '('  ')'  •  ';'  …
+    //     1:  module_keyword  module_identifier  (list_of_port_declarations  '('  ')')  •  ';'  …
+    //     2:  module_keyword  module_identifier  (list_of_ports  '('  ')')  •  ';'  …
     [$.list_of_ports, $.list_of_port_declarations],
 
 
