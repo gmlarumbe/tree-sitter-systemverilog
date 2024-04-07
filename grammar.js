@@ -851,24 +851,17 @@ const rules = {
     )
   )),
 
-  // /* A.1.4 Module items */
+  /* A.1.4 Module items */
+  severity_system_task: $ => choice(
+    // INFO: LRM makes $.finish_number mandatory, but seems tool specific, so relax requirement
+    seq('$fatal', optional(seq('(', optional(seq($.finish_number, ',')), optional($.list_of_arguments), ')')), ';'),
+    seq(choice('$error', '$warning', '$info'), optional(seq('(', optional($.list_of_arguments), ')')), ';')
+  ),
 
-  // elaboration_system_task: $ => choice(
-  //   seq(
-  //     '$fatal',
-  //     optseq(
-  //       '(', $.finish_number, optseq(',', $.list_of_arguments), ')'
-  //     ),
-  //     ';'
-  //   ),
-  //   seq(
-  //     choice('$error', '$warning', '$info'),
-  //     optional($.list_of_arguments_parent),
-  //     ';'
-  //   )
-  // ),
+  finish_number: $ => choice('0', '1', '2'),
 
-  // finish_number: $ => choice('0', '1', '2'),
+  // TODO: Maybe inline this one?
+  elaboration_severity_system_task: $ => $.severity_system_task,
 
   _module_common_item: $ => prec('_module_common_item', choice(
     $._module_or_generate_item_declaration,
@@ -883,7 +876,7 @@ const rules = {
     $.always_construct,
     $.loop_generate_construct,
     $.conditional_generate_construct,
-    // $.elaboration_system_task // INFO: Not in LRM, is it allowed here? Without procedural block?
+    $.elaboration_severity_system_task
   )),
 
   _module_item: $ => choice(
@@ -1057,7 +1050,7 @@ const rules = {
     // TODO
     // $.conditional_generate_construct,
     // $.generate_region,
-    // $.elaboration_system_task
+    // $.elaboration_severity_system_task
   ),
 
   // /* A.1.8 Checker items */
@@ -1102,7 +1095,7 @@ const rules = {
   //   $.loop_generate_construct,
   //   $.conditional_generate_construct,
   //   $.generate_region,
-  //   $.elaboration_system_task
+  //   $.elaboration_severity_system_task
   // ),
 
   // /* A.1.9 Class items */
@@ -3810,10 +3803,11 @@ const rules = {
   ),
 
   // A.6.9 Subroutine call statements
-  subroutine_call_statement: $ => choice(
+  subroutine_call_statement: $ => prec('subroutine_call_statement', choice(
     seq($.subroutine_call, ';'),
-    seq('void\'', '(', $.function_subroutine_call, ')', ';')
-  ),
+    seq('void\'', '(', $.function_subroutine_call, ')', ';'),
+    $.severity_system_task, // INFO: Out of LRM
+  )),
 
   // A.6.10 Assertion statements
   _assertion_item: $ => choice(
@@ -4569,7 +4563,7 @@ const rules = {
     $.tf_call,
     $.system_tf_call,
     $.method_call,
-    seq(optional(seq('std', '::')), $.randomize_call)
+    seq(optional(seq('std', '::')), $.randomize_call),
   ),
 
   function_subroutine_call: $ => $.subroutine_call,
@@ -5944,6 +5938,12 @@ module.exports = grammar({
     // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select1  '.')  (precedence: 'hierarchical_identifier')
     ['hierarchical_identifier', '_directives'],
     ['_method_call_root', '_directives'],
+
+
+    // severity_system_task  •  'resetall_compiler_directive_token1'  …
+    // 1:  (_module_common_item  severity_system_task)  •  'resetall_compiler_directive_token1'  …        (precedence: '_module_common_item')
+    // 2:  (subroutine_call_statement  severity_system_task)  •  'resetall_compiler_directive_token1'  …
+    ['subroutine_call_statement', '_module_common_item'],
 
 
     ///////////////////////////////////////////////////
