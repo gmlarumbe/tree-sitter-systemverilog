@@ -159,6 +159,13 @@ const rules = {
   source_file: $ => repeat($._description), // TODO: What about [timeunits_declaration]
   // source_file: $ => seq(optional($.timeunits_declaration), repeat($._description)), // TODO: What about [timeunits_declaration]
 
+  /* 20.2 Simulation control system tasks */
+  simulation_control_task: $ => seq(
+    choice('$stop', '$finish', '$exit'),
+    optional(seq('(', optional($.list_of_arguments), ')')),
+    ';'
+  ),
+
   /* 22. Compiler directives */
   // `__FILE__ [22.13]
   // `__LINE__ [22.13]
@@ -861,7 +868,7 @@ const rules = {
   finish_number: $ => choice('0', '1', '2'),
 
   // TODO: Maybe inline this one?
-  elaboration_severity_system_task: $ => $.severity_system_task,
+  _elaboration_severity_system_task: $ => $.severity_system_task,
 
   _module_common_item: $ => prec('_module_common_item', choice(
     $._module_or_generate_item_declaration,
@@ -876,7 +883,7 @@ const rules = {
     $.always_construct,
     $.loop_generate_construct,
     $.conditional_generate_construct,
-    $.elaboration_severity_system_task
+    $._elaboration_severity_system_task
   )),
 
   _module_item: $ => choice(
@@ -1050,7 +1057,7 @@ const rules = {
     // TODO
     // $.conditional_generate_construct,
     // $.generate_region,
-    // $.elaboration_severity_system_task
+    // $._elaboration_severity_system_task
   ),
 
   // /* A.1.8 Checker items */
@@ -1095,7 +1102,7 @@ const rules = {
   //   $.loop_generate_construct,
   //   $.conditional_generate_construct,
   //   $.generate_region,
-  //   $.elaboration_severity_system_task
+  //   $._elaboration_severity_system_task
   // ),
 
   // /* A.1.9 Class items */
@@ -3806,7 +3813,8 @@ const rules = {
   subroutine_call_statement: $ => prec('subroutine_call_statement', choice(
     seq($.subroutine_call, ';'),
     seq('void\'', '(', $.function_subroutine_call, ')', ';'),
-    $.severity_system_task, // INFO: Out of LRM
+    $.severity_system_task,    // INFO: Out of LRM
+    $.simulation_control_task, // INFO: Out of LRM
   )),
 
   // A.6.10 Assertion statements
@@ -5497,6 +5505,7 @@ module.exports = grammar({
     // $.pragma_keyword,
     // $.incomplete_class_scoped_type,
     $._constant_assignment_pattern_expression,
+    $._elaboration_severity_system_task,
   ],
 
   precedences: () => [
