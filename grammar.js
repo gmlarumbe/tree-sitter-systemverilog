@@ -572,7 +572,7 @@ const rules = {
     $._assertion_item,
     $.bind_directive,
     $.continuous_assign,
-  //   $.net_alias,
+    $.net_alias,
     $.initial_construct,
     $.final_construct,
     $.always_construct,
@@ -3042,9 +3042,9 @@ const rules = {
 
   list_of_variable_assignments: $ => sepBy1(',', $.variable_assignment),
 
-  // net_alias: $ => prec.left(PREC.ASSIGN, seq(
-  //   'alias', $.net_lvalue, '=', sep1(',', seq('=', $.net_lvalue)), ';'
-  // )),
+  net_alias: $ => seq(
+    'alias', $.net_lvalue, '=', sepBy1('=', $.net_lvalue), ';'
+  ),
 
   // INFO: Drom's one
   // net_assignment: $ => prec.left(PREC.ASSIGN,
