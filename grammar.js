@@ -165,6 +165,13 @@ const rules = {
   source_file: $ => repeat($._description), // TODO: What about [timeunits_declaration]
   // source_file: $ => seq(optional($.timeunits_declaration), repeat($._description)), // TODO: What about [timeunits_declaration]
 
+  snippets: $ => choice(
+    $._directives,
+    $._module_item,
+    $.statement,
+    $.package_import_declaration,
+  ),
+
 // * A.1 Source text
 // ** A.1.1 Library source text
 
@@ -187,6 +194,7 @@ const rules = {
 
   // include_statement: $ => seq('include', $.file_path_spec, ';'),
 
+
 // ** A.1.2 SystemVerilog source text
   _description: $ => prec('_description', choice(
     $.module_declaration,
@@ -196,11 +204,7 @@ const rules = {
     $.package_declaration,
     seq(repeat($.attribute_instance), choice($._package_item, $.bind_directive)),
     // $.config_declaration, // TODO: Simplify debugging
-    // DANGER: Out of the LRM
-    $._directives,
-    $.statement_or_null, // have them here to parse snippets
-    $._module_item,
-    // End of DANGER
+    $.snippets, // Out of the LRM (inlined)
   )),
 
   _module_header: $ => seq( // Not in LRM, groups common tokens of module headers
@@ -228,7 +232,7 @@ const rules = {
     seq( // ANSI
       $.module_nonansi_header,
       optional($.timeunits_declaration),
-      repeat($._module_item),
+      repeat(alias($._module_item, $.module_item)),
       enclosing('endmodule', $.module_identifier)
     ),
     seq( // nonANSI
@@ -244,7 +248,7 @@ const rules = {
       field('name', $.module_identifier),
       '(', '.*', ')', ';',
       optional($.timeunits_declaration),
-      repeat($._module_item),
+      repeat(alias($._module_item, $.module_item)),
       enclosing('endmodule', $.module_identifier)
     ),
     seq('extern', $.module_nonansi_header),
@@ -311,7 +315,7 @@ const rules = {
     seq(
       $.program_ansi_header,
       optional($.timeunits_declaration),
-      repeat($.non_port_program_item),
+      repeat($._non_port_program_item),
       enclosing('endprogram', $.program_identifier)
     ),
     seq(
@@ -354,7 +358,7 @@ const rules = {
     field('name', $.checker_identifier),
     optseq('(', optional($.checker_port_list), ')'),
     ';',
-    repseq(repeat($.attribute_instance), $._checker_or_generate_item),
+    repseq(repeat($.attribute_instance), alias($.checker_or_generate_item, $.checker_item)),
     enclosing('endchecker', $.checker_identifier)
   ),
 
@@ -389,7 +393,7 @@ const rules = {
     'package', optional($.lifetime),
     field('name', $.package_identifier), ';',
     optional($.timeunits_declaration),
-    repseq(repeat($.attribute_instance), $._package_item),
+    repseq(repeat($.attribute_instance), alias($._package_item, $.package_item)),
     enclosing('endpackage',$.package_identifier)
   ),
 
@@ -493,22 +497,26 @@ const rules = {
     )
   )),
 
+
 // ** A.1.4 Module items
   severity_system_task: $ => choice(
-    // LRM makes $.finish_number mandatory, but seems tool specific, so relax requirement
-    seq('$fatal', optional(seq('(', optional(seq($.finish_number, ',')), optional($.list_of_arguments), ')')), ';'),
-    seq(choice('$error', '$warning', '$info'), optional(seq('(', optional($.list_of_arguments), ')')), ';')
+    seq(
+      '$fatal',
+      // LRM makes $.finish_number mandatory but seems tool specific (relax requirement)
+      optseq('(', optseq($.finish_number, ','), optional($.list_of_arguments), ')'),
+      ';'
+    ),
+    seq(choice('$error', '$warning', '$info'), optseq('(', optional($.list_of_arguments), ')'), ';')
   ),
 
   finish_number: $ => choice('0', '1', '2'),
 
-  // TODO: Maybe inline this one?
-  _elaboration_severity_system_task: $ => $.severity_system_task,
+  elaboration_severity_system_task: $ => $.severity_system_task,
 
   _module_common_item: $ => prec('_module_common_item', choice(
     $._module_or_generate_item_declaration,
-  //   $.interface_instantiation,
-  //   $.program_instantiation,
+    // $.interface_instantiation, // INFO: Ambiguous with module_instantiation and program_instantiation
+    // $.program_instantiation,   // INFO: Ambiguous with module_instantiation and interface_instantiation
     $._assertion_item,
     $.bind_directive,
     $.continuous_assign,
@@ -518,7 +526,7 @@ const rules = {
     $.always_construct,
     $.loop_generate_construct,
     $.conditional_generate_construct,
-    $._elaboration_severity_system_task
+    $.elaboration_severity_system_task
   )),
 
   _module_item: $ => choice(
@@ -526,19 +534,19 @@ const rules = {
     $._non_port_module_item
   ),
 
-  module_or_generate_item: $ => prec('module_or_generate_item', seq(
+  _module_or_generate_item: $ => prec('_module_or_generate_item', seq(
     repeat($.attribute_instance),
     choice(
       $.parameter_override,
       // $.gate_instantiation, // TODO: Removed temporarily to simplify parsing
-      // $.udp_instantiation, // TODO: Removed temporarily to simplify parsing
+      // $.udp_instantiation,  // TODO: Removed temporarily to simplify parsing
       $.module_instantiation,
       $._module_common_item
     )
   )),
 
   _module_or_generate_item_declaration: $ => prec('_module_or_generate_item_declaration', choice(
-    $.package_or_generate_item_declaration,
+    $._package_or_generate_item_declaration,
     $.genvar_declaration,
     $.clocking_declaration,
     seq('default', 'clocking', $.clocking_identifier, ';'),
@@ -548,7 +556,7 @@ const rules = {
   _non_port_module_item: $ => prec('_non_port_module_item', choice(
     $._directives, // // DANGER: This one is not in the LRM but adds good support for lots of stuff
     $.generate_region,
-    $.module_or_generate_item,
+    $._module_or_generate_item,
     // $.specify_block,
     // seq(repeat($.attribute_instance), $.specparam_declaration), // TODO: Make it simpler
     $.program_declaration,
@@ -646,7 +654,7 @@ const rules = {
   // ),
 
 // ** A.1.6 Interface items
-  interface_or_generate_item: $ => prec('interface_or_generate_item', choice(
+  _interface_or_generate_item: $ => prec('_interface_or_generate_item', choice(
     seq(repeat($.attribute_instance), $._module_common_item),
     seq(repeat($.attribute_instance), $.extern_tf_declaration),
     $._directives // INFO: Out of LRM but for convenience
@@ -664,7 +672,7 @@ const rules = {
 
   _non_port_interface_item: $ => choice(
     $.generate_region,
-    $.interface_or_generate_item,
+    $._interface_or_generate_item,
     // $.program_declaration,
     $.modport_declaration,
     $.interface_declaration,
@@ -674,10 +682,10 @@ const rules = {
 // ** A.1.7 Program items
   program_item: $ => choice(
     seq($.port_declaration, ';'),
-    $.non_port_program_item
+    $._non_port_program_item
   ),
 
-  non_port_program_item: $ => choice(
+  _non_port_program_item: $ => choice(
     seq(repeat($.attribute_instance), $.continuous_assign),
     seq(repeat($.attribute_instance), $._module_or_generate_item_declaration),
     seq(repeat($.attribute_instance), $.initial_construct),
@@ -692,7 +700,7 @@ const rules = {
     // TODO
     // $.conditional_generate_construct,
     // $.generate_region,
-    // $._elaboration_severity_system_task
+    // $.elaboration_severity_system_task
   ),
 
 // ** A.1.8 Checker items
@@ -709,8 +717,8 @@ const rules = {
 
   checker_port_direction: $ => choice('input', 'output'),
 
-  _checker_or_generate_item: $ => choice(
-    $.checker_or_generate_item_declaration,
+  checker_or_generate_item: $ => choice(
+    $._checker_or_generate_item_declaration,
     $.initial_construct,
     $.always_construct,
     $.final_construct,
@@ -724,7 +732,7 @@ const rules = {
     $.checker_instantiation
   ),
 
-  checker_or_generate_item_declaration: $ => choice(
+  _checker_or_generate_item_declaration: $ => choice(
     seq(optional('rand'), $.data_declaration),
     $.function_declaration,
     $.checker_declaration,
@@ -742,7 +750,7 @@ const rules = {
     $.loop_generate_construct,
     $.conditional_generate_construct,
     $.generate_region,
-    $._elaboration_severity_system_task
+    $.elaboration_severity_system_task
   ),
 
 // ** A.1.9 Class items
@@ -942,13 +950,13 @@ const rules = {
 
 // ** A.1.11 Package items
   _package_item: $ => prec('_package_item', choice(
-    $.package_or_generate_item_declaration,
+    $._package_or_generate_item_declaration,
     // $.anonymous_program,
     $.package_export_declaration,
-    // $.timeunits_declaration
+    // $.timeunits_declaration // TODO: This should be included
   )),
 
-  package_or_generate_item_declaration: $ => prec('package_or_generate_item_declaration', choice(
+  _package_or_generate_item_declaration: $ => prec('_package_or_generate_item_declaration', choice(
     prec.dynamic(0, $.net_declaration),
     prec.dynamic(1, $.data_declaration),
     $.task_declaration,
@@ -1049,7 +1057,7 @@ const rules = {
   ),
 
 // *** A.2.1.3 Type declarations
-  data_declaration: $ => choice(
+  data_declaration: $ => prec('data_declaration', choice(
     seq(
       optional('const'),
       // In a data_declaration, it shall be illegal to omit the explicit data_type
@@ -1068,7 +1076,7 @@ const rules = {
     $.type_declaration,
     $.package_import_declaration,
     $.nettype_declaration
-  ),
+  )),
 
   // INFO: Original one
   // package_import_declaration: $ => seq(
@@ -2809,9 +2817,9 @@ const rules = {
   ),
 
   _generate_item: $ => choice(
-    $.module_or_generate_item,
-    $.interface_or_generate_item,
-    // $._checker_or_generate_item
+    $._module_or_generate_item,
+    $._interface_or_generate_item,
+    // alias($.checker_or_generate_item, $.checker_item)
   ),
 
 // * A.5 UDP declaration and instantiation
@@ -5315,6 +5323,8 @@ module.exports = grammar({
 // ** Inline
   inline: $ => [
     // Reviewed
+    $.snippets,
+
     // A.1
     $.module_identifier,
     $.interface_identifier,
@@ -5330,6 +5340,7 @@ module.exports = grammar({
 
     $.any_parameter_declaration,
 
+    $.elaboration_severity_system_task,
 
 
     // TODO: Not reviewed
@@ -5387,30 +5398,51 @@ module.exports = grammar({
     // $.pragma_keyword,
     // $.incomplete_class_scoped_type,
     $._constant_assignment_pattern_expression,
-    $._elaboration_severity_system_task,
   ],
 
 // ** Precedences
   precedences: () => [
-    // Top level precedence
-    // Used when declarations and/or statements are outside of sequential statements,
-    // modules, classes, packages or checkers
-    // Use case: snippets of code on web, include files...
-    ['statement_or_null', 'package_or_generate_item_declaration'],
-    // ['_description', 'statement'],
-    ['_non_port_module_item', 'package_or_generate_item_declaration', '_description'],
-    ['statement_item', 'package_or_generate_item_declaration', '_description'],
-    ['_package_item', '_module_or_generate_item_declaration'],
-    ['_module_common_item', '_description'],
-
-
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: Reviewed
     ////////////////////////////////////////////////////////////////////////////////
+
+    // Top level precedence
+    //   Used when items, declarations or statements are outside of modules,
+    //   classes, packages or checkers
+    //   Use case: snippets of code on web, include files...
+    ['_description', '_non_port_module_item'],
+    ['_description', '_module_common_item'],
+    ['_description', 'data_declaration'],
+    ['_package_or_generate_item_declaration', '_non_port_module_item'],
+    ['_package_or_generate_item_declaration', 'statement_item'],
+
+
+    // Isolated colon without context (snippet):
+    //  - Consider it a statement_or_null as if it was inside function
+    //  (The other successful branch is _package_or_generate_item_declaration -> ; )
+    //
+    // ';'  •  ';'  …
+    // 1:  (_package_or_generate_item_declaration  ';')  •  ';'  …  (precedence: '_package_or_generate_item_declaration')
+    // 2:  (statement_or_null  ';')  •  ';'  …                      (precedence: 'statement_or_null')
+    // ['statement_or_null', '_package_or_generate_item_declaration'],
+
+
+    // Common item for module/package without context -> Consider it a module
+    //
+    // _package_or_generate_item_declaration  •  ';'  …
+    // 1:  (_module_or_generate_item_declaration  _package_or_generate_item_declaration)  •  ';'  …  (precedence: '_module_or_generate_item_declaration')
+    // 2:  (_package_item  _package_or_generate_item_declaration)  •  ';'  …                          (precedence: '_package_item')
+    // ['_module_or_generate_item_declaration', '_package_item'],
+    ['_package_item', '_module_or_generate_item_declaration'],
+    // ['_module_or_generate_item_declaration'],
+    // ['_package_item'],
+
+
     // 'input'  data_type  •  '\'  …
     // 1:  'input'  (data_type_or_implicit1  data_type)  •  '\'  …  (precedence: 'data_type_or_implicit1')
     // 2:  'input'  (variable_port_type  data_type)  •  '\'  …
     ['variable_port_type', 'data_type_or_implicit1'],
+
 
     // Consider port list without directions to be nonANSI:
     //
@@ -5418,6 +5450,7 @@ module.exports = grammar({
     //   1:  module_keyword  module_identifier  '('  (ansi_port_declaration  _identifier)  •  ')'  …
     //   2:  module_keyword  module_identifier  '('  (port_reference  _identifier)  •  ')'  …
     ['port_reference', 'ansi_port_declaration'],
+
 
     // If no port direction is specified but there is something besides the identifier (e.g. the unpacked dimension)
     // then it must be an ANSI declaration instead of a nonANSI
@@ -5427,12 +5460,21 @@ module.exports = grammar({
     //   2:  module_keyword  module_identifier  '('  _identifier  (ansi_port_declaration_repeat1  unpacked_dimension)  •  ')'  …
     ['ansi_port_declaration', '_variable_dimension'],
 
+
     // For a port list the tf_port_direction is in a higher level in the tree, for the 'ref' conflict
     //
     //   'function'  function_identifier  '('  'ref'  •  'var'  …
     //   1:  'function'  function_identifier  '('  (port_direction  'ref')  •  'var'  …
     //   2:  'function'  function_identifier  '('  (tf_port_direction  'ref')  •  'var'  …
     ['tf_port_direction', 'port_direction'],
+
+
+    // In case we are working with a snippet (no module/interface declaration), consider it a _module_item
+    //
+    // 'generate'  _module_common_item  •  ';'  …
+    // 1:  'generate'  (_interface_or_generate_item  _module_common_item)  •  ';'  …  (precedence: '_interface_or_generate_item')
+    // 2:  'generate'  (_module_or_generate_item  _module_common_item)  •  ';'  …     (precedence: '_module_or_generate_item')
+    ['_module_or_generate_item', '_interface_or_generate_item'],
 
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -5458,8 +5500,6 @@ module.exports = grammar({
     //   1:  module_nonansi_header  'output'  (list_of_port_identifiers  _identifier)  •  ';'  …
     //   2:  module_nonansi_header  'output'  (list_of_variable_port_identifiers  _identifier)  •  ';'  …
     ['list_of_port_identifiers', 'list_of_variable_port_identifiers'],
-
-
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
@@ -5763,10 +5803,6 @@ module.exports = grammar({
     ['hierarchical_identifier', 'primary'],
 
 
-    //   module_nonansi_header  'generate'  _module_common_item  •  'resetall_compiler_directive_token1'  …
-    //   1:  module_nonansi_header  'generate'  (interface_or_generate_item  _module_common_item)  •  'resetall_compiler_directive_token1'  …
-    //   2:  module_nonansi_header  'generate'  (module_or_generate_item  _module_common_item)  •  'resetall_compiler_directive_token1'  …
-    ['module_or_generate_item', 'interface_or_generate_item'],
 
 
     // text_macro_usage  •  'resetall_compiler_directive_token1'  …
@@ -6276,7 +6312,7 @@ module.exports = grammar({
     [$.timeunits_declaration],
 
     // Program (TODO: don't understand these two below)
-    [$.program_declaration, $.non_port_program_item],
+    [$.program_declaration, $._non_port_program_item],
 
 
     // Inout/ref/interface ports
@@ -6349,8 +6385,8 @@ module.exports = grammar({
 
 
     // After adding support for directives in packages,
-    [$.interface_or_generate_item, $.package_or_generate_item_declaration],
-    [$._description, $._non_port_module_item, $.package_or_generate_item_declaration, $.statement_item],
+    [$._interface_or_generate_item, $._package_or_generate_item_declaration],
+    [$._description, $._non_port_module_item, $._package_or_generate_item_declaration, $.statement_item],
 
     // After adding text_macro_usage to _method_call_root
     [$._directives, $._method_call_root],
