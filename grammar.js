@@ -417,7 +417,7 @@ const rules = {
     $.type_parameter_declaration,
   ),
 
-  // Only the $.port_reference branch will be possible in a non-ansi declaration
+  // Only the $.port_reference branch should be legal in a nonansi declaration
   list_of_ports: $ => seq('(', sepBy(',', alias($.port_reference, $.port)), ')'),
 
   list_of_port_declarations: $ => seq(
@@ -440,7 +440,8 @@ const rules = {
     )
   ),
 
-  port: $ => choice( // Modified to avoid matching empty string
+  // Modified to avoid matching empty string
+  port: $ => choice(
     $._port_expression,
     seq('.', $.port_identifier, '(', optional($._port_expression), ')')
   ),
@@ -457,22 +458,14 @@ const rules = {
 
   port_direction: $ => prec('port_direction', choice('input', 'output', 'inout', 'ref')),
 
-  // INFO: Drom's one
-  net_port_header1: $ => prec('net_port_header1', choice(
+  // Modified to avoid matching empty string, ($.net_port_type could match empty string)
+  net_port_header: $ => choice( //
     seq(optional($.port_direction), $.net_port_type1),
     $.port_direction
-  )),
-  // End of INFO
+  ),
 
-  // INFO: Mine, adapted to 1800-2023
-  // INFO: Gave issues with ansi_port_declaration with example:
-  //  input clk;
-  // net_port_header1: $ => seq(optional($.port_direction), $.net_port_type1),
-  // End of INFO
+  variable_port_header: $ => seq(optional($.port_direction), $._variable_port_type),
 
-  variable_port_header: $ => prec('variable_port_header', seq(optional($.port_direction), $._variable_port_type)),
-
-  // INFO: Drom's one
   interface_port_header: $ => prec('interface_port_header', seq(
     choice(
       $.interface_identifier,
@@ -480,20 +473,19 @@ const rules = {
     ),
     optional(seq('.', $.modport_identifier))
   )),
-  // End of INFO
 
   ansi_port_declaration: $ => prec('ansi_port_declaration', choice(
     prec.dynamic(0, seq(
-      optional(choice($.net_port_header1, $.interface_port_header)),
+      optional(choice($.net_port_header, $.interface_port_header)),
       $.port_identifier,
       repeat(prec('ansi_port_declaration', $.unpacked_dimension)),
-      optional(seq('=', $.constant_expression))
+      optseq('=', $.constant_expression)
     )),
     prec.dynamic(1, seq(
       optional($.variable_port_header),
       $.port_identifier,
       repeat($._variable_dimension),
-      optional(seq('=', $.constant_expression))
+      optseq('=', $.constant_expression)
     )),
     seq(
       optional($.port_direction), '.', $.port_identifier,
@@ -503,7 +495,7 @@ const rules = {
 
 // ** A.1.4 Module items
   severity_system_task: $ => choice(
-    // INFO: LRM makes $.finish_number mandatory, but seems tool specific, so relax requirement
+    // LRM makes $.finish_number mandatory, but seems tool specific, so relax requirement
     seq('$fatal', optional(seq('(', optional(seq($.finish_number, ',')), optional($.list_of_arguments), ')')), ';'),
     seq(choice('$error', '$warning', '$info'), optional(seq('(', optional($.list_of_arguments), ')')), ';')
   ),
@@ -5448,6 +5440,8 @@ module.exports = grammar({
     ['list_of_port_identifiers', 'list_of_variable_port_identifiers'],
 
 
+    // The 'ansi_port_declaration' would be illegal since without port direction would always be nonANSI
+    //
     // module_keyword  module_identifier  '('  _identifier  •  ')'  …
     //   1:  module_keyword  module_identifier  '('  (ansi_port_declaration  _identifier)  •  ')'  …
     //   2:  module_keyword  module_identifier  '('  (port_reference  _identifier)  •  ')'  …
@@ -5466,14 +5460,6 @@ module.exports = grammar({
     //   1:  module_keyword  module_identifier  '('  _identifier  (_variable_dimension  unpacked_dimension)  •  ')'  …            (precedence: '_variable_dimension')
     //   2:  module_keyword  module_identifier  '('  _identifier  (ansi_port_declaration_repeat1  unpacked_dimension)  •  ')'  …
     ['ansi_port_declaration', '_variable_dimension'],
-
-
-    // This one doesn't seem to make much sense for module declarations, but port
-    // will be used in module instantiation with unconnected ports, so prioritize it.
-    // module_keyword  module_identifier  '('  '.'  _identifier  '('  ')'  •  ')'  …
-    //   1:  module_keyword  module_identifier  '('  (ansi_port_declaration  '.'  _identifier  '('  ')')  •  ')'  …  (precedence: 'ansi_port_declaration')
-    //   2:  module_keyword  module_identifier  '('  (port  '.'  _identifier  '('  ')')  •  ')'  …
-    // ['port', 'ansi_port_declaration'],
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
@@ -5869,7 +5855,7 @@ module.exports = grammar({
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
-    ['net_port_header1'],
+    ['net_port_header'],
     ['variable_port_header'],
     ['net_declaration'],
     ['module_instantiation'],
@@ -5909,8 +5895,6 @@ module.exports = grammar({
     ['hierarchical_instance'],
     ['concurrent_assertion_item'],
     ['interface_port_declaration'],
-
-    ['port'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -6049,10 +6033,10 @@ module.exports = grammar({
     // Even though we do not aim to support user defined nets (example 1), there is a conflict between examples 2 and 3
     //
     //   _module_header1  '('  port_direction  •  simple_identifier  …
-    //   1:  _module_header1  '('  (net_port_header1  port_direction  •  net_port_type1)           (precedence: 'net_port_header1')
-    //   2:  _module_header1  '('  (net_port_header1  port_direction)  •  simple_identifier  …     (precedence: 'net_port_header1')
+    //   1:  _module_header1  '('  (net_port_header  port_direction  •  net_port_type1)           (precedence: 'net_port_header')
+    //   2:  _module_header1  '('  (net_port_header  port_direction)  •  simple_identifier  …     (precedence: 'net_port_header')
     //   3:  _module_header1  '('  (variable_port_header  port_direction  •  _variable_port_type)  (precedence: 'variable_port_header')
-    [$.net_port_header1, $.variable_port_header],
+    [$.net_port_header, $.variable_port_header],
 
 
     // It seems the more general option 1 would be the correct, but adding associativity would probably cause some
