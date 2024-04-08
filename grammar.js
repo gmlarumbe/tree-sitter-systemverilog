@@ -165,7 +165,8 @@ const rules = {
   source_file: $ => repeat($._description), // TODO: What about [timeunits_declaration]
   // source_file: $ => seq(optional($.timeunits_declaration), repeat($._description)), // TODO: What about [timeunits_declaration]
 
-  /* A.1.1 Library source text */
+// * A.1 Source text
+// ** A.1.1 Library source text
 
   // library_text: $ => repeat($.library_description),
 
@@ -186,7 +187,7 @@ const rules = {
 
   // include_statement: $ => seq('include', $.file_path_spec, ';'),
 
-  /* A.1.2 SystemVerilog source text */
+// ** A.1.2 SystemVerilog source text
   _description: $ => prec('_description', choice(
     $.module_declaration,
     // $.udp_declaration, // TODO: Simplifying debugging
@@ -326,6 +327,7 @@ const rules = {
     seq('extern', $.program_ansi_header)
   ),
 
+  // Not in LRM, groups common tokens of program headers
   _program_header: $ => seq(
     repeat($.attribute_instance),
     'program',
@@ -398,29 +400,16 @@ const rules = {
     seq('timeprecision', $.time_literal, ';', 'timeunit', $.time_literal, ';')
   ),
 
-  // /* A.1.3 Module parameters and ports */
 
-  // INFO: Original one
-  // parameter_port_list: $ => seq(
-  //   '#', '(',
-  //   optional(choice(
-  //     seq($.list_of_param_assignments, repseq(',', $.parameter_port_declaration)),
-  //     sep1(',', $.parameter_port_declaration)
-  //   )),
-  //   ')'
-  // ),
-  // End of INFO
-
-  // INFO: Larumbe's one: WIP
+// ** A.1.3 Module parameters and ports
   parameter_port_list: $ => seq(
     '#', '(',
     optional(choice(
-      seq($.list_of_param_assignments, repeat(seq(',', $.parameter_port_declaration))),
+      seq($.list_of_param_assignments, repseq(',', $.parameter_port_declaration)),
       sepBy1(',', $.parameter_port_declaration)
     )),
     ')'
   ),
-  // End of INFO
 
   parameter_port_declaration: $ => choice(
     $._any_parameter_declaration,
@@ -529,7 +518,7 @@ const rules = {
     )
   )),
 
-  /* A.1.4 Module items */
+// ** A.1.4 Module items
   severity_system_task: $ => choice(
     // INFO: LRM makes $.finish_number mandatory, but seems tool specific, so relax requirement
     seq('$fatal', optional(seq('(', optional(seq($.finish_number, ',')), optional($.list_of_arguments), ')')), ';'),
@@ -631,7 +620,7 @@ const rules = {
     // $.checker_instantiation // TODO: Remove temporarily to narrow conflicts
   ),
 
-  // /* A.1.5 Configuration source text */
+// ** A.1.5 Configuration source text
 
   // config_declaration: $ => seq(
   //   'config', $.config_identifier, ';',
@@ -681,7 +670,7 @@ const rules = {
   //   optseq(':', 'config')
   // ),
 
-  /* A.1.6 Interface items */
+// ** A.1.6 Interface items
   interface_or_generate_item: $ => prec('interface_or_generate_item', choice(
     seq(repeat($.attribute_instance), $._module_common_item),
     seq(repeat($.attribute_instance), $.extern_tf_declaration),
@@ -707,7 +696,7 @@ const rules = {
     $.timeunits_declaration
   ),
 
-  /* A.1.7 Program items */
+// ** A.1.7 Program items
   program_item: $ => choice(
     seq($.port_declaration, ';'),
     $.non_port_program_item
@@ -731,7 +720,7 @@ const rules = {
     // $._elaboration_severity_system_task
   ),
 
-  /* A.1.8 Checker items */
+// ** A.1.8 Checker items
   checker_port_list: $ => sepBy1(',', $.checker_port_item),
 
   checker_port_item: $ => seq( // TODO
@@ -781,8 +770,7 @@ const rules = {
     $._elaboration_severity_system_task
   ),
 
-  // /* A.1.9 Class items */
-
+// ** A.1.9 Class items
   class_item: $ => choice(
     $._directives, // INFO: Out of LRM but useful for basic parsing in the UVM
     seq(repeat($.attribute_instance), $.class_property),
@@ -872,7 +860,7 @@ const rules = {
     'endfunction', optional(seq(':', 'new'))
   )),
 
-  /* A.1.10 Constraints */
+// ** A.1.10 Constraints
 
   constraint_declaration: $ => seq(
     optional('static'),
@@ -977,8 +965,7 @@ const rules = {
   identifier_list: $ => sepBy1(',', $._identifier),
 
 
-  // /* A.1.11 Package items */
-
+// ** A.1.11 Package items
   _package_item: $ => prec('_package_item', choice(
     $.package_or_generate_item_declaration,
     // $.anonymous_program,
@@ -1017,12 +1004,9 @@ const rules = {
   //   ';'
   // ),
 
-  // /* A.2 Declarations */
-
-  // /* A.2.1 Declaration types */
-
-  // /* A.2.1.1 Module parameter declarations */
-
+// * A.2 Declarations
+// ** A.2.1 Declaration types
+// *** A.2.1.1 Module parameter declarations
   local_parameter_declaration: $ => seq(
     'localparam',
     choice(
@@ -1057,7 +1041,7 @@ const rules = {
   //   ';'
   // ),
 
-  // /* A.2.1.2 Port declarations */
+// *** A.2.1.2 Port declarations
 
   inout_declaration: $ => seq(
     'inout', optional($.net_port_type1), $.list_of_port_identifiers
@@ -1089,8 +1073,7 @@ const rules = {
     'ref', $._variable_port_type, $.list_of_variable_identifiers
   ),
 
-  // // A.2.1.3 Type declarations
-
+// *** A.2.1.3 Type declarations
   data_declaration: $ => choice(
     seq(
       optional('const'),
@@ -1231,10 +1214,8 @@ const rules = {
   lifetime: $ => prec('lifetime', choice('static', 'automatic')),
 
 
-  /* A.2.2 Declaration data types */
-
-  /* A.2.2.1 Net and variable types */
-
+// ** A.2.2 Declaration data types
+// *** A.2.2.1 Net and variable types
   casting_type: $ => prec('casting_type', choice(
     $._simple_type,
     $.constant_primary,
@@ -1395,7 +1376,7 @@ const rules = {
     ')'
   ),
 
-  // // A.2.2.2 Strengths
+// *** A.2.2.2 Strengths
 
   drive_strength: $ => seq(
     '(',
@@ -1416,8 +1397,7 @@ const rules = {
 
   charge_strength: $ => seq('(', choice('small', 'medium', 'large'), ')'),
 
-  // A.2.2.3 Delays
-
+// *** A.2.2.3 Delays
   delay3: $ => seq('#', choice(
     $.delay_value,
     seq(
@@ -1440,7 +1420,7 @@ const rules = {
     '1step'
   ),
 
-  /* A.2.3 Declaration lists */
+// ** A.2.3 Declaration lists
   list_of_defparam_assignments: $ => sepBy1(',', $.defparam_assignment),
 
   list_of_genvar_identifiers: $ => sepBy1(',', $.genvar_identifier),
@@ -1500,7 +1480,7 @@ const rules = {
     optional(seq('=', $.constant_expression))
   ))),
 
-  /* A.2.4 Declaration assignments */
+// ** A.2.4 Declaration assignments
   defparam_assignment: $ => seq(
     $._hierarchical_parameter_identifier,
     '=',
@@ -1593,8 +1573,7 @@ const rules = {
     'new', '[', $.expression, ']', optional(seq('(', $.expression, ')'))
   ),
 
-  // // A.2.5 Declaration ranges
-
+// ** A.2.5 Declaration ranges
   unpacked_dimension: $ => prec('unpacked_dimension', seq(
     '[',
     choice(
@@ -1626,8 +1605,7 @@ const rules = {
 
   unsized_dimension: $ => seq('[', ']'),
 
-  // A.2.6 Function declarations
-
+// ** A.2.6 Function declarations
   function_data_type_or_implicit1: $ => choice(
     $.data_type_or_void,
     $.implicit_data_type1
@@ -1714,8 +1692,7 @@ const rules = {
   dpi_task_proto: $ => $.task_prototype,
 
 
-  // A.2.7 Task declarations
-
+// ** A.2.7 Task declarations
   task_declaration: $ => seq(
     'task',
     optional($.dynamic_override_specifiers),
@@ -1823,8 +1800,7 @@ const rules = {
   final_specifier: $ => seq(':', 'final'),
 
 
-  // // A.2.8 Block item declarations
-
+// ** A.2.8 Block item declarations
   block_item_declaration: $ => seq(
     repeat($.attribute_instance),
     choice(
@@ -1851,8 +1827,7 @@ const rules = {
 
   // overload_proto_formals: $ => sep1(',', $.data_type),
 
-  /* A.2.9 Interface declarations */
-
+// ** A.2.9 Interface declarations
   modport_declaration: $ => seq('modport', sepBy1(',', $.modport_item), ';'),
 
   modport_item: $ => seq(
@@ -1892,7 +1867,7 @@ const rules = {
 
   import_export: $ => choice('import', 'export'),
 
-  // A.2.10 Assertion declarations
+// ** A.2.10 Assertion declarations
   concurrent_assertion_item: $ => prec('concurrent_assertion_item', choice(
     seq(optional(seq($._block_identifier, ':')), $._concurrent_assertion_statement),
     // $.checker_instantiation
@@ -2249,7 +2224,7 @@ const rules = {
     ';'
   ),
 
-  // A.2.11 Covergroup declarations
+// ** A.2.11 Covergroup declarations
   covergroup_declaration: $ => seq(
     'covergroup',
     choice(
@@ -2485,7 +2460,7 @@ const rules = {
 
   _covergroup_expression: $ => $.expression,
 
-  /* A.2.12 Let declarations */
+// ** A.2.12 Let declarations
   let_declaration: $ => seq(
     'let', $.let_identifier,
     optional(seq('(', optional($.let_port_list), ')')),
@@ -2545,9 +2520,8 @@ const rules = {
   // let_actual_arg: $ => alias($.expression, $.let_actual_arg),
 
 
-  // // A.3 Primitive instances
-
-  // // A.3.1 Primitive instantiation and instances
+// * A.3 Primitive instances
+// ** A.3.1 Primitive instantiation and instances
 
   // gate_instantiation: $ => seq(
   //   choice(
@@ -2644,7 +2618,7 @@ const rules = {
   //   '(', $.output_terminal, ')'
   // ),
 
-  // // A.3.2 Primitive strengths
+// ** A.3.2 Primitive strengths
 
   // pulldown_strength: $ => choice(
   //   seq('(', $.strength0, ',', $.strength1, ')'),
@@ -2658,7 +2632,7 @@ const rules = {
   //   seq(',', $.strength1, ')')
   // ),
 
-  // // A.3.3 Primitive terminals
+// ** A.3.3 Primitive terminals
 
   // enable_terminal: $ => $.expression,
   // inout_terminal: $ => $.net_lvalue,
@@ -2667,7 +2641,7 @@ const rules = {
   // output_terminal: $ => $.net_lvalue,
   // pcontrol_terminal: $ => $.expression,
 
-  // // A.3.4 Primitive gate and switch types
+// ** A.3.4 Primitive gate and switch types
 
   // cmos_switchtype: $ => choice('cmos', 'rcmos'),
   // enable_gatetype: $ => choice('bufif0', 'bufif1', 'notif0', 'notif1'),
@@ -2677,12 +2651,9 @@ const rules = {
   // pass_en_switchtype: $ => choice('tranif0', 'tranif1', 'rtranif1', 'rtranif0'),
   // pass_switchtype: $ => choice('tran', 'rtran'),
 
-  // // A.4 Instantiations
-
-  // // A.4.1 Instantiation
-
-  // // A.4.1.1 Module instantiation
-
+// * A.4 Instantiations
+// ** A.4.1 Instantiation
+// *** A.4.1.1 Module instantiation
   module_instantiation: $ => prec('module_instantiation', seq(
     field('instance_type', $.module_identifier),
     optional($.parameter_value_assignment),
@@ -2743,7 +2714,7 @@ const rules = {
     )
   ),
 
-  /* A.4.1.2 Interface instantiation */
+// *** A.4.1.2 Interface instantiation
   interface_instantiation: $ => prec('interface_instantiation', seq(
     $.interface_identifier,
     optional($.parameter_value_assignment),
@@ -2751,7 +2722,7 @@ const rules = {
     ';'
   )),
 
-  // /* A.4.1.3 Program instantiation */
+// *** A.4.1.3 Program instantiation
   program_instantiation: $ => prec('program_instantiation', seq(
     $.program_identifier,
     optional($.parameter_value_assignment),
@@ -2759,7 +2730,7 @@ const rules = {
     ';'
   )),
 
-  /* A.4.1.4 Checker instantiation */
+// *** A.4.1.4 Checker instantiation
   checker_instantiation: $ => prec('checker_instantiation', seq(
     $.ps_checker_identifier,
     $.name_of_instance,
@@ -2811,7 +2782,7 @@ const rules = {
 
 
 
-  /* A.4.2 Generated instantiation */
+// ** A.4.2 Generated instantiation
   generate_region: $ => seq(
     'generate', repeat($._generate_item), 'endgenerate'
   ),
@@ -2880,10 +2851,8 @@ const rules = {
     // $._checker_or_generate_item
   ),
 
-  // /* A.5 UDP declaration and instantiation */
-
-  // /* A.5.1 UDP declaration */
-
+// * A.5 UDP declaration and instantiation
+// ** A.5.1 UDP declaration
   // udp_nonansi_declaration: $ => seq(
   //   repeat($.attribute_instance), 'primitive', $._udp_identifier, '(', $.udp_port_list, ')', ';'
   // ),
@@ -2909,7 +2878,7 @@ const rules = {
   //   )
   // ),
 
-  // /* A.5.2 UDP ports */
+// ** A.5.2 UDP ports
 
   // udp_port_list: $ => seq(
   //   $.output_port_identifier, ',', sep1(',', $.input_port_identifier)
@@ -2945,8 +2914,7 @@ const rules = {
   //   repeat($.attribute_instance), 'reg', $._variable_identifier
   // ),
 
-  // /* A.5.3 UDP body */
-
+// ** A.5.3 UDP body
   // _udp_body: $ => choice($.combinational_body, $.sequential_body),
 
   // combinational_body: $ => seq(
@@ -2993,8 +2961,7 @@ const rules = {
 
   // edge_symbol: $ => /[rRfFpPnN*]/,
 
-  // /* A.5.4 UDP instantiation */
-
+// ** A.5.4 UDP instantiation
   // udp_instantiation: $ => seq(
   //   $._udp_identifier,
   //   optional($.drive_strength),
@@ -3008,10 +2975,8 @@ const rules = {
   //   '(', $.output_terminal, ',', sep1(',', $.input_terminal), ')'
   // ),
 
-  // // A.6 Behavioral statements
-
-  // // A.6.1 Continuous assignment and net alias statements
-
+// * A.6 Behavioral statements
+// ** A.6.1 Continuous assignment and net alias statements
   continuous_assign: $ => seq(
     'assign',
     choice(
@@ -3043,8 +3008,7 @@ const rules = {
   // INFO: Mine without prec.left
   net_assignment: $ => seq($.net_lvalue, '=', $.expression),
 
-  // // A.6.2 Procedural blocks and assignments
-
+// ** A.6.2 Procedural blocks and assignments
   initial_construct: $ => seq('initial', $.statement_or_null),
 
   always_construct: $ => seq($.always_keyword, $.statement),
@@ -3127,8 +3091,7 @@ const rules = {
   // INFO: Mine
   variable_assignment: $ => seq($.variable_lvalue, '=', $.expression),
 
-  // A.6.3 Parallel and sequential blocks
-
+// ** A.6.3 Parallel and sequential blocks
   action_block: $ => prec('action_block', choice(
     $.statement_or_null,
     seq(optional($.statement), 'else', $.statement_or_null)
@@ -3150,8 +3113,7 @@ const rules = {
 
   join_keyword: $ => choice('join', 'join_any', 'join_none'),
 
-  // // A.6.4 Statements
-
+// ** A.6.4 Statements
   statement_or_null: $ => prec('statement_or_null', choice(
     $.statement,
     seq(repeat($.attribute_instance), ';')
@@ -3200,8 +3162,7 @@ const rules = {
   variable_identifier_list: $ => sepBy1(',', $._variable_identifier),
 
 
-  // // A.6.5 Timing control statements
-
+// ** A.6.5 Timing control statements
   procedural_timing_control_statement: $ => seq(
     $._procedural_timing_control,
     $.statement_or_null
@@ -3288,8 +3249,7 @@ const rules = {
     seq('disable', 'fork', ';')
   ),
 
-  // // A.6.6 Conditional statements
-
+// ** A.6.6 Conditional statements
   // conditional_statement: $ => prec.left(seq(
   //   optional($.unique_priority),
   //   'if', '(', $.cond_predicate, ')', $.statement_or_null,
@@ -3326,8 +3286,7 @@ const rules = {
     $.pattern
   ),
 
-  // // A.6.7 Case statements
-
+// ** A.6.7 Case statements
   // case_statement: $ => seq(
   //   optional($.unique_priority),
   //   seq(
@@ -3451,7 +3410,7 @@ const rules = {
     '\'{', sepBy1(',', $.variable_lvalue), '}'
   ),
 
-  // A.6.8 Looping statements
+// ** A.6.8 Looping statements
   loop_statement: $ => choice(
     seq('forever', $.statement_or_null),
     seq('repeat', '(', $.expression, ')', $.statement_or_null),
@@ -3499,7 +3458,7 @@ const rules = {
     repeat(seq(',', optional($.index_variable_identifier)))
   ),
 
-  // A.6.9 Subroutine call statements
+// ** A.6.9 Subroutine call statements
   subroutine_call_statement: $ => prec('subroutine_call_statement', choice(
     seq($.subroutine_call, ';'),
     seq('void\'', '(', $.function_subroutine_call, ')', ';'),
@@ -3507,7 +3466,7 @@ const rules = {
     $.simulation_control_task, // INFO: Out of LRM
   )),
 
-  // A.6.10 Assertion statements
+// ** A.6.10 Assertion statements
   _assertion_item: $ => choice(
     $.concurrent_assertion_item,
     $.deferred_immediate_assertion_item
@@ -3571,7 +3530,7 @@ const rules = {
     '(', $.expression, ')', $.statement_or_null
   ),
 
-  /* A.6.11 Clocking block */
+// ** A.6.11 Clocking block
   clocking_declaration: $ => choice(
     seq(
       optional('default'),
@@ -3651,7 +3610,7 @@ const rules = {
     optional($.select1)
   ),
 
-  // A.6.12 Randsequence
+// ** A.6.12 Randsequence
   randsequence_statement: $ => seq(
     'randsequence', '(', optional($.rs_production_identifier), ')',
     repeat1($.rs_production),
@@ -3708,10 +3667,8 @@ const rules = {
   ),
 
 
-  // // A.7 Specify section
-
-  // // A.7.1 Specify block declaration
-
+// * A.7 Specify section
+// ** A.7.1 Specify block declaration
   // specify_block: $ => seq('specify', repeat($._specify_item), 'endspecify'),
 
   // _specify_item: $ => choice(
@@ -3734,12 +3691,7 @@ const rules = {
   //   ';'
   // ),
 
-  // // A.7 Specify section
-
-  // // A.7.1 Specify block declaration
-
-  // // A.7.2 Specify path declarations
-
+// ** A.7.2 Specify path declarations
   // path_declaration: $ => seq(
   //   choice(
   //     $.simple_path_declaration,
@@ -3777,8 +3729,7 @@ const rules = {
 
   // list_of_path_outputs: $ => sep1(',', $.specify_output_terminal_descriptor),
 
-  // // A.7.3 Specify block terminals
-
+// ** A.7.3 Specify block terminals
   // specify_input_terminal_descriptor: $ => seq(
   //   $.input_identifier, optseq('[', $._constant_range_expression, ']')
   // ),
@@ -3799,8 +3750,7 @@ const rules = {
   //   seq($.interface_identifier, '.', $.port_identifier)
   // ),
 
-  // /* A.7.4 Specify path delays */
-
+// ** A.7.4 Specify path delays
   // path_delay_value: $ => choice(
   //   $.list_of_path_delay_expressions,
   //   seq('(', $.list_of_path_delay_expressions, ')')
@@ -3899,10 +3849,8 @@ const rules = {
 
   // polarity_operator: $ => choice('+', '-'),
 
-  // /* A.7.5 System timing checks */
-
-  // /* A.7.5.1 System timing check commands */
-
+// ** A.7.5 System timing checks
+// *** A.7.5.1 System timing check commands
   // _system_timing_check: $ => choice(
   //   $.$setup_timing_check,
   //   $.$hold_timing_check,
@@ -4044,8 +3992,7 @@ const rules = {
   //   ')', ';'
   // ),
 
-  // // A.7.5.2 System timing check command arguments
-
+// *** A.7.5.2 System timing check command arguments
   // timecheck_condition: $ => $.mintypmax_expression,
 
   // controlled_reference_event: $ => alias($.controlled_timing_check_event, $.controlled_reference_event),
@@ -4078,8 +4025,7 @@ const rules = {
 
   // timing_check_limit: $ => $.expression,
 
-  // // A.7.5.3 System timing check event definitions
-
+// *** A.7.5.3 System timing check event definitions
   // timing_check_event: $ => seq(
   //   optional($.timing_check_event_control),
   //   $._specify_terminal_descriptor,
@@ -4140,10 +4086,8 @@ const rules = {
   //   '0'
   // ),
 
-  // // A.8 Expressions
-
-  // // A.8.1 Concatenations
-
+// * A.8 Expressions
+// ** A.8.1 Concatenations
   // concatenation: $ => seq(
   //   '{', psep1(PREC.CONCAT, ',', $.expression), '}'
   // ),
@@ -4212,8 +4156,7 @@ const rules = {
 
   empty_unpacked_array_concatenation: $ => prec('empty_unpacked_array_concatenation', seq('{', '}')),
 
-  // /* A.8.2 Subroutine calls */
-
+// ** A.8.2 Subroutine calls
   constant_function_call: $ => $.function_subroutine_call,
 
   // tf_call: $ => prec.left(seq(
@@ -4382,8 +4325,7 @@ const rules = {
     $.method_identifier, 'unique', 'and', 'or', 'xor'
   ),
 
-  // // A.8.3 Expressions
-
+// ** A.8.3 Expressions
   inc_or_dec_expression: $ => choice(
     seq($.inc_or_dec_operator, repeat($.attribute_instance), $.variable_lvalue),
     seq($.variable_lvalue, repeat($.attribute_instance), $.inc_or_dec_operator)
@@ -4557,8 +4499,7 @@ const rules = {
 
   _genvar_expression: $ => $.constant_expression,
 
-  /* A.8.4 Primaries */
-
+// ** A.8.4 Primaries
   // TODO: Probably the ones with prec.dynamic below can be grouped with some aliases/inlining or whatever
   // option, since they match the same path as the ps_parameter_identifier, but in different contexts (and
   // tree-sitter is not aware of them )
@@ -4727,8 +4668,7 @@ const rules = {
   cast: $ => prec('cast', seq($.casting_type, '\'', '(', $.expression, ')')),
 
 
-  // // A.8.5 Expression left-side values
-
+// ** A.8.5 Expression left-side values
   // INFO: drom's one
   // net_lvalue: $ => choice(
   //   seq(
@@ -4802,8 +4742,7 @@ const rules = {
     optional($.nonrange_select1)
   ),
 
-  // // A.8.6 Operators
-
+// ** A.8.6 Operators
   unary_operator: $ => choice(
     '+', '-', '!', '~', '&', '~&', '|', '~|', '^', '~^', '^~'
   ),
@@ -4830,8 +4769,7 @@ const rules = {
   // //   '^~' /
   // //   '~^'
 
-  // /* A.8.7 Numbers */
-
+// ** A.8.7 Numbers
   _number: $ => choice($.integral_number, $.real_number),
 
   integral_number: $ => choice(
@@ -4893,18 +4831,15 @@ const rules = {
   // // The apostrophe ( ' ) in unbased_unsized_literal shall not be followed by white_space.
   unbased_unsized_literal: $ => choice('\'0', '\'1', /'[xXzZ]/),
 
-  // /* A.9 General */
-
-  // /* A.9.1 Attributes */
-
+// * A.9 General
+// ** A.9.1 Attributes
   attribute_instance: $ => seq('(*', sepBy1(',', $.attr_spec), '*)'),
 
   attr_spec: $ => seq($._attr_name, optional(seq('=', $.constant_expression))),
 
   _attr_name: $ => $._identifier,
 
-  // /* A.9.2 Comments */
-
+// ** A.9.2 Comments
   // comment: $ => one_line_comment | block_comment
   // one_line_comment: $ => // comment_text \n
   // block_comment: $ => /* comment_text */
@@ -4921,8 +4856,7 @@ const rules = {
     )
   )),
 
-  // /* A.9.3 Identifiers */
-
+// ** A.9.3 Identifiers
   // _array_identifier: $ => $._identifier,
   _block_identifier: $ => $._identifier,
   _bin_identifier: $ => $._identifier,
@@ -5122,20 +5056,21 @@ const rules = {
   // _udp_identifier: $ => $._identifier,
   _variable_identifier: $ => $._identifier,
 
-  // /* A.9.4 White space */
+// ** A.9.4 White space
 
   // // white_space: $ => space | tab | newline | eof};
 
 
 
-  /* 20.2 Simulation control system tasks */
+// * 20. Utility system tasks and system functions
+// ** 20.2 Simulation control system tasks
   simulation_control_task: $ => seq(
     choice('$stop', '$finish', '$exit'),
     optional(seq('(', optional($.list_of_arguments), ')')),
     ';'
   ),
 
-  /* 22. Compiler directives */
+// * 22. Compiler directives
   // `__FILE__ [22.13]
   // `__LINE__ [22.13]
   // `begin_keywords [22.14]
@@ -5179,12 +5114,11 @@ const rules = {
     $.endkeywords_directive
   )),
 
-
-  /* 22-3 `resetall */
+// ** 22-3 `resetall
   resetall_compiler_directive: $ => directive('resetall'),
 
 
-  /* 22-4 `include */
+// ** 22-4 `include
   double_quoted_string: $ => seq(
     '"', token.immediate(prec(1, /[^\\"\n]+/)), '"'
   ),
@@ -5203,7 +5137,7 @@ const rules = {
   ),
 
 
-  /* 22.5 `define, `undef, and `undefineall */
+// ** 22.5 `define, `undef, and `undefineall
   default_text: $ => /\w+/,
 
   macro_text: $ => /(\\(.|\r?\n)|[^\\\n])*/,
@@ -5284,7 +5218,7 @@ const rules = {
   // ),
 
 
-  /* 22.6 `ifdef, `else, `elsif, `endif, `ifndef */
+// ** 22.6 `ifdef, `else, `elsif, `endif, `ifndef
   // conditional_compilation_directive ::=
   //   ifdef_or_ifndef ifdef_condition block_of_text
   //   { `elsif ifdef_condition block_of_text }
@@ -5314,7 +5248,7 @@ const rules = {
 
   binary_logical_operator: $ => choice('&&', '||', '->', '<->'),
 
-  /* 22-7 timescale */
+// ** 22-7 timescale
   timescale_compiler_directive: $ => seq(
     directive('timescale'),
     $.time_literal, // time_unit,
@@ -5323,7 +5257,7 @@ const rules = {
     '\n' // TODO: Are newlines required?
   ),
 
-  /* 22-8 default_nettype */
+// ** 22-8 default_nettype
   default_nettype_compiler_directive: $ => seq(
     directive('default_nettype'),
     $.default_nettype_value,
@@ -5332,19 +5266,19 @@ const rules = {
 
   default_nettype_value: $ => choice('wire', 'tri', 'tri0', 'tri1', 'wand', 'triand', 'wor', 'trior', 'trireg', 'uwire', 'none'),
 
-  /* 22-9 */
+// ** 22-9
   unconnected_drive_compiler_directive: $ => seq(
     directive('unconnected_drive'),
     choice('pull0', 'pull1'),
     '\n'
   ),
 
-  /* 22.10 `celldefine and `endcelldefine */
+// ** 22.10 `celldefine and `endcelldefine
   celldefine_compiler_directive: $ => directive('celldefine'),
   endcelldefine_compiler_directive: $ => directive('endcelldefine'),
 
 
-  /* 22.11 `pragma */
+// ** 22.11 `pragma
   pragma: $ => prec.right(seq(
     directive('pragma'),
     $.pragma_name,
@@ -5368,7 +5302,7 @@ const rules = {
 
   pragma_keyword: $ => $.simple_identifier,
 
-  /* 22-12 `line */
+// ** 22-12 `line
   line_compiler_directive: $ => seq(
     directive('line'),
     $.unsigned_number,
@@ -5378,13 +5312,13 @@ const rules = {
     '\n'
   ),
 
-  /* 22.13 `__FILE__ and `__LINE__ */
+// ** 22.13 `__FILE__ and `__LINE__
   file_or_line_compiler_directive: $ => choice(
     directive('__FILE__'),
     directive('__LINE__'),
   ),
 
-  /* 22.14 */
+// ** 22.14 `begin_keywords, `end_keywords
   keywords_directive: $ => seq(
     directive('begin_keywords'),
     '\"', $.version_specifier, '\"'
@@ -5406,12 +5340,16 @@ const rules = {
 
 };
 
+
+// * Tree-sitter
+// ** Module exports
 module.exports = grammar({
   name: 'verilog',
   word: $ => $.simple_identifier,
   rules: rules,
   extras: $ => [/\s/, $.comment],
 
+// ** Inline
   inline: $ => [
     // Reviewed
     $.module_identifier,
@@ -5480,6 +5418,7 @@ module.exports = grammar({
     $._elaboration_severity_system_task,
   ],
 
+// ** Precedences
   precedences: () => [
     // Top level precedence
     // Used when declarations and/or statements are outside of sequential statements,
@@ -5985,6 +5924,7 @@ module.exports = grammar({
     ///////////////////////////////////////////////////
   ],
 
+// ** Conflicts
   conflicts: $ => [
     // Help differentiate between many parameters and list of parameters:
     //
