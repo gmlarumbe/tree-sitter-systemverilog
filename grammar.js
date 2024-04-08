@@ -453,10 +453,12 @@ const rules = {
 
   port_reference: $ => prec('port_reference', seq(
     $.port_identifier,
-    optional($.constant_select1)
+    optional($.constant_select)
   )),
 
-  port_direction: $ => prec('port_direction', choice('input', 'output', 'inout', 'ref')),
+  port_direction: $ => prec('port_direction', choice(
+    'input', 'output', 'inout', 'ref'
+  )),
 
   // Modified to avoid matching empty string, ($.net_port_type could match empty string)
   net_port_header: $ => choice( //
@@ -4465,10 +4467,10 @@ const rules = {
   // tree-sitter is not aware of them )
   constant_primary: $ => prec('constant_primary', choice(
     $.primary_literal,
-    seq($.ps_parameter_identifier, optional($.constant_select1)),
+    seq($.ps_parameter_identifier, optional($.constant_select)),
     // // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')),
     // prec.dynamic(-1, $.genvar_identifier), // TODO: No need to add, matched by the ps_parameter [constant_select] above
-    // prec.dynamic(-1, seq($.formal_port_identifier, optional($.constant_select1))), // TODO: No need to add, same syntax as the ps_parameter_identifier constant_select1 above
+    // prec.dynamic(-1, seq($.formal_port_identifier, optional($.constant_select))), // TODO: No need to add, same syntax as the ps_parameter_identifier constant_select above
     // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier), // TODO: No need to add, also matched by the ps_parameter_identifier branch above
     seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
     seq($.constant_multiple_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
@@ -4607,10 +4609,10 @@ const rules = {
     '[', $.constant_expression, ']'
   ))),
 
-  // TODO: Review with range tests
-  constant_select1: $ => prec('constant_select1', choice( // reordered -> non empty
+  // Modified to avoid matching empty string
+  constant_select: $ => prec('constant_select', choice( // reordered -> non empty
     seq(
-      repeat(prec('constant_select1', seq('.', $.member_identifier, optional($.constant_bit_select1)))), '.', $.member_identifier,
+      repeat(prec('constant_select', seq('.', $.member_identifier, optional($.constant_bit_select1)))), '.', $.member_identifier,
       optional($.constant_bit_select1),
       optional(seq('[', $._constant_part_select_range, ']'))
     ),
@@ -4633,7 +4635,7 @@ const rules = {
   // net_lvalue: $ => choice(
   //   seq(
   //     $.ps_or_hierarchical_net_identifier,
-  //     optional($.constant_select1)
+  //     optional($.constant_select)
   //   ),
   //   prec.left(PREC.CONCAT, seq('{', sep1(',', $.net_lvalue), '}')),
   //   seq(
@@ -4645,7 +4647,7 @@ const rules = {
   net_lvalue: $ => choice(
     seq(
       $.ps_or_hierarchical_net_identifier,
-      optional($.constant_select1)
+      optional($.constant_select)
     ),
     seq('{', sepBy1(',', $.net_lvalue), '}'),
     // seq(
@@ -5413,6 +5415,12 @@ module.exports = grammar({
     //   2:  module_keyword  module_identifier  '('  (port_reference  _identifier)  •  ')'  …
     ['port_reference', 'ansi_port_declaration'],
 
+    // For a port list the tf_port_direction is in a higher level in the tree, for the 'ref' conflict
+    //
+    //   'function'  function_identifier  '('  'ref'  •  'var'  …
+    //   1:  'function'  function_identifier  '('  (port_direction  'ref')  •  'var'  …
+    //   2:  'function'  function_identifier  '('  (tf_port_direction  'ref')  •  'var'  …
+    ['tf_port_direction', 'port_direction'],
 
 
     // INFO: To be reviewed
@@ -5454,7 +5462,7 @@ module.exports = grammar({
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
-    // Set higher precedence to hierarchical_identifier than to select1/constant_select1 since
+    // Set higher precedence to hierarchical_identifier than to select1/constant_select since
     // the latter is optional (according to LRM can match the empty string).
     // INFO: However, take into account that there should be a conflict below for the case
     // when there is actually a select1 besides the hierarchical_identifier
@@ -5468,7 +5476,7 @@ module.exports = grammar({
     //   6:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier  bit_select1)
     //   7:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier)
     // ['hierarchical_identifier', 'select1'], // INFO: I think this one is redundant or not needed anymore
-    ['hierarchical_identifier', 'constant_select1'],
+    ['hierarchical_identifier', 'constant_select'],
 
 
     // TODO: Removed to fix the expressions with primaries inside a bit_select1!!
@@ -5505,7 +5513,7 @@ module.exports = grammar({
 
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  class_scope  •  simple_identifier  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (class_qualifier  class_scope)  •  simple_identifier  …
-    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier  constant_select1)
+    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier  constant_select)
     //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier)
     ['class_qualifier', 'ps_parameter_identifier'],
 
@@ -5513,9 +5521,9 @@ module.exports = grammar({
     // TODO: Removed to fix the expressions with primaries inside a bit_select1!!
     //
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '.'  _identifier  •  '/'  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (constant_select1  '.'  _identifier)  •  '/'  …  (precedence: 'constant_select1')
+    //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (constant_select  '.'  _identifier)  •  '/'  …  (precedence: 'constant_select')
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (select1  '.'  _identifier)  •  '/'  …           (precedence: 'select1')
-    // ['constant_select1', 'select1'],
+    // ['constant_select', 'select1'],
 
 
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  constant_range  •  ']'  …
@@ -5561,12 +5569,6 @@ module.exports = grammar({
     //   3:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier)           (precedence: 'variable_lvalue')
     ['variable_lvalue', 'class_qualifier'],
 
-    // tf_port_direction is in a higher level in the tree, for the 'ref' conflict
-    //
-    //   'function'  function_identifier  '('  'ref'  •  'var'  …
-    //   1:  'function'  function_identifier  '('  (port_direction  'ref')  •  'var'  …
-    //   2:  'function'  function_identifier  '('  (tf_port_direction  'ref')  •  'var'  …
-    ['tf_port_direction', 'port_direction'],
 
 
     // First option follows the path: data_type_or_implicit1 -> data_type -> seq($._type_identifier, repeat($.packed_dimension))
@@ -5854,7 +5856,7 @@ module.exports = grammar({
     ['_sequence_actual_arg'],
     ['expression_or_dist'],
     ['text_macro_usage'],
-    ['constant_select1'],
+    ['constant_select'],
     ['select1'],
 
     ['module_declaration'],
@@ -6366,7 +6368,7 @@ module.exports = grammar({
     // Fix error with method call with bit_select
     [$.class_qualifier, $.select1],
     [$.select1, $.hierarchical_identifier],
-    [$.constant_select1, $.hierarchical_identifier],
+    [$.constant_select, $.hierarchical_identifier],
     [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$._method_call_root, $.primary],
     [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue],
