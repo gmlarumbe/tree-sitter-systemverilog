@@ -75,6 +75,11 @@ function enclosing(keyword, identifier) {
   return seq(keyword, optseq(':', identifier));
 }
 
+function optchoice(...rules) {
+  return optional(choice(...rules));
+}
+
+
 
 /**
  *
@@ -408,10 +413,10 @@ const rules = {
 // ** A.1.3 Module parameters and ports
   parameter_port_list: $ => seq(
     '#', '(',
-    optional(choice(
+    optchoice(
       seq($.list_of_param_assignments, repseq(',', $.parameter_port_declaration)),
       sepBy1(',', $.parameter_port_declaration)
-    )),
+    ),
     ')'
   ),
 
@@ -479,7 +484,7 @@ const rules = {
 
   ansi_port_declaration: $ => prec('ansi_port_declaration', choice(
     prec.dynamic(0, seq(
-      optional(choice($.net_port_header, $.interface_port_header)),
+      optchoice($.net_port_header, $.interface_port_header),
       field('port_name', $.port_identifier),
       repeat(prec('ansi_port_declaration', $.unpacked_dimension)),
       optseq('=', $.constant_expression)
@@ -549,35 +554,28 @@ const rules = {
     $._package_or_generate_item_declaration,
     $.genvar_declaration,
     $.clocking_declaration,
-    seq('default', 'clocking', $.clocking_identifier, ';'),
-    seq('default', 'disable', 'iff', $.expression_or_dist, ';')
+    seq('default', 'clocking', $.clocking_identifier, ';'),     // INFO: Could be possible to group these two below
+    seq('default', 'disable', 'iff', $.expression_or_dist, ';') //       with the ones in $._checker_or_generate_item_declaration
   )),
 
   _non_port_module_item: $ => prec('_non_port_module_item', choice(
-    $._directives, // // DANGER: This one is not in the LRM but adds good support for lots of stuff
     $.generate_region,
     $._module_or_generate_item,
-    // $.specify_block,
-    // seq(repeat($.attribute_instance), $.specparam_declaration), // TODO: Make it simpler
+    // $.specify_block,                                            // TODO: Pending
+    // seq(repeat($.attribute_instance), $.specparam_declaration), // TODO: Pending
     $.program_declaration,
     $.module_declaration,
     $.interface_declaration,
-    $.timeunits_declaration
+    $.timeunits_declaration,
+    $._directives, // Not in LRM
   )),
 
-  parameter_override: $ => seq(
-    'defparam',
-    $.list_of_defparam_assignments,
-    ';'
-  ),
+  parameter_override: $ => seq('defparam', $.list_of_defparam_assignments, ';'),
 
   bind_directive: $ => seq(
     'bind',
     choice(
-      seq(
-        $.bind_target_scope,
-        optional(seq(':', $.bind_target_instance_list))
-      ),
+      seq($.bind_target_scope, optseq(':', $.bind_target_instance_list)),
       $.bind_target_instance
     ),
     $._bind_instantiation,
@@ -597,14 +595,13 @@ const rules = {
   bind_target_instance_list: $ => sepBy1(',', $.bind_target_instance),
 
   _bind_instantiation: $ => choice(
-    // $.program_instantiation, // TODO: Remove temporarily to narrow conflicts
+    // $.program_instantiation,   // INFO: Ambiguous with rest of instantiations
     $.module_instantiation,
-    // $.interface_instantiation, // TODO: Remove temporarily to narrow conflicts
-    // $.checker_instantiation // TODO: Remove temporarily to narrow conflicts
+    // $.interface_instantiation, // INFO: Ambiguous with rest of instantiations
+    // $.checker_instantiation    // INFO: Ambiguous with rest of instantiations
   ),
 
 // ** A.1.5 Configuration source text
-
   // config_declaration: $ => seq(
   //   'config', $.config_identifier, ';',
   //   repseq($.local_parameter_declaration, ';'),
@@ -3504,15 +3501,17 @@ const rules = {
 // ** A.6.11 Clocking block
   clocking_declaration: $ => choice(
     seq(
-      optional('default'),
-      'clocking', optional($.clocking_identifier), $.clocking_event, ';',
+      optional('default'), 'clocking',
+      field('name', optional($.clocking_identifier)),
+      $.clocking_event, ';',
       repeat($.clocking_item),
-      'endclocking', optional(seq(':', $.clocking_identifier))
+      enclosing('endclocking', $.clocking_identifier)
     ),
     seq(
-      'global',
-      'clocking', optional($.clocking_identifier), $.clocking_event, ';',
-      'endclocking', optional(seq(':', $.clocking_identifier))
+      'global', 'clocking',
+      field('name', optional($.clocking_identifier)),
+      $.clocking_event, ';',
+      enclosing('endclocking', $.clocking_identifier)
     )
   ),
 
@@ -4839,7 +4838,7 @@ const rules = {
   checker_identifier: $ => $._identifier,
   class_identifier: $ => $._identifier,
   class_variable_identifier: $ => $._variable_identifier,
-  clocking_identifier: $ => alias($._identifier, $.clocking_identifier),
+  clocking_identifier: $ => $._identifier,
   // config_identifier: $ => alias($._identifier, $.config_identifier),
   const_identifier: $ => alias($._identifier, $.const_identifier),
   constraint_identifier: $ => alias($._identifier, $.constraint_identifier),
@@ -5335,6 +5334,7 @@ module.exports = grammar({
 
     $.port_identifier,
     $.modport_identifier,
+    $.clocking_identifier,
 
     $.var_data_type,
 
@@ -5417,31 +5417,20 @@ module.exports = grammar({
     ['_package_or_generate_item_declaration', 'statement_item'],
 
 
-    // Isolated colon without context (snippet):
-    //  - Consider it a statement_or_null as if it was inside function
-    //  (The other successful branch is _package_or_generate_item_declaration -> ; )
-    //
-    // ';'  •  ';'  …
-    // 1:  (_package_or_generate_item_declaration  ';')  •  ';'  …  (precedence: '_package_or_generate_item_declaration')
-    // 2:  (statement_or_null  ';')  •  ';'  …                      (precedence: 'statement_or_null')
-    // ['statement_or_null', '_package_or_generate_item_declaration'],
-
-
-    // Common item for module/package without context -> Consider it a module
+    // Common item for module/package without context -> Consider it a package_item
     //
     // _package_or_generate_item_declaration  •  ';'  …
     // 1:  (_module_or_generate_item_declaration  _package_or_generate_item_declaration)  •  ';'  …  (precedence: '_module_or_generate_item_declaration')
     // 2:  (_package_item  _package_or_generate_item_declaration)  •  ';'  …                          (precedence: '_package_item')
-    // ['_module_or_generate_item_declaration', '_package_item'],
     ['_package_item', '_module_or_generate_item_declaration'],
-    // ['_module_or_generate_item_declaration'],
-    // ['_package_item'],
 
 
-    // 'input'  data_type  •  '\'  …
-    // 1:  'input'  (data_type_or_implicit1  data_type)  •  '\'  …  (precedence: 'data_type_or_implicit1')
-    // 2:  'input'  (variable_port_type  data_type)  •  '\'  …
-    ['variable_port_type', 'data_type_or_implicit1'],
+    // In case we are working with a snippet (no module/interface declaration), consider it a _module_item
+    //
+    // 'generate'  _module_common_item  •  ';'  …
+    // 1:  'generate'  (_interface_or_generate_item  _module_common_item)  •  ';'  …  (precedence: '_interface_or_generate_item')
+    // 2:  'generate'  (_module_or_generate_item  _module_common_item)  •  ';'  …     (precedence: '_module_or_generate_item')
+    ['_module_or_generate_item', '_interface_or_generate_item'],
 
 
     // Consider port list without directions to be nonANSI:
@@ -5469,12 +5458,13 @@ module.exports = grammar({
     ['tf_port_direction', 'port_direction'],
 
 
-    // In case we are working with a snippet (no module/interface declaration), consider it a _module_item
+    // $.data_type corresponds to variables, $.net_type to $.net_port_type
     //
-    // 'generate'  _module_common_item  •  ';'  …
-    // 1:  'generate'  (_interface_or_generate_item  _module_common_item)  •  ';'  …  (precedence: '_interface_or_generate_item')
-    // 2:  'generate'  (_module_or_generate_item  _module_common_item)  •  ';'  …     (precedence: '_module_or_generate_item')
-    ['_module_or_generate_item', '_interface_or_generate_item'],
+    // 'input'  data_type  •  '\'  …
+    // 1:  'input'  (data_type_or_implicit1  data_type)  •  '\'  …  (precedence: 'data_type_or_implicit1')
+    // 2:  'input'  (variable_port_type  data_type)  •  '\'  …      (precedence: 'variable_port_type')
+    ['variable_port_type', 'data_type_or_implicit1'],
+
 
 
     ////////////////////////////////////////////////////////////////////////////////
