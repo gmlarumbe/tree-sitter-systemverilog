@@ -461,17 +461,17 @@ const rules = {
   )),
 
   // Modified to avoid matching empty string, ($.net_port_type could match empty string)
-  net_port_header: $ => choice( //
+  net_port_header: $ => choice(
     seq(optional($.port_direction), $.net_port_type),
     $.port_direction
   ),
 
   variable_port_header: $ => seq(optional($.port_direction), $.variable_port_type),
 
-  interface_port_header: $ => prec('interface_port_header', seq(
-    choice($.interface_identifier, 'interface'),
-    optseq('.', $.modport_identifier)
-  )),
+  interface_port_header: $ => seq(
+    choice(field('interface_name', $.interface_identifier), 'interface'),
+    optseq('.', field('modport_name', $.modport_identifier))
+  ),
 
   ansi_port_declaration: $ => prec('ansi_port_declaration', choice(
     prec.dynamic(0, seq(
@@ -487,7 +487,8 @@ const rules = {
       optseq('=', $.constant_expression)
     )),
     seq(
-      optional($.port_direction), '.', $.port_identifier,
+      optional($.port_direction), '.',
+      field('port_name', $.port_identifier),
       '(', optional($.expression), ')'
     )
   )),
@@ -1037,11 +1038,11 @@ const rules = {
     )
   ),
 
-  interface_port_declaration: $ => prec('interface_port_declaration', seq(
+  interface_port_declaration: $ => seq(
     $.interface_identifier,
     optional(seq('.', $.modport_identifier)),
     $.list_of_interface_identifiers
-  )),
+  ),
 
   ref_declaration: $ => seq(
     'ref', $.variable_port_type, $.list_of_variable_identifiers
@@ -1287,13 +1288,13 @@ const rules = {
   net_type: $ => choice('supply0', 'supply1', 'tri', 'triand', 'trior', 'trireg', 'tri0', 'tri1', 'uwire', 'wire', 'wand', 'wor'),
 
   // Modified to avoid matching empty string
-  net_port_type: $ => prec('net_port_type', choice( // Reorder, avoid matching empty string
+  net_port_type: $ => choice( // Reorder, avoid matching empty string
     seq($.net_type, $.data_type_or_implicit1),
     $.net_type,
     $.data_type_or_implicit1,
     $._net_type_identifier,
     seq('interconnect', optional($.implicit_data_type1))
-  )),
+  ),
 
   variable_port_type: $ => prec('variable_port_type', $.var_data_type),
 
@@ -4893,7 +4894,7 @@ const rules = {
   // library_identifier: $ => alias($._identifier, $.library_identifier),
   member_identifier: $ => alias($._identifier, $.member_identifier),
   method_identifier: $ => alias($._identifier, $.method_identifier),
-  modport_identifier: $ => alias($._identifier, $.modport_identifier),
+  modport_identifier: $ => $._identifier,
   module_identifier: $ => $._identifier,
   _net_identifier: $ => $._identifier,
   _net_type_identifier: $ => $._identifier,
@@ -5323,6 +5324,7 @@ module.exports = grammar({
     $.package_identifier,
 
     $.port_identifier,
+    $.modport_identifier,
 
     $.var_data_type,
 
@@ -5402,7 +5404,9 @@ module.exports = grammar({
     ['_module_common_item', '_description'],
 
 
+    ////////////////////////////////////////////////////////////////////////////////
     // INFO: Reviewed
+    ////////////////////////////////////////////////////////////////////////////////
     // 'input'  data_type  •  '\'  …
     // 1:  'input'  (data_type_or_implicit1  data_type)  •  '\'  …  (precedence: 'data_type_or_implicit1')
     // 2:  'input'  (variable_port_type  data_type)  •  '\'  …
@@ -5415,6 +5419,14 @@ module.exports = grammar({
     //   2:  module_keyword  module_identifier  '('  (port_reference  _identifier)  •  ')'  …
     ['port_reference', 'ansi_port_declaration'],
 
+    // If no port direction is specified but there is something besides the identifier (e.g. the unpacked dimension)
+    // then it must be an ANSI declaration instead of a nonANSI
+    //
+    // module_keyword  module_identifier  '('  _identifier  unpacked_dimension  •  ')'  …
+    //   1:  module_keyword  module_identifier  '('  _identifier  (_variable_dimension  unpacked_dimension)  •  ')'  …            (precedence: '_variable_dimension')
+    //   2:  module_keyword  module_identifier  '('  _identifier  (ansi_port_declaration_repeat1  unpacked_dimension)  •  ')'  …
+    ['ansi_port_declaration', '_variable_dimension'],
+
     // For a port list the tf_port_direction is in a higher level in the tree, for the 'ref' conflict
     //
     //   'function'  function_identifier  '('  'ref'  •  'var'  …
@@ -5423,7 +5435,9 @@ module.exports = grammar({
     ['tf_port_direction', 'port_direction'],
 
 
+    ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
+    ////////////////////////////////////////////////////////////////////////////////
 
     // module_nonansi_header  'input'  _identifier  •  ';'  …
     //   1:  module_nonansi_header  'input'  _identifier  (_variable_dimension  unpacked_dimension)  •  ';'  …
@@ -5446,19 +5460,6 @@ module.exports = grammar({
     ['list_of_port_identifiers', 'list_of_variable_port_identifiers'],
 
 
-
-    // For ANSI port declaration, if there is no builtin net type assume it's an interface identifier and not a net
-    // module_keyword  module_identifier  '('  _identifier  •  simple_identifier  …
-    //   1:  module_keyword  module_identifier  '('  (interface_port_header  _identifier)  •  simple_identifier  …
-    //   2:  module_keyword  module_identifier  '('  (net_port_type  _identifier)  •  simple_identifier  …
-    ['interface_port_header', 'net_port_type'],
-
-
-    // This one doesn't make much sense, but prioritize ansi_port_declaration
-    // module_keyword  module_identifier  '('  _identifier  unpacked_dimension  •  ')'  …
-    //   1:  module_keyword  module_identifier  '('  _identifier  (_variable_dimension  unpacked_dimension)  •  ')'  …            (precedence: '_variable_dimension')
-    //   2:  module_keyword  module_identifier  '('  _identifier  (ansi_port_declaration_repeat1  unpacked_dimension)  •  ')'  …
-    ['ansi_port_declaration', '_variable_dimension'],
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
@@ -5582,17 +5583,6 @@ module.exports = grammar({
     //   1:  'localparam'  _identifier  (_variable_dimension  unsized_dimension)  •  '['  …  (precedence: '_variable_dimension')
     //   2:  'localparam'  _identifier  (packed_dimension  unsized_dimension)  •  '['  …
     ['_variable_dimension', 'packed_dimension'],
-
-
-    // Set higher precedence on data_types (variables) than on interfaces or user defined nets, since it would be necessary
-    // to parse other files/units to know exactly what they are, and this simplifies the parser.
-    // TODO: Can be moved together with another up very similar upwards!
-    //
-    //   _module_header1  '('  _identifier  •  simple_identifier  …
-    //   1:  _module_header1  '('  (data_type  _identifier)  •  simple_identifier  …              (precedence: 'data_type')
-    //   2:  _module_header1  '('  (interface_port_header  _identifier)  •  simple_identifier  …  (precedence: 'interface_port_header')
-    //   3:  _module_header1  '('  (net_port_type  _identifier)  •  simple_identifier  …         (precedence: 'net_port_type')
-    ['data_type', 'interface_port_header', 'net_port_type'],
 
 
     // Identify as a constant_mintypmax_expression -> constant_expression on the RHS instead of a data_type (since it's a declaration)
@@ -5867,6 +5857,7 @@ module.exports = grammar({
     ['concurrent_assertion_item'],
     ['interface_port_declaration'],
     ['port_reference'],
+    ['net_port_type'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -6232,7 +6223,7 @@ module.exports = grammar({
     [$.type_identifier_or_class_type, $.data_type],
     [$.nettype_declaration, $.data_type, $.class_type],
     [$.net_declaration, $.data_type, $.class_type, $.module_instantiation],
-    [$.interface_port_header, $.data_type, $.class_type, $.net_port_type],
+    [$.interface_port_header, $.data_type, $.class_type, $.net_port_type], // INFO: This one seems a true one (checked somehow)
     [$.data_type, $.class_type, $.net_port_type],
     [$.class_type, $.module_instantiation],
     [$.data_type, $.class_type, $.tf_port_item1],
