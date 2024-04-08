@@ -412,37 +412,19 @@ const rules = {
   ),
 
   parameter_port_declaration: $ => choice(
-    $._any_parameter_declaration,
+    $.any_parameter_declaration,
     seq($.data_type, $.list_of_param_assignments),
-    seq('type', $.list_of_type_assignments)
+    $.type_parameter_declaration,
   ),
 
-  // INFO: Original one
-  // list_of_ports: $ => seq(
-  //   '(',
-  //   optional(sep1(',', seq(
-  //     optional($.line_compiler_directive),
-  //     $.port,
-  //     optional($.line_compiler_directive)
-  //   ))),
-  //   ')'
-  // ),
-  // End of INFO:
-
-  // INFO: Larumbe's one
-  list_of_ports: $ => seq(
-    '(',
-    optional(sepBy1(',', $.port1)),
-    ')'
-  ),
-  // End of INFO
+  list_of_ports: $ => seq('(', sepBy(',', $.port), ')'),
 
   list_of_port_declarations: $ => seq(
     '(',
-    optional(sepBy1(',', seq(
+    sepBy(',', seq(
       repeat($.attribute_instance),
-      $.ansi_port_declaration
-    ))),
+      $.ansi_port_declaration)
+    ),
     ')'
   ),
 
@@ -779,7 +761,7 @@ const rules = {
     seq(repeat($.attribute_instance), $.class_declaration),
     seq(repeat($.attribute_instance), $.interface_class_declaration),
     seq(repeat($.attribute_instance), $.covergroup_declaration),
-    seq($._any_parameter_declaration, ';'),
+    seq($.any_parameter_declaration, ';'),
     ';'
   ),
 
@@ -818,7 +800,7 @@ const rules = {
   interface_class_item: $ => choice(
     $.type_declaration,
     seq(repeat($.attribute_instance), $.interface_class_method),
-    seq($._any_parameter_declaration, ';'),
+    seq($.any_parameter_declaration, ';'),
     ';'
   ),
 
@@ -984,7 +966,7 @@ const rules = {
     $.class_declaration,
     $.interface_class_declaration,
     $.class_constructor_declaration,
-    seq($._any_parameter_declaration, ';'),
+    seq($.any_parameter_declaration, ';'),
     $.covergroup_declaration,
     $._assertion_item_declaration,
     ';',
@@ -1029,7 +1011,7 @@ const rules = {
     $.list_of_type_assignments
   ),
 
-  _any_parameter_declaration: $ => choice(
+  any_parameter_declaration: $ => choice(
     $.local_parameter_declaration,
     $.parameter_declaration
   ),
@@ -1805,7 +1787,7 @@ const rules = {
     repeat($.attribute_instance),
     choice(
       $.data_declaration,
-      seq($._any_parameter_declaration, ';'),
+      seq($.any_parameter_declaration, ';'),
       // $.overload_declaration,   // INFO: Removed from 1800-2023
       $.let_declaration
     )
@@ -5359,6 +5341,7 @@ module.exports = grammar({
     $.class_identifier,
     $.package_identifier,
 
+    $.any_parameter_declaration,
     // TODO: Not reviewed
 
     // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
