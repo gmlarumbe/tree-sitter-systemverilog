@@ -439,7 +439,7 @@ const rules = {
     )
   ),
 
-  port1: $ => prec('port1', choice( // Reordered, not empty
+  port: $ => prec('port', choice( // Modified to avoid matching empty string
     $._port_expression,
     seq('.', $.port_identifier, '(', optional($._port_expression), ')')
   )),
@@ -5462,12 +5462,12 @@ module.exports = grammar({
     ['ansi_port_declaration', '_variable_dimension'],
 
 
-    // This one doesn't seem to make much sense for module declarations, but port1
+    // This one doesn't seem to make much sense for module declarations, but port
     // will be used in module instantiation with unconnected ports, so prioritize it.
     // module_keyword  module_identifier  '('  '.'  _identifier  '('  ')'  •  ')'  …
     //   1:  module_keyword  module_identifier  '('  (ansi_port_declaration  '.'  _identifier  '('  ')')  •  ')'  …  (precedence: 'ansi_port_declaration')
-    //   2:  module_keyword  module_identifier  '('  (port1  '.'  _identifier  '('  ')')  •  ')'  …
-    ['port1', 'ansi_port_declaration'],
+    //   2:  module_keyword  module_identifier  '('  (port  '.'  _identifier  '('  ')')  •  ')'  …
+    ['port', 'ansi_port_declaration'],
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
