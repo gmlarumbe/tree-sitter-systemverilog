@@ -589,7 +589,7 @@ const rules = {
 
   bind_target_instance: $ => seq(
     $.hierarchical_identifier,
-    optional($.constant_bit_select1)
+    optional($.constant_bit_select)
   ),
 
   bind_target_instance_list: $ => sepBy1(',', $.bind_target_instance),
@@ -1131,7 +1131,7 @@ const rules = {
   //   choice(
   //     seq($.data_type, $._type_identifier, repeat($._variable_dimension)),
   //     seq(
-  //       $.interface_instance_identifier, optional($.constant_bit_select1),
+  //       $.interface_instance_identifier, optional($.constant_bit_select),
   //       '.', $._type_identifier, $._type_identifier
   //     ),
   //     seq(
@@ -1147,7 +1147,7 @@ const rules = {
     'typedef',
     choice(
       seq($.data_type_or_incomplete_class_scoped_type, $._type_identifier, repeat($._variable_dimension)),
-      seq($.interface_port_identifier, optional($.constant_bit_select1), '.', $._type_identifier, $._type_identifier),
+      seq($.interface_port_identifier, optional($.constant_bit_select), '.', $._type_identifier, $._type_identifier),
       seq(optional($._forward_type), $._type_identifier)
     ),
     ';'
@@ -4613,19 +4613,20 @@ const rules = {
     $.bit_select1
   ),
 
-  constant_bit_select1: $ => repeat1(prec('constant_bit_select1', seq( // reordered -> non empty
+  // Modified to avoid matching empty string
+  constant_bit_select: $ => repeat1(prec('constant_bit_select', seq(
     '[', $.constant_expression, ']'
   ))),
 
   // Modified to avoid matching empty string
   constant_select: $ => prec('constant_select', choice( // reordered -> non empty
     seq(
-      repeat(prec('constant_select', seq('.', $.member_identifier, optional($.constant_bit_select1)))), '.', $.member_identifier,
-      optional($.constant_bit_select1),
+      repeat(prec('constant_select', seq('.', $.member_identifier, optional($.constant_bit_select)))), '.', $.member_identifier,
+      optional($.constant_bit_select),
       optional(seq('[', $._constant_part_select_range, ']'))
     ),
     seq(
-      $.constant_bit_select1,
+      $.constant_bit_select,
       optional(seq('[', $._constant_part_select_range, ']'))
     ),
     seq('[', $._constant_part_select_range, ']'),
@@ -4871,8 +4872,8 @@ const rules = {
   hierarchical_identifier: $ => prec('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
     optional(seq('$root', '.')),
     // INFO: Slightly out of LRM to support use of macros as part of hierarchical identifiers
-    repeat(prec('hierarchical_identifier', seq(choice($._identifier, $.text_macro_usage), optional($.constant_bit_select1), '.'))),
-    // repeat(prec('hierarchical_identifier', seq($._identifier, optional($.constant_bit_select1), '.'))),
+    repeat(prec('hierarchical_identifier', seq(choice($._identifier, $.text_macro_usage), optional($.constant_bit_select), '.'))),
+    // repeat(prec('hierarchical_identifier', seq($._identifier, optional($.constant_bit_select), '.'))),
     // End of INFO
     $._identifier
   )),
@@ -5533,7 +5534,7 @@ module.exports = grammar({
     //   module_keyword  module_identifier  '('  _identifier  '['  constant_expression  ']'  •  ')'  …
     //     1:  module_keyword  module_identifier  '('  _identifier  (constant_bit_select1_repeat1  '['  constant_expression  ']')  •  ')'  …
     //     2:  module_keyword  module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_expression  ']')  •  ')'  …            (precedence: 'unpacked_dimension')
-    ['unpacked_dimension', 'constant_bit_select1'],
+    ['unpacked_dimension', 'constant_bit_select'],
 
 
     // module_nonansi_header  always_keyword  '@'  _identifier  •  ';'  …
@@ -5817,7 +5818,7 @@ module.exports = grammar({
     // INFO: After adding text_macro support for hierarchical identifiers
     // text_macro_usage  •  '['  …
     // 1:  (_directives  text_macro_usage)  •  '['  …                                         (precedence: '_directives')
-    // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select1  '.')  (precedence: 'hierarchical_identifier')
+    // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     ['hierarchical_identifier', '_directives'],
     ['_method_call_root', '_directives'],
 
@@ -5989,9 +5990,9 @@ module.exports = grammar({
     // Same case below
     //
     //   '['  _identifier  constant_bit_select1_repeat1  •  '['  …
-    //   1:  '['  _identifier  (constant_bit_select1  constant_bit_select1_repeat1)  •  '['  …
+    //   1:  '['  _identifier  (constant_bit_select  constant_bit_select1_repeat1)  •  '['  …
     //   2:  '['  _identifier  (constant_bit_select1_repeat1  constant_bit_select1_repeat1  •  constant_bit_select1_repeat1)
-    [$.constant_bit_select1],
+    [$.constant_bit_select],
 
 
     // Parser needs more information to know which of these possibiliies is the correct one:
@@ -6046,7 +6047,7 @@ module.exports = grammar({
     //   'function'  function_identifier  ';'  _identifier  •  '['  …
     //   1:  'function'  function_identifier  ';'  (data_type  _identifier  •  data_type_repeat1)                                (precedence: 'data_type')
     //   2:  'function'  function_identifier  ';'  (hierarchical_identifier  _identifier)  •  '['  …                             (precedence: 'hierarchical_identifier')
-    //   3:  'function'  function_identifier  ';'  (hierarchical_identifier_repeat1  _identifier  •  constant_bit_select1  '.')  (precedence: 'hierarchical_identifier')
+    //   3:  'function'  function_identifier  ';'  (hierarchical_identifier_repeat1  _identifier  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     [$.data_type, $.hierarchical_identifier],
 
 
