@@ -417,7 +417,8 @@ const rules = {
     $.type_parameter_declaration,
   ),
 
-  list_of_ports: $ => seq('(', sepBy(',', $.port), ')'),
+  // Only the $.port_reference branch will be possible in a non-ansi declaration
+  list_of_ports: $ => seq('(', sepBy(',', alias($.port_reference, $.port)), ')'),
 
   list_of_port_declarations: $ => seq(
     '(',
@@ -439,10 +440,10 @@ const rules = {
     )
   ),
 
-  port: $ => prec('port', choice( // Modified to avoid matching empty string
+  port: $ => choice( // Modified to avoid matching empty string
     $._port_expression,
     seq('.', $.port_identifier, '(', optional($._port_expression), ')')
-  )),
+  ),
 
   _port_expression: $ => choice(
     $.port_reference,
@@ -2691,7 +2692,7 @@ const rules = {
     repeat($.attribute_instance),
     choice(
       // INFO: optional directives out of LRM, supports e.g. ifdefs in parameter lists
-      seq(optional($._directives), '.', $.port_identifier, optional(seq('(', optional($.expression), ')'))),
+      seq(optional($._directives), '.', field('port_name', $.port_identifier), optional(seq('(', optional(field('connection', $.expression)), ')'))),
       '.*'
     )
   ),
@@ -4926,7 +4927,7 @@ const rules = {
   )),
 
   parameter_identifier: $ => alias($._identifier, $.parameter_identifier),
-  port_identifier: $ => alias($._identifier, $.port_identifier),
+  port_identifier: $ => $._identifier,
   // production_identifier: $ => alias($._identifier, $.production_identifier),
   program_identifier: $ => $._identifier,
   property_identifier: $ => alias($._identifier, $.property_identifier),
@@ -5341,7 +5342,13 @@ module.exports = grammar({
     $.class_identifier,
     $.package_identifier,
 
+    $.port_identifier,
+
     $.any_parameter_declaration,
+
+    // $._port_expression,
+
+
     // TODO: Not reviewed
 
     // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
@@ -5382,7 +5389,6 @@ module.exports = grammar({
   //   $.sequence_identifier,
     $._net_identifier,
     $.member_identifier,
-    $.port_identifier,
     $._block_identifier,
     $.instance_identifier,
     $.property_identifier,
@@ -5467,7 +5473,7 @@ module.exports = grammar({
     // module_keyword  module_identifier  '('  '.'  _identifier  '('  ')'  •  ')'  …
     //   1:  module_keyword  module_identifier  '('  (ansi_port_declaration  '.'  _identifier  '('  ')')  •  ')'  …  (precedence: 'ansi_port_declaration')
     //   2:  module_keyword  module_identifier  '('  (port  '.'  _identifier  '('  ')')  •  ')'  …
-    ['port', 'ansi_port_declaration'],
+    // ['port', 'ansi_port_declaration'],
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
@@ -5903,6 +5909,8 @@ module.exports = grammar({
     ['hierarchical_instance'],
     ['concurrent_assertion_item'],
     ['interface_port_declaration'],
+
+    ['port'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+RC=
+
 while getopts :p:t opts; do
     case ${opts} in
         p) PATTERN=${OPTARG} ;;
@@ -170,16 +172,21 @@ echo ""
 if [[ -n "$TREE_SITTER_TEST" ]]; then
     echo "Running tree-sitter tests..."
     tree-sitter test -f "$PATTERN" > test.log
-    if [[ $? -eq 0 ]]; then
-        echo "All tests passed"
-    else
+    RC=$?
+    if [[ $RC != 0 ]]; then
         echo "Some tests failed!!"
         cat test.log
     fi
 fi
 
-
 echo ""
 echo "List of changed files:"
 git status --porcelain -uno test/corpus
 echo ""
+
+# Report if all tests have passed
+if [[ $RC -eq 0 ]]; then
+    echo "All tests passed!"
+else
+    echo "Some tests failed!!"
+fi
