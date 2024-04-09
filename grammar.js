@@ -881,7 +881,7 @@ const rules = {
     seq($.uniqueness_constraint, ';'),
     prec.right(PREC.IMPLICATION, seq($.expression, '->', $.constraint_set)),
     prec.right(seq('if', '(', $.expression, ')', $.constraint_set, optseq('else', $.constraint_set))),
-    seq('foreach', '(', $.ps_or_hierarchical_array_identifier, '[', optional($.loop_variables1), ']', ')', $.constraint_set),
+    seq('foreach', '(', $.ps_or_hierarchical_array_identifier, '[', optional($.loop_variables), ']', ')', $.constraint_set),
     seq('disable', 'soft', $.constraint_primary, ';')
   ),
 
@@ -920,9 +920,11 @@ const rules = {
   constraint_prototype_qualifier: $ => choice('extern', 'pure'),
 
   extern_constraint_declaration: $ => seq(
-    optional('static'),
-    'constraint',
-    optional($.dynamic_override_specifiers),
+    choice(
+      // A.10.11: It shall be illegal to use the dynamic_override_specifiers with static constraints
+      seq('static', 'constraint'),
+      seq('constraint', optional($.dynamic_override_specifiers)),
+    ),
     $.class_scope,
     $.constraint_identifier,
     $.constraint_block
@@ -3375,7 +3377,7 @@ const rules = {
       'foreach', '(',
       $.ps_or_hierarchical_array_identifier,
       '[',
-      optional($.loop_variables1),
+      optional($.loop_variables),
       ']',
       ')',
       $.statement
@@ -3400,7 +3402,8 @@ const rules = {
     $.function_subroutine_call
   ),
 
-  loop_variables1: $ => seq( // Avoid matching empty string!
+  // Modified to avoid matching empty string
+  loop_variables: $ => seq(
     $.index_variable_identifier,
     repeat(seq(',', optional($.index_variable_identifier)))
   ),
