@@ -707,10 +707,10 @@ const rules = {
 // ** A.1.8 Checker items
   checker_port_list: $ => sepBy1(',', $.checker_port_item),
 
-  checker_port_item: $ => seq( // TODO
+  checker_port_item: $ => seq(
     repeat($.attribute_instance),
     optional($.checker_port_direction),
-    optional($.property_formal_type1),
+    optional($.property_formal_type), // Contains empty string branch $.data_type_or_implicit
     $.formal_port_identifier,
     repeat($._variable_dimension),
     optseq('=', $._property_actual_arg)
@@ -994,14 +994,14 @@ const rules = {
   local_parameter_declaration: $ => seq(
     'localparam',
     choice(
-      seq(optional($.data_type_or_implicit1), $.list_of_param_assignments),
+      seq(optional($.data_type_or_implicit), $.list_of_param_assignments),
       $.type_parameter_declaration,
     )),
 
   parameter_declaration: $ => seq(
     'parameter',
     choice(
-      seq(optional($.data_type_or_implicit1), $.list_of_param_assignments),
+      seq(optional($.data_type_or_implicit), $.list_of_param_assignments),
       $.type_parameter_declaration,
     )),
 
@@ -1068,8 +1068,8 @@ const rules = {
       // INFO: I think it's not an option because var_data_type doesn't have
       // the automatic/static lifetime into account
       choice(
-        seq('var', optional($.lifetime), optional($.data_type_or_implicit1)),
-        seq(optional($.lifetime), $.data_type_or_implicit1),
+        seq('var', optional($.lifetime), optional($.data_type_or_implicit)),
+        seq(optional($.lifetime), $.data_type_or_implicit),
       ),
       $.list_of_variable_decl_assignments,
       ';'
@@ -1110,7 +1110,7 @@ const rules = {
       $.net_type,
       optional(choice($.drive_strength, $.charge_strength)),
       optional(choice('vectored', 'scalared')),
-      optional($.data_type_or_implicit1),
+      optional($.data_type_or_implicit),
       optional($.delay3), // TODO: Removed temporarily by Larumbe
       $.list_of_net_decl_assignments,
       ';'
@@ -1123,7 +1123,7 @@ const rules = {
     ),
     // seq(
     //   'interconnect',
-    //   optional($.implicit_data_type1),
+    //   optional($.implicit_data_type),
     //   optseq('#', $.delay_value),
     //   sep1(',', seq($._net_identifier, repeat($.unpacked_dimension))),
     //   ';'
@@ -1244,17 +1244,16 @@ const rules = {
     $.type_reference
   )),
 
-  data_type_or_implicit1: $ => prec('data_type_or_implicit1', choice(
+  data_type_or_implicit: $ => prec('data_type_or_implicit', choice(
     $.data_type,
-    $.implicit_data_type1
+    $.implicit_data_type
   )),
 
-  // INFO: Original by Drom, changed from standard to avoid matching the empty string
-  implicit_data_type1: $ => prec.right(choice( // reordered : repeat -> repeat1
+  // Changed to avoid matching empty string
+  implicit_data_type: $ => prec.right(choice(
     seq($._signing, repeat($.packed_dimension)),
     repeat1($.packed_dimension)
   )),
-  // End of INFO
 
   enum_base_type: $ => choice(
     seq($.integer_atom_type, optional($._signing)),
@@ -1298,18 +1297,18 @@ const rules = {
 
   // Modified to avoid matching empty string
   net_port_type: $ => choice( // Reorder, avoid matching empty string
-    seq($.net_type, $.data_type_or_implicit1),
+    seq($.net_type, $.data_type_or_implicit),
     $.net_type,
-    $.data_type_or_implicit1,
+    $.data_type_or_implicit,
     $._net_type_identifier,
-    seq('interconnect', optional($.implicit_data_type1))
+    seq('interconnect', optional($.implicit_data_type))
   ),
 
   variable_port_type: $ => prec('variable_port_type', $.var_data_type),
 
   var_data_type: $ => choice(
     $.data_type,
-    seq('var', optional($.data_type_or_implicit1))
+    seq('var', optional($.data_type_or_implicit))
   ),
 
   _signing: $ => choice('signed', 'unsigned'),
@@ -1580,7 +1579,7 @@ const rules = {
 // ** A.2.6 Function declarations
   function_data_type_or_implicit1: $ => choice(
     $.data_type_or_void,
-    $.implicit_data_type1
+    $.implicit_data_type
   ),
 
   function_declaration: $ => seq(
@@ -1708,7 +1707,7 @@ const rules = {
   //   optional('var'),
   //   choice(
   //     seq(
-  //       $.data_type_or_implicit1,
+  //       $.data_type_or_implicit,
   //       optseq(
   //         $.port_identifier,
   //         repeat($._variable_dimension),
@@ -1728,7 +1727,7 @@ const rules = {
     optional($.tf_port_direction),
     optional('var'),
     choice(
-      seq($.data_type_or_implicit1, optional($.port_identifier)),
+      seq($.data_type_or_implicit, optional($.port_identifier)),
       $.port_identifier,
     ),
     repeat($._variable_dimension),
@@ -1744,7 +1743,7 @@ const rules = {
     repeat($.attribute_instance),
     $.tf_port_direction,
     optional('var'),
-    optional($.data_type_or_implicit1),
+    optional($.data_type_or_implicit),
     $.list_of_tf_variable_identifiers,
     ';'
   ),
@@ -1956,7 +1955,7 @@ const rules = {
       'local',
       optional($.property_lvar_port_direction)
     )),
-    optional($.property_formal_type1),
+    optional($.property_formal_type), // Contains empty string branch $.data_type_or_implicit
     $.formal_port_identifier,
     repeat($._variable_dimension),
     optional(seq('=', $._property_actual_arg))
@@ -1964,8 +1963,8 @@ const rules = {
 
   property_lvar_port_direction: $ => 'input',
 
-  property_formal_type1: $ => choice(
-    $.sequence_formal_type1,
+  property_formal_type: $ => choice(
+    $.sequence_formal_type,  // Contains empty string branch $.data_type_or_implicit
     'property'
   ),
 
@@ -2054,7 +2053,7 @@ const rules = {
   sequence_port_item: $ => seq(
     repeat($.attribute_instance),
     optional(seq('local', optional($.sequence_lvar_port_direction))),
-    optional($.sequence_formal_type1),
+    optional($.sequence_formal_type), // Contains empty string branch $.data_type_or_implicit
     $.formal_port_identifier,
     repeat($._variable_dimension),
     optional(seq('=', $._sequence_actual_arg))
@@ -2062,8 +2061,8 @@ const rules = {
 
   sequence_lvar_port_direction: $ => choice('input', 'inout', 'output'),
 
-  sequence_formal_type1: $ => choice(
-    $.data_type_or_implicit1,
+  sequence_formal_type: $ => choice(
+    $.data_type_or_implicit,
     'sequence',
     'untyped'
   ),
@@ -2250,7 +2249,7 @@ const rules = {
   ),
 
   cover_point: $ => seq(
-    optional(seq(optional($.data_type_or_implicit1), $.cover_point_identifier, ':')),
+    optional(seq(optional($.data_type_or_implicit), $.cover_point_identifier, ':')),
     'coverpoint', $.expression,
     // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')'))),
     optional(seq('iff', '(', $.expression, ')')),
@@ -2452,7 +2451,7 @@ const rules = {
   ),
 
   let_formal_type1: $ => choice(
-    $.data_type_or_implicit1,
+    $.data_type_or_implicit,
     'untyped'
   ),
 
@@ -5466,9 +5465,9 @@ module.exports = grammar({
     // $.data_type corresponds to variables, $.net_type to $.net_port_type
     //
     // 'input'  data_type  •  '\'  …
-    // 1:  'input'  (data_type_or_implicit1  data_type)  •  '\'  …  (precedence: 'data_type_or_implicit1')
+    // 1:  'input'  (data_type_or_implicit  data_type)  •  '\'  …  (precedence: 'data_type_or_implicit')
     // 2:  'input'  (variable_port_type  data_type)  •  '\'  …      (precedence: 'variable_port_type')
-    ['variable_port_type', 'data_type_or_implicit1'],
+    ['variable_port_type', 'data_type_or_implicit'],
 
 
 
@@ -5607,8 +5606,8 @@ module.exports = grammar({
 
 
 
-    // First option follows the path: data_type_or_implicit1 -> data_type -> seq($._type_identifier, repeat($.packed_dimension))
-    // Second option follows the path: data_type_or_implicit1 -> implicit_data_type1 -> repeat1($.packed_dimension)
+    // First option follows the path: data_type_or_implicit -> data_type -> seq($._type_identifier, repeat($.packed_dimension))
+    // Second option follows the path: data_type_or_implicit -> implicit_data_type -> repeat1($.packed_dimension)
     // In theory this is not a legal case since a packed array should be set for vector types, like bit/logic, not for the
     // implicit one (which is int). Set to the first one for potential future conflicts and because it is not 'completely implicit'
     // if setting the packed dimension.
@@ -5717,10 +5716,10 @@ module.exports = grammar({
     // Since it comes after a class declaration, consider it a class property
     //
     //   'class'  _identifier  ';'  'const'  data_type  •  simple_identifier  …
-    //   1:  'class'  _identifier  ';'  'const'  (data_type_or_implicit1  data_type)  •  simple_identifier  …                     (precedence: 'data_type_or_implicit1')
+    //   1:  'class'  _identifier  ';'  'const'  (data_type_or_implicit  data_type)  •  simple_identifier  …                     (precedence: 'data_type_or_implicit')
     //   2:  'class'  _identifier  ';'  (class_property  'const'  data_type  •  const_identifier  ';')                            (precedence: 'class_property')
     //   3:  'class'  _identifier  ';'  (class_property  'const'  data_type  •  const_identifier  '='  constant_expression  ';')  (precedence: 'class_property')
-    ['class_property', 'data_type_or_implicit1'],
+    ['class_property', 'data_type_or_implicit'],
 
 
     // pure virtual function will always be a function prototype overriden in the extended class
@@ -6018,7 +6017,7 @@ module.exports = grammar({
     // before a list_of_variable_decl_assignments unless the var keyword is used.
     //
     //   'input'  'var'  •  '\'  …
-    //   1:  'input'  (variable_port_type  'var'  •  data_type_or_implicit1)
+    //   1:  'input'  (variable_port_type  'var'  •  data_type_or_implicit)
     //   2:  'input'  (variable_port_type  'var')  •  '\'  …
     [$.variable_port_type],
 
@@ -6041,7 +6040,7 @@ module.exports = grammar({
     // errors in the parsing of some file, so set as a conflict to increase lookahead 1 token
     //
     //   _module_header1  '('  net_type  •  simple_identifier  …
-    //   1:  _module_header1  '('  (net_port_type  net_type  •  data_type_or_implicit1)  (precedence: 'net_port_type')
+    //   1:  _module_header1  '('  (net_port_type  net_type  •  data_type_or_implicit)  (precedence: 'net_port_type')
     //   2:  _module_header1  '('  (net_port_type  net_type)  •  simple_identifier  …    (precedence: 'net_port_type')
     [$.net_port_type],
 
