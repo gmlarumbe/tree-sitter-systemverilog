@@ -849,11 +849,12 @@ const rules = {
   ),
 
 // ** A.1.10 Constraints
-
   constraint_declaration: $ => seq(
-    optional('static'),
-    'constraint',
-    optional($.dynamic_override_specifiers),
+    choice(
+      // A.10.11: It shall be illegal to use the dynamic_override_specifiers with static constraints
+      seq('static', 'constraint'),
+      seq('constraint', optional($.dynamic_override_specifiers)),
+    ),
     $.constraint_identifier,
     $.constraint_block
   ),
@@ -873,8 +874,8 @@ const rules = {
       $.class_scope
     )),
     $.hierarchical_identifier,
-    optional($.select1),
-    optional(seq('(', ')'))
+    optional($.select),
+    optseq('(', ')')
   ),
 
   // constraint_expression: $ => choice(
@@ -3585,7 +3586,7 @@ const rules = {
 
   clockvar_expression: $ => seq(
     $.clockvar,
-    optional($.select1)
+    optional($.select)
   ),
 
 // ** A.6.12 Randsequence
@@ -4293,7 +4294,7 @@ const rules = {
     // INFO: Modified wrt LRM, the implicit_class_handle should be matched by the $.primary
     // second condition. However there must be some precedences that prevent this from being
     // detected. This workaround might complicate a bit more the parser but seems to work well.
-    prec.dynamic(1, seq($.implicit_class_handle, optional($.select1))),
+    prec.dynamic(1, seq($.implicit_class_handle, optional($.select))),
     // End of INFO
     $.class_type, // INFO: Out of LRM: Added to support calling parameterized static methods
     $.text_macro_usage,// INFO: Out of LRM, added to fix parsing errors in UVM
@@ -4516,14 +4517,14 @@ const rules = {
       seq( // INFO: This is the one in the LRM
         optional(choice($.class_qualifier, $.package_scope)),
         $.hierarchical_identifier,
-        optional($.select1)
+        optional($.select)
       ),
       // INFO: The one below should be included in the one above, however it doesn't work well
       // possibly because of some bad specified precedence/conflict. For the time being, adding
       // the option below fixes things and seems to work well (at the expense of some more complexity
       // in the parser)
-      seq($.implicit_class_handle, optional($.select1)), // INFO: Out of LRM, but used as a workaround
-      // seq(choice($.class_qualifier, $.package_scope), optional($.select1)), // Tried this instead of the one above, but broke things and didn't add anything new
+      seq($.implicit_class_handle, optional($.select)), // INFO: Out of LRM, but used as a workaround
+      // seq(choice($.class_qualifier, $.package_scope), optional($.select)), // Tried this instead of the one above, but broke things and didn't add anything new
     ),
     $.empty_unpacked_array_concatenation,
     seq($.concatenation, optional(seq('[', $.range_expression, ']'))),
@@ -4587,7 +4588,7 @@ const rules = {
   ),
 
   // TODO: Review
-  select1: $ => choice( // reordered -> non empty
+  select: $ => choice( // reordered -> non empty
     seq( // 1xx
       // INFO: First line overlaps a lot with $.hierarchical_identifier, but that one uses constant_bit_select
       repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
@@ -4682,7 +4683,7 @@ const rules = {
         $.class_qualifier // INFO: Out of LRM, needed for static class access in LHS
       )),
       $._hierarchical_variable_identifier,
-      optional($.select1)
+      optional($.select)
     ),
 
     seq('{', sepBy1(',', $.variable_lvalue), '}'),
@@ -4702,7 +4703,7 @@ const rules = {
   //       $.package_scope
   //     )),
   //     $._hierarchical_variable_identifier,
-  //     optional($.select1)
+  //     optional($.select)
   //   )),
   //   prec.left(PREC.CONCAT, seq('{', sep1(',', $.variable_lvalue), '}')),
   //   prec.left(PREC.ASSIGN, seq(
@@ -5502,26 +5503,26 @@ module.exports = grammar({
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
-    // Set higher precedence to hierarchical_identifier than to select1/constant_select since
+    // Set higher precedence to hierarchical_identifier than to select/constant_select since
     // the latter is optional (according to LRM can match the empty string).
     // INFO: However, take into account that there should be a conflict below for the case
-    // when there is actually a select1 besides the hierarchical_identifier
+    // when there is actually a select besides the hierarchical_identifier
     //
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '.'  •  simple_identifier  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …
-    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier  '['  _part_select_range  ']')
-    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier  bit_select1  '['  _part_select_range  ']')
-    //   4:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier  bit_select1)
-    //   5:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1  '.'  •  _identifier)
+    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  '['  _part_select_range  ']')
+    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  bit_select1  '['  _part_select_range  ']')
+    //   4:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  bit_select1)
+    //   5:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier)
     //   6:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier  bit_select1)
     //   7:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier)
-    // ['hierarchical_identifier', 'select1'], // INFO: I think this one is redundant or not needed anymore
+    // ['hierarchical_identifier', 'select'], // INFO: I think this one is redundant or not needed anymore
     ['hierarchical_identifier', 'constant_select'],
 
 
     // TODO: Removed to fix the expressions with primaries inside a bit_select1!!
     //
-    // INFO: constant_primary has precedence since it refers to hierarchical_identifier instead of to select1, which in theory should simplify things quite a lot
+    // INFO: constant_primary has precedence since it refers to hierarchical_identifier instead of to select, which in theory should simplify things quite a lot
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  primary_literal  •  '/'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  primary_literal)  •  '/'  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  primary_literal)  •  '/'  …
@@ -5562,8 +5563,8 @@ module.exports = grammar({
     //
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '.'  _identifier  •  '/'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (constant_select  '.'  _identifier)  •  '/'  …  (precedence: 'constant_select')
-    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (select1  '.'  _identifier)  •  '/'  …           (precedence: 'select1')
-    // ['constant_select', 'select1'],
+    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (select  '.'  _identifier)  •  '/'  …           (precedence: 'select')
+    // ['constant_select', 'select'],
 
 
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  constant_range  •  ']'  …
@@ -5605,7 +5606,7 @@ module.exports = grammar({
     //
     //   module_nonansi_header  'var'  _identifier  '='  implicit_class_handle  '.'  •  '$root'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  (class_qualifier  implicit_class_handle  '.')  •  '$root'  …                        (precedence: 'class_qualifier')
-    //   2:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier  select1)  (precedence: 'variable_lvalue')
+    //   2:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier  select)  (precedence: 'variable_lvalue')
     //   3:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier)           (precedence: 'variable_lvalue')
     ['variable_lvalue', 'class_qualifier'],
 
@@ -5882,7 +5883,7 @@ module.exports = grammar({
     ['expression_or_dist'],
     ['text_macro_usage'],
     ['constant_select'],
-    ['select1'],
+    ['select'],
 
     ['module_declaration'],
     ['checker_instantiation'],
@@ -5936,7 +5937,7 @@ module.exports = grammar({
 
 
     // This is a real conflict, since it needs more lookeahead to distinguish between a hierarchical identifier
-    // and a select1 construct, that might have some members with non-constant expressions
+    // and a select construct, that might have some members with non-constant expressions
     //
     //   module_nonansi_header  'initial'  _identifier  •  '.'  …
     //   1:  module_nonansi_header  'initial'  (hierarchical_identifier  _identifier)  •  '.'  …       (precedence: 'hierarchical_identifier')
@@ -5948,7 +5949,7 @@ module.exports = grammar({
     //
     // module_nonansi_header  'assign'  hierarchical_identifier  •  '.'  …
     // 1:  module_nonansi_header  'assign'  (ps_or_hierarchical_net_identifier  hierarchical_identifier)  •  '.'  …
-    // 2:  module_nonansi_header  'assign'  (variable_lvalue  hierarchical_identifier  •  select1)
+    // 2:  module_nonansi_header  'assign'  (variable_lvalue  hierarchical_identifier  •  select)
     [$.variable_lvalue, $.ps_or_hierarchical_net_identifier],
 
 
@@ -6124,7 +6125,7 @@ module.exports = grammar({
     //   module_nonansi_header  'initial'  implicit_class_handle  •  '.'  …
     //   1:  module_nonansi_header  'initial'  (_method_call_root  implicit_class_handle)  •  '.'  …                                         (precedence: '_method_call_root')
     //   2:  module_nonansi_header  'initial'  (class_qualifier  implicit_class_handle  •  '.')                                              (precedence: 'class_qualifier')
-    //   3:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  _hierarchical_variable_identifier  select1)  (precedence: 'variable_lvalue')
+    //   3:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  _hierarchical_variable_identifier  select)  (precedence: 'variable_lvalue')
     //   4:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  _hierarchical_variable_identifier)           (precedence: 'variable_lvalue')
     [$._method_call_root, $.class_qualifier, $.variable_lvalue],
 
@@ -6132,10 +6133,10 @@ module.exports = grammar({
     // Same as before, this case could be all the options inside the initial, need more lookahead
     //
     // module_nonansi_header  'initial'  hierarchical_identifier  •  '.'  …
-    // 1:  module_nonansi_header  'initial'  (primary  hierarchical_identifier  •  select1)          (precedence: 'primary')
+    // 1:  module_nonansi_header  'initial'  (primary  hierarchical_identifier  •  select)          (precedence: 'primary')
     // 2:  module_nonansi_header  'initial'  (primary  hierarchical_identifier)  •  '.'  …           (precedence: 'primary')
     // 3:  module_nonansi_header  'initial'  (tf_call  hierarchical_identifier)  •  '.'  …           (precedence: 'tf_call')
-    // 4:  module_nonansi_header  'initial'  (variable_lvalue  hierarchical_identifier  •  select1)  (precedence: 'variable_lvalue')
+    // 4:  module_nonansi_header  'initial'  (variable_lvalue  hierarchical_identifier  •  select)  (precedence: 'variable_lvalue')
     [$.tf_call, $.primary, $.variable_lvalue],
 
 
@@ -6146,7 +6147,7 @@ module.exports = grammar({
     [$._method_call_root, $.class_qualifier],
     [$.tf_call, $.primary],
     [$.method_call_body, $.array_method_name],
-    [$.select1],
+    [$.select],
 
 
     // Need to set these to allow correct parsing of external methods and static methods
@@ -6326,7 +6327,7 @@ module.exports = grammar({
     [$._method_call_root, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.variable_lvalue, $.nonrange_variable_lvalue],
     [$.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.select1, $.nonrange_select1],
+    [$.select, $.nonrange_select1],
     [$.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
@@ -6334,7 +6335,7 @@ module.exports = grammar({
 
 
     // TODO: Remove!
-    [$.select1, $.variable_lvalue],
+    [$.select, $.variable_lvalue],
 
 
     // INFO: Added to fix issue with expressions inside bit_select1
@@ -6392,8 +6393,8 @@ module.exports = grammar({
 
 
     // Fix error with method call with bit_select
-    [$.class_qualifier, $.select1],
-    [$.select1, $.hierarchical_identifier],
+    [$.class_qualifier, $.select],
+    [$.select, $.hierarchical_identifier],
     [$.constant_select, $.hierarchical_identifier],
     [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$._method_call_root, $.primary],
