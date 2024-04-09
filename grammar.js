@@ -28,7 +28,7 @@ const PREC = {
   LOGICAL_AND: 25, // &&                                                 Left
   LOGICAL_OR: 24,  // ||                                                 Left
   CONDITIONAL: 23, // ?: (conditional operator)                          Right
-  IMPLICATION: 22, // –> <–>                                             Right
+  IMPLICATION: 22, // -> <->                                             Right
   ASSIGN: 21,      // = += -= *= /= %= &= ^= |= <<= >>= <<<=             None
                    // >>>= := :/ <=
   CONCAT: 20,      // {} {{}}                                            Concatenation
@@ -73,13 +73,14 @@ function optseq(...rules) {
   return optional(seq(...rules));
 }
 
+function optchoice(...rules) {
+  return optional(choice(...rules));
+}
+
 function enclosing(keyword, identifier) {
   return seq(keyword, optseq(':', identifier));
 }
 
-function optchoice(...rules) {
-  return optional(choice(...rules));
-}
 
 
 
@@ -869,47 +870,18 @@ const rules = {
   solve_before_list: $ => sepBy1(',', $.constraint_primary),
 
   constraint_primary: $ => seq(
-    optional(choice(
-      seq($.implicit_class_handle, '.'),
-      $.class_scope
-    )),
+    optchoice(seq($.implicit_class_handle, '.'), $.class_scope),
     $.hierarchical_identifier,
     optional($.select),
     optseq('(', ')')
   ),
 
-  // constraint_expression: $ => choice(
-  //   seq(optional('soft'), $.expression_or_dist, ';'),
-  //   seq($.uniqueness_constraint, ';'),
-  //   prec.right(PREC.IMPLICATION, seq($.expression, '–>', $.constraint_set)),
-  //   prec.left(seq(
-  //     'if', '(', $.expression, ')', $.constraint_set,
-  //     optseq('else', $.constraint_set)
-  //   )),
-  //   seq(
-  //     'foreach', '(',
-  //     $.ps_or_hierarchical_array_identifier,
-  //     '[', optional($.loop_variables1), ']',
-  //     ')',
-  //     $.constraint_set
-  //   ),
-  //   seq('disable', 'soft', $.constraint_primary, ';')
-  // ),
   constraint_expression: $ => choice(
     seq(optional('soft'), $.expression_or_dist, ';'),
     seq($.uniqueness_constraint, ';'),
-    prec.right(PREC.IMPLICATION, seq($.expression, '–>', $.constraint_set)),
-    prec.left(seq(
-      'if', '(', $.expression, ')', $.constraint_set,
-      optional(seq('else', $.constraint_set))
-    )),
-    seq(
-      'foreach', '(',
-      $.ps_or_hierarchical_array_identifier,
-      '[', optional($.loop_variables1), ']',
-      ')',
-      $.constraint_set
-    ),
+    prec.right(PREC.IMPLICATION, seq($.expression, '->', $.constraint_set)),
+    prec.right(seq('if', '(', $.expression, ')', $.constraint_set, optseq('else', $.constraint_set))),
+    seq('foreach', '(', $.ps_or_hierarchical_array_identifier, '[', optional($.loop_variables1), ']', ')', $.constraint_set),
     seq('disable', 'soft', $.constraint_primary, ';')
   ),
 
@@ -921,6 +893,11 @@ const rules = {
     $.constraint_expression,
     seq('{', repeat($.constraint_expression), '}')
   )),
+
+  expression_or_dist: $ => seq(
+    $.expression,
+    optional(prec.left(PREC.RELATIONAL, seq('dist', '{', $.dist_list, '}')))
+  ),
 
   dist_list: $ => sepBy1(',', $.dist_item),
 
@@ -950,8 +927,6 @@ const rules = {
     $.constraint_identifier,
     $.constraint_block
   ),
-
-  identifier_list: $ => sepBy1(',', $._identifier),
 
 
 // ** A.1.11 Package items
@@ -1113,8 +1088,8 @@ const rules = {
   net_declaration: $ => prec('net_declaration', choice(
     seq(
       $.net_type,
-      optional(choice($.drive_strength, $.charge_strength)),
-      optional(choice('vectored', 'scalared')),
+      optchoice($.drive_strength, $.charge_strength),
+      optchoice('vectored', 'scalared'),
       optional($.data_type_or_implicit),
       optional($.delay3), // TODO: Removed temporarily by Larumbe
       $.list_of_net_decl_assignments,
@@ -1187,12 +1162,12 @@ const rules = {
         $._net_type_identifier,
         optional(seq(
           'with',
-          optional(choice($.package_scope, $.class_scope)),
+          optchoice($.package_scope, $.class_scope),
           $.tf_identifier
         ))
       ),
       seq(
-        optional(choice($.package_scope, $.class_scope)),
+        optchoice($.package_scope, $.class_scope),
         $._net_type_identifier,
         $._net_type_identifier
       )
@@ -1800,7 +1775,7 @@ const rules = {
   //   ';'
   // ),
 
-  // overload_operator: $ => choice('+', '++', '–', '––', '*', '**', '/', '%', '==', '!=', '<', '<=', '>', '>=', '='),
+  // overload_operator: $ => choice('+', '++', '-', '--', '*', '**', '/', '%', '==', '!=', '<', '<=', '>', '>=', '='),
 
   // overload_proto_formals: $ => sep1(',', $.data_type),
 
@@ -2001,8 +1976,8 @@ const rules = {
     prec.right(PREC.INCIDENCE, seq($.sequence_expr, '|=>', $.property_expr)),
 
     // FIXME no assosiativity rules per spec
-    prec.left(seq('if', '(', $.expression_or_dist, ')', $.property_expr, optional(seq('else', $.property_expr)))), // FIXME spec bug ( ) are not red seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase'),  // FIXME spec bug ( ) are not red
-    prec.left(seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase')),
+    prec.right(seq('if', '(', $.expression_or_dist, ')', $.property_expr, optional(seq('else', $.property_expr)))), // FIXME spec bug ( ) are not red seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase'),  // FIXME spec bug ( ) are not red
+    prec.right(seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase')),
     prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#-#', $.property_expr)),
     prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#=#', $.property_expr)),
 
@@ -2188,11 +2163,6 @@ const rules = {
   cycle_delay_const_range_expression: $ => prec('cycle_delay_const_range_expression', choice(
     seq($.constant_expression, ':', $.constant_expression),
     seq($.constant_expression, ':', '$')
-  )),
-
-  expression_or_dist: $ => prec('expression_or_dist', seq(
-    $.expression,
-    optional(prec.left(PREC.RELATIONAL, seq('dist', '{', $.dist_list, '}')))
   )),
 
   assertion_variable_declaration: $ => seq(
@@ -2799,11 +2769,11 @@ const rules = {
     optional(seq('else', $.generate_block))
   )),
 
-  case_generate_construct: $ => seq(
+  case_generate_construct: $ => prec.right(seq(
     'case', '(', $.constant_expression, ')', $.case_generate_item,
     repeat($.case_generate_item),
     'endcase'
-  ),
+  )),
 
   case_generate_item: $ => choice(
     seq(sepBy1(',', $.constant_expression), ':', $.generate_block),
@@ -3278,7 +3248,7 @@ const rules = {
   //   'endcase'
   // ),
 
-  case_statement: $ => seq(
+  case_statement: $ => prec.right(seq(
     optional($.unique_priority),
     choice(
       seq(
@@ -3297,7 +3267,7 @@ const rules = {
       )
     ),
     'endcase'
-  ),
+  )),
 
   case_keyword: $ => choice('case', 'casez', 'casex'),
 
@@ -3628,17 +3598,17 @@ const rules = {
     $.rs_production_identifier, optional(seq('(', optional($.list_of_arguments), ')'))
   ),
 
-  rs_if_else: $ => seq(
+  rs_if_else: $ => prec.right(seq(
     'if', '(', $.expression, ')', $.rs_production_item, optional(seq('else', $.rs_production_item))
-  ),
+  )),
 
   rs_repeat: $ => seq(
     'repeat', '(', $.expression, ')', $.rs_production_item
   ),
 
-  rs_case: $ => seq(
+  rs_case: $ => prec.right(seq(
     'case', '(', $.case_expression, ')', repeat1($.rs_case_item), 'endcase'
-  ),
+  )),
 
   rs_case_item: $ => choice(
     seq(sepBy1(',', $.case_item_expression), ":", $.rs_production_item, ';'),
@@ -4288,6 +4258,8 @@ const rules = {
     optional(seq('(', optional(choice($.variable_identifier_list, 'null')), ')')),
     optional(seq('with', optional(seq('(', optional($.identifier_list), ')')), $.constraint_block))
   ),
+
+  identifier_list: $ => sepBy1(',', $._identifier),
 
   _method_call_root: $ => prec('_method_call_root', choice(
     prec.dynamic(0, $.primary),
@@ -5818,9 +5790,9 @@ module.exports = grammar({
     ['module_declaration', '_non_port_module_item'],
 
 
-    // 'randomize'  'with'  '{'  expression  '–>'  '{'  '}'  •  '+'  …
-    // 1:  'randomize'  'with'  '{'  expression  '–>'  (constraint_set  '{'  '}')  •  '+'  …
-    // 2:  'randomize'  'with'  '{'  expression  '–>'  (empty_unpacked_array_concatenation  '{'  '}')  •  '+'  …
+    // 'randomize'  'with'  '{'  expression  '->'  '{'  '}'  •  '+'  …
+    // 1:  'randomize'  'with'  '{'  expression  '->'  (constraint_set  '{'  '}')  •  '+'  …
+    // 2:  'randomize'  'with'  '{'  expression  '->'  (empty_unpacked_array_concatenation  '{'  '}')  •  '+'  …
     ['constraint_set', 'empty_unpacked_array_concatenation'],
 
 
