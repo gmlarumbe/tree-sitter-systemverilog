@@ -169,9 +169,10 @@ function directive(command) {
 */
 
 const rules = {
-  // Tree-sitter entry point
-  source_file: $ => repeat($._description), // TODO: What about [timeunits_declaration]
-  // source_file: $ => seq(optional($.timeunits_declaration), repeat($._description)), // TODO: What about [timeunits_declaration]
+
+  // LRM includes optional $.timeunits_declaration. but having it creates
+  // unnecessary conflicts with the $.snippets children which already cover it.
+  source_file: $ => repeat($._description),
 
   snippets: $ => choice(
     $._directives,
@@ -265,7 +266,7 @@ const rules = {
 
   module_keyword: $ => choice('module', 'macromodule'),
 
-  interface_declaration: $ => choice(
+  interface_declaration: $ => prec('interface_declaration', choice(
     seq(
       $.interface_nonansi_header,
       optional($.timeunits_declaration),
@@ -289,7 +290,7 @@ const rules = {
     ),
     seq('extern', $.interface_nonansi_header),
     seq('extern', $.interface_ansi_header)
-  ),
+  )),
 
   // Out of LRM, groups common tokens of interface headers
   _interface_header: $ => seq(
@@ -313,7 +314,7 @@ const rules = {
     ';'
   ),
 
-  program_declaration: $ => choice(
+  program_declaration: $ => prec('program_declaration', choice(
     seq(
       $.program_nonansi_header,
       optional($.timeunits_declaration),
@@ -337,7 +338,7 @@ const rules = {
     ),
     seq('extern', $.program_nonansi_header),
     seq('extern', $.program_ansi_header)
-  ),
+  )),
 
   // Out of LRM, groups common tokens of program headers
   _program_header: $ => seq(
@@ -396,14 +397,14 @@ const rules = {
     enclosing('endclass',$.class_identifier)
   ),
 
-  package_declaration: $ => seq(
+  package_declaration: $ => prec('package_declaration', seq(
     repeat($.attribute_instance),
     'package', optional($.lifetime),
     field('name', $.package_identifier), ';',
     optional($.timeunits_declaration),
     repseq(repeat($.attribute_instance), alias($._package_item, $.package_item)),
     enclosing('endpackage',$.package_identifier)
-  ),
+  )),
 
   timeunits_declaration: $ => choice(
     seq('timeunit', $.time_literal, optseq('/', $.time_literal), ';'),
@@ -569,7 +570,7 @@ const rules = {
     $.program_declaration,
     $.module_declaration,
     $.interface_declaration,
-    $.timeunits_declaration,
+    $.timeunits_declaration, // A.10.3
     $._directives, // Out of LRM
   )),
 
@@ -679,7 +680,7 @@ const rules = {
     $.program_declaration,
     $.modport_declaration,
     $.interface_declaration,
-    $.timeunits_declaration
+    $.timeunits_declaration // A.10.3
   ),
 
 // ** A.1.7 Program items
@@ -696,7 +697,7 @@ const rules = {
       $.final_construct,
       $.concurrent_assertion_item,
     )),
-    $.timeunits_declaration,
+    $.timeunits_declaration, // A.10.3
     $._program_generate_item
   ),
 
@@ -934,9 +935,9 @@ const rules = {
 // ** A.1.11 Package items
   _package_item: $ => prec('_package_item', choice(
     $._package_or_generate_item_declaration,
-    // $.anonymous_program,
+    $.anonymous_program,
     $.package_export_declaration,
-    // $.timeunits_declaration // TODO: This should be included
+    $.timeunits_declaration // A.10.3
   )),
 
   _package_or_generate_item_declaration: $ => prec('_package_or_generate_item_declaration', choice(
@@ -954,21 +955,21 @@ const rules = {
     $.covergroup_declaration,
     $._assertion_item_declaration,
     ';',
-    $._directives  // DANGER: Out of LRM
+    $._directives // Out of LRM
   )),
 
-  // anonymous_program: $ => seq(
-  //   'program', ';', repeat($.anonymous_program_item), 'endprogram'
-  // ),
+  anonymous_program: $ => seq(
+    'program', ';', repeat($.anonymous_program_item), 'endprogram'
+  ),
 
-  // anonymous_program_item: $ => choice(
-  //   $.task_declaration,
-  //   $.function_declaration,
-  //   $.class_declaration,
-  //   $.covergroup_declaration,
-  //   $.class_constructor_declaration,
-  //   ';'
-  // ),
+  anonymous_program_item: $ => choice(
+    $.task_declaration,
+    $.function_declaration,
+    $.class_declaration,
+    $.covergroup_declaration,
+    $.class_constructor_declaration,
+    ';'
+  ),
 
 // * A.2 Declarations
 // ** A.2.1 Declaration types
@@ -5408,6 +5409,22 @@ module.exports = grammar({
     // 1:  (_module_or_generate_item_declaration  _package_or_generate_item_declaration)  •  ';'  …  (precedence: '_module_or_generate_item_declaration')
     // 2:  (_package_item  _package_or_generate_item_declaration)  •  ';'  …                          (precedence: '_package_item')
     ['_package_item', '_module_or_generate_item_declaration'],
+    // timeunits_declaration  •  ';'  …
+    // 1:  (_non_port_module_item  timeunits_declaration)  •  ';'  …  (precedence: '_non_port_module_item')
+    // 2:  (_package_item  timeunits_declaration)  •  ';'  …          (precedence: '_package_item')
+    ['_package_item', '_non_port_module_item'],
+
+
+    // First appearing timeunits being part of the declaration have higher precedence than the item.
+    // Plus, A.10.3: A timeunits_declaration shall be legal as a non_port_module_item, non_port_interface_item,
+    // non_port_program_item, or package_item only if it repeats and matches a previous
+    // timeunits_declaration within the same time scope.
+    //
+    // 'package'  _identifier  ';'  timeunits_declaration  •  ';'  …
+    // 1:  'package'  _identifier  ';'  (_package_item  timeunits_declaration)  •  ';'  …                                                                    (precedence: '_package_item')
+    // 2:  (package_declaration  'package'  _identifier  ';'  timeunits_declaration  •  package_declaration_repeat1  'endpackage'  ':'  package_identifier)  (precedence: 'package_declaration')
+    // 3:  (package_declaration  'package'  _identifier  ';'  timeunits_declaration  •  package_declaration_repeat1  'endpackage')                           (precedence: 'package_declaration')
+    ['package_declaration', '_package_item'],
 
 
     // In case we are working with a snippet (no module/interface declaration), consider it a _module_item
@@ -5450,6 +5467,20 @@ module.exports = grammar({
     // 2:  'input'  (variable_port_type  data_type)  •  '\'  …      (precedence: 'variable_port_type')
     ['variable_port_type', 'data_type_or_implicit'],
 
+
+    // Consider the super.new after declaration as part of the declaration and not as a statement:
+    //
+    // 'function'  'new'  ';'  'super'  •  '.'  …
+    // 1:  'function'  'new'  ';'  (implicit_class_handle  'super')  •  '.'  …                                                                                                                  (precedence: 'implicit_class_handle')
+    // 2:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  'endfunction'  ':'  'new')                                         (precedence: 'class_constructor_declaration')
+    // 3:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  'endfunction')                                                     (precedence: 'class_constructor_declaration')
+    // 4:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  class_constructor_declaration_repeat2  'endfunction'  ':'  'new')  (precedence: 'class_constructor_declaration')
+    // 5:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  class_constructor_declaration_repeat2  'endfunction')              (precedence: 'class_constructor_declaration')
+    // 6:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  'endfunction'  ':'  'new')                                                                      (precedence: 'class_constructor_declaration')
+    // 7:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  'endfunction')                                                                                  (precedence: 'class_constructor_declaration')
+    // 8:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  class_constructor_declaration_repeat2  'endfunction'  ':'  'new')                               (precedence: 'class_constructor_declaration')
+    // 9:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  class_constructor_declaration_repeat2  'endfunction')                                           (precedence: 'class_constructor_declaration')
+    ['class_constructor_declaration', 'implicit_class_handle'],
 
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -5679,21 +5710,6 @@ module.exports = grammar({
     ['class_item_qualifier', 'lifetime'],
 
 
-    // Consider the super.new after declaration as part of the declaration and not as a statement:
-    //
-    // 'function'  'new'  ';'  'super'  •  '.'  …
-    // 1:  'function'  'new'  ';'  (implicit_class_handle  'super')  •  '.'  …                                                                                                                  (precedence: 'implicit_class_handle')
-    // 2:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  'endfunction'  ':'  'new')                                         (precedence: 'class_constructor_declaration')
-    // 3:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  'endfunction')                                                     (precedence: 'class_constructor_declaration')
-    // 4:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  class_constructor_declaration_repeat2  'endfunction'  ':'  'new')  (precedence: 'class_constructor_declaration')
-    // 5:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  '('  list_of_arguments  ')'  ';'  class_constructor_declaration_repeat2  'endfunction')              (precedence: 'class_constructor_declaration')
-    // 6:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  'endfunction'  ':'  'new')                                                                      (precedence: 'class_constructor_declaration')
-    // 7:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  'endfunction')                                                                                  (precedence: 'class_constructor_declaration')
-    // 8:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  class_constructor_declaration_repeat2  'endfunction'  ':'  'new')                               (precedence: 'class_constructor_declaration')
-    // 9:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  class_constructor_declaration_repeat2  'endfunction')                                           (precedence: 'class_constructor_declaration')
-    ['class_constructor_declaration', 'implicit_class_handle'],
-
-
     // Since it comes after a class declaration, consider it a class property
     //
     //   'class'  _identifier  ';'  'const'  data_type  •  simple_identifier  …
@@ -5860,7 +5876,6 @@ module.exports = grammar({
     ['constant_select'],
     ['select'],
 
-    ['module_declaration'],
     ['checker_instantiation'],
     ['program_instantiation'],
     ['interface_instantiation'],
@@ -5869,6 +5884,12 @@ module.exports = grammar({
     ['interface_port_declaration'],
     ['port_reference'],
     ['net_port_type'],
+    ['source_file'],
+
+    ['module_declaration'],
+    ['interface_declaration'],
+    ['program_declaration'],
+    ['package_declaration'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
