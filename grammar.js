@@ -9,43 +9,45 @@
 'use strict';
 
 const PREC = {
-
-  PARENT: 37,     // () [] :: .                                   Left Highest
+  // Table 11-2—Operator precedence and associativity
+  PARENT: 37,     // () [] :: .                                          Left
   UNARY: 36,      // + - ! ~ & ~& | ~| ^ ~^ ^~ ++ -- (unary)
-  POW: 35,        // **                                           Left
-  MUL: 34,        // * / %                                        Left
-  ADD: 33,        // + - (binary)                                 Left
-  SHIFT: 32,      // << >> <<< >>>                                Left
-  RELATIONAL: 31, // < <= > >= inside dist                        Left
-  EQUAL: 30,      // == != === !== ==? !=?                        Left
-  AND: 29,        // & (binary)                                   Left
-  XOR: 28,        // ^ ~^ ^~ (binary)                             Left
-  OR: 27,         // | (binary)                                   Left
+  POW: 35,        // **                                                  Left
+  MUL: 34,        // * / %                                               Left
+  ADD: 33,        // + - (binary)                                        Left
+  SHIFT: 32,      // << >> <<< >>>                                       Left
+  RELATIONAL: 31, // < <= > >= inside dist                               Left
+  EQUAL: 30,      // == != === !== ==? !=?                               Left
+  AND: 29,        // & (binary)                                          Left
+  XOR: 28,        // ^ ~^ ^~ (binary)                                    Left
+  OR: 27,         // | (binary)                                          Left
 
-  // The matches operator shall have higher precedence than the && and || operators
+  // A.10.30: The matches operator shall have higher precedence than the && and || operators
   MATCHES: 26,
 
-  LOGICAL_AND: 25, // &&                                           Left
-  LOGICAL_OR: 24, // ||                                           Left
-  CONDITIONAL: 23, // ?: (conditional operator)                    Right
-  IMPLICATION: 22, // –> <–>                                       Right
-  ASSIGN: 21,     // = += -= *= /= %= &= ^= |= <<= >>= <<<= >>>= := :/ <= None
-  CONCAT: 20,     // {} {{}}                            Concatenation   Lowest
+  LOGICAL_AND: 25, // &&                                                 Left
+  LOGICAL_OR: 24,  // ||                                                 Left
+  CONDITIONAL: 23, // ?: (conditional operator)                          Right
+  IMPLICATION: 22, // –> <–>                                             Right
+  ASSIGN: 21,      // = += -= *= /= %= &= ^= |= <<= >>= <<<=             None
+                   // >>>= := :/ <=
+  CONCAT: 20,      // {} {{}}                                            Concatenation
 
+  // Table 16-3—Sequence and property operator precedence and associativity
   SPARENT: 19,    // [* ] [= ] [-> ]
-  SHARP2: 18,     // ##                                                 Left
-  throughout: 17, // throughout                                         Right
-  within: 16,     // within                                             Left
-  intersect: 15,  // intersect                                          Left
-  nexttime: 14,   // not, nexttime, s_nexttime
-  and: 13,        // and                                                Left
-  or: 12,         // or                                                 Left
-  iff: 11,        // iff                                                Right
-  until: 10,      // until, s_until, until_with, s_until_with, implies  Right
-  INCIDENCE: 9,   // |->, |=>, #-#, #=#                                 Right
-  always: 8       // always, s_always, eventually, s_eventually,        —
-  // if-else, case , accept_on, reject_on,
-  // sync_accept_on, sync_reject_on
+  SHARP2: 18,     // ##                                                  Left
+  throughout: 17, // throughout                                          Right
+  within: 16,     // within                                              Left
+  intersect: 15,  // intersect                                           Left
+  nexttime: 14,   // not, nexttime, s_nexttime                           —
+  and: 13,        // and                                                 Left
+  or: 12,         // or                                                  Left
+  iff: 11,        // iff                                                 Right
+  until: 10,      // until, s_until, until_with, s_until_with, implies   Right
+  INCIDENCE: 9,   // |->, |=>, #-#, #=#                                  Right
+  always: 8       // always, s_always, eventually, s_eventually,          —
+                  // if-else, case , accept_on, reject_on,
+                  // sync_accept_on, sync_reject_on
 };
 
 function sepBy1(sep, rule) {
@@ -209,10 +211,10 @@ const rules = {
     $.package_declaration,
     seq(repeat($.attribute_instance), choice($._package_item, $.bind_directive)),
     // $.config_declaration, // TODO: Simplify debugging
-    $.snippets, // Out of the LRM (inlined)
+    $.snippets, // Out of LRM (inlined)
   )),
 
-  _module_header: $ => seq( // Not in LRM, groups common tokens of module headers
+  _module_header: $ => seq( // Out of LRM, groups common tokens of module headers
     repeat($.attribute_instance),
     $.module_keyword,
     optional($.lifetime),
@@ -288,7 +290,7 @@ const rules = {
     seq('extern', $.interface_ansi_header)
   ),
 
-  // Not in LRM, groups common tokens of interface headers
+  // Out of LRM, groups common tokens of interface headers
   _interface_header: $ => seq(
     repeat($.attribute_instance),
     'interface',
@@ -336,7 +338,7 @@ const rules = {
     seq('extern', $.program_ansi_header)
   ),
 
-  // Not in LRM, groups common tokens of program headers
+  // Out of LRM, groups common tokens of program headers
   _program_header: $ => seq(
     repeat($.attribute_instance),
     'program',
@@ -567,7 +569,7 @@ const rules = {
     $.module_declaration,
     $.interface_declaration,
     $.timeunits_declaration,
-    $._directives, // Not in LRM
+    $._directives, // Out of LRM
   )),
 
   parameter_override: $ => seq('defparam', $.list_of_defparam_assignments, ';'),
@@ -726,10 +728,10 @@ const rules = {
     $._assertion_item,
     $.continuous_assign,
     $._checker_generate_item,
-    // INFO: Out of LRM: This is a workaround to support checker_instantiations and
-    // avoid multiple conflicts with module/interface/program instantiations.
+    // INFO: Out of LRM: This is a workaround to support checker_instantiations
+    // and avoid multiple conflicts with module/interface/program instantiations.
     // The proper way to do it would be uncommenting the $.checker_instantiation
-    // in $.concurrent_assertion_item and removing the one below
+    // in $.concurrent_assertion_item and removing the one below.
     $.checker_instantiation
   ),
 
@@ -741,9 +743,10 @@ const rules = {
     $.covergroup_declaration,
     $.genvar_declaration,
     $.clocking_declaration,
-    seq('default', 'clocking', $.clocking_identifier, ';'),
-    // prec.right(PREC.iff, seq('default', 'disable', 'iff', $.expression_or_dist, ';')),
-    seq('default', 'disable', 'iff', $.expression_or_dist, ';'),
+    seq('default', choice(
+      seq('clocking', $.clocking_identifier),
+      prec.right(PREC.iff, seq('disable', 'iff', $.expression_or_dist))
+    ), ';'),
     ';'
   ),
 
@@ -756,15 +759,17 @@ const rules = {
 
 // ** A.1.9 Class items
   class_item: $ => choice(
-    $._directives, // INFO: Out of LRM but useful for basic parsing in the UVM
-    seq(repeat($.attribute_instance), $.class_property),
-    seq(repeat($.attribute_instance), $.class_method),
-    seq(repeat($.attribute_instance), $._class_constraint),
-    seq(repeat($.attribute_instance), $.class_declaration),
-    seq(repeat($.attribute_instance), $.interface_class_declaration),
-    seq(repeat($.attribute_instance), $.covergroup_declaration),
+    seq(repeat($.attribute_instance), choice(
+      $.class_property,
+      $.class_method,
+      $._class_constraint,
+      $.class_declaration,
+      $.interface_class_declaration,
+      $.covergroup_declaration,
+    )),
     seq($.any_parameter_declaration, ';'),
-    ';'
+    ';',
+    $._directives, // Out of LRM
   ),
 
   class_property: $ => prec('class_property', choice(
@@ -774,30 +779,41 @@ const rules = {
       repeat($.class_item_qualifier),
       $.data_type,
       $.const_identifier,
-      optional(seq('=', $.constant_expression)),
+      optseq('=', $.constant_expression),
       ';'
     )
   )),
 
   class_method: $ => prec('class_method', choice(
-    seq(repeat($.method_qualifier), $.task_declaration),
-    seq(repeat($.method_qualifier), $.function_declaration),
+    seq(repeat($.method_qualifier), choice(
+      $.task_declaration,
+      $.function_declaration,
+      $.class_constructor_declaration
+    )),
+    seq('extern', repeat($.method_qualifier), choice(
+      seq($._method_prototype, ';'),
+      $.class_constructor_prototype,
+    )),
     seq('pure', 'virtual', repeat($.class_item_qualifier), $._method_prototype, ';'),
-    seq('extern', repeat($.method_qualifier), $._method_prototype, ';'),
-    seq(repeat($.method_qualifier), $.class_constructor_declaration),
-    seq('extern', repeat($.method_qualifier), $.class_constructor_prototype)
+  )),
+
+  class_constructor_declaration: $ => prec('class_constructor_declaration', seq(
+    'function', optional($.class_scope), 'new',
+    optseq('(', optional($.class_constructor_arg_list), ')'), ';',
+    repeat($.block_item_declaration),
+    optseq('super', '.', 'new', optseq('(', optional($.list_of_arguments), ')'), ';'),
+    repeat($.function_statement_or_null),
+    enclosing('endfunction', 'new')
   )),
 
   class_constructor_prototype: $ => seq(
-    'function',
-    'new',
-    optional(seq('(', optional($.class_constructor_arg_list), ')')),
-    ';'
+    'function', 'new',
+    optseq('(', optional($.class_constructor_arg_list), ')'), ';'
   ),
 
   class_constructor_arg_list: $ => sepBy1(',', $.class_constructor_arg),
 
-  class_constructor_arg: $ => choice($.tf_port_item1, 'default'),
+  class_constructor_arg: $ => choice($.tf_port_item, 'default'),
 
   interface_class_item: $ => choice(
     $.type_declaration,
@@ -831,18 +847,6 @@ const rules = {
     $.task_prototype,
     $.function_prototype
   ),
-
-  class_constructor_declaration: $ => prec('class_constructor_declaration', seq(
-    'function',
-    optional($.class_scope),
-    'new',
-    optional(seq('(', optional($.class_constructor_arg_list), ')')),
-    ';',
-    repeat($.block_item_declaration),
-    optional(seq('super', '.', 'new', optional(seq('(', optional($.list_of_arguments), ')')), ';')),
-    repeat($.function_statement_or_null),
-    'endfunction', optional(seq(':', 'new'))
-  )),
 
 // ** A.1.10 Constraints
 
@@ -1698,10 +1702,10 @@ const rules = {
     $.tf_port_declaration
   ),
 
-  tf_port_list: $ => sepBy1(',', $.tf_port_item1),
+  tf_port_list: $ => sepBy1(',', $.tf_port_item),
 
   // INFO: drom's writing
-  // tf_port_item1: $ => seq(
+  // tf_port_item: $ => seq(
   //   repeat($.attribute_instance),
   //   optional($.tf_port_direction),
   //   optional('var'),
@@ -1721,8 +1725,9 @@ const rules = {
   //     )
   //   )
   // ),
-  // INFO: My rewriting/refactoring
-  tf_port_item1: $ => prec('tf_port_item1', seq(
+
+  // INFO: My rewriting/refactoring: COULD match the empty string
+  tf_port_item: $ => prec('tf_port_item', seq(
     repeat($.attribute_instance),
     optional($.tf_port_direction),
     optional('var'),
@@ -5627,12 +5632,12 @@ module.exports = grammar({
     ['ps_parameter_identifier', 'data_type'],
 
 
-    // tf_port_item1 seems more generic, so resolve it to this node for this particular case
+    // tf_port_item seems more generic, so resolve it to this node for this particular case
     //
     //   'function'  function_identifier  '('  _identifier  •  ')'  …
     //   1:  'function'  function_identifier  '('  (data_type  _identifier)  •  ')'  …      (precedence: 'data_type')
-    //   2:  'function'  function_identifier  '('  (tf_port_item1  _identifier)  •  ')'  …n
-    ['tf_port_item1', 'data_type'],
+    //   2:  'function'  function_identifier  '('  (tf_port_item  _identifier)  •  ')'  …n
+    ['tf_port_item', 'data_type'],
 
 
     // Even though the class_scope is implicitly a data_type, it should not be needed to set it as a node
@@ -6256,7 +6261,7 @@ module.exports = grammar({
     [$.interface_port_header, $.data_type, $.class_type, $.net_port_type], // INFO: This one seems a true one (checked somehow)
     [$.data_type, $.class_type, $.net_port_type],
     [$.class_type, $.module_instantiation],
-    [$.data_type, $.class_type, $.tf_port_item1],
+    [$.data_type, $.class_type, $.tf_port_item],
     [$.data_type, $.class_type, $.constant_primary],
 
     [$.ansi_port_declaration],
