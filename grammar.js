@@ -652,14 +652,17 @@ const rules = {
 
 // ** A.1.6 Interface items
   _interface_or_generate_item: $ => prec('_interface_or_generate_item', choice(
-    seq(repeat($.attribute_instance), $._module_common_item),
-    seq(repeat($.attribute_instance), $.extern_tf_declaration),
-    $._directives // INFO: Out of LRM but for convenience
+    seq(repeat($.attribute_instance), choice($._module_common_item, $.extern_tf_declaration)),
+    $._directives // Out of LRM
   )),
 
-  extern_tf_declaration: $ => choice(
-    seq('extern', $._method_prototype, ';'),
-    seq('extern', 'forkjoin', $.task_prototype, ';')
+  extern_tf_declaration: $ => seq(
+    'extern',
+    choice(
+      $._method_prototype,
+      seq('forkjoin', $.task_prototype)
+    ),
+    ";"
   ),
 
   interface_item: $ => choice(
@@ -670,7 +673,7 @@ const rules = {
   _non_port_interface_item: $ => choice(
     $.generate_region,
     $._interface_or_generate_item,
-    // $.program_declaration,
+    $.program_declaration,
     $.modport_declaration,
     $.interface_declaration,
     $.timeunits_declaration
@@ -683,21 +686,22 @@ const rules = {
   ),
 
   _non_port_program_item: $ => choice(
-    seq(repeat($.attribute_instance), $.continuous_assign),
-    seq(repeat($.attribute_instance), $._module_or_generate_item_declaration),
-    seq(repeat($.attribute_instance), $.initial_construct),
-    seq(repeat($.attribute_instance), $.final_construct),
-    seq(repeat($.attribute_instance), $.concurrent_assertion_item),
+    seq(repeat($.attribute_instance), choice(
+      $.continuous_assign,
+      $._module_or_generate_item_declaration,
+      $.initial_construct,
+      $.final_construct,
+      $.concurrent_assertion_item,
+    )),
     $.timeunits_declaration,
-    // $._program_generate_item
+    $._program_generate_item
   ),
 
   _program_generate_item: $ => choice(
-    // $.loop_generate_construct,
-    // TODO
-    // $.conditional_generate_construct,
-    // $.generate_region,
-    // $.elaboration_severity_system_task
+    $.loop_generate_construct,
+    $.conditional_generate_construct,
+    $.generate_region,
+    $.elaboration_severity_system_task
   ),
 
 // ** A.1.8 Checker items
