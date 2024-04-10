@@ -1476,21 +1476,23 @@ const rules = {
     optseq('(', optional($.tf_port_list), ')')
   ),
 
-  // TODO: Replace $.simple_identifier to $.c_identifier: might it have to do with tree-sitter $word => ?
+  // TODO: Replace $.simple_identifier to $.c_identifier:
+  // For some reason it does not work with $.c_identifier.
+  // Might it have to do with tree-sitter $.word ?
   dpi_import_export: $ => choice(
     seq(
       'import', $.dpi_spec_string,
       choice(
-        seq(optional($.dpi_function_import_property), optseq($.simple_identifier, '='), $.dpi_function_proto),
-        seq(optional($.dpi_task_import_property), optseq($.simple_identifier, '='), $.dpi_task_proto)
+        seq(optional($.dpi_function_import_property), optseq(field('c_name', $.simple_identifier), '='), $.dpi_function_proto),
+        seq(optional($.dpi_task_import_property), optseq(field('c_name', $.simple_identifier), '='), $.dpi_task_proto)
       ),
       ';'
     ),
     seq(
-      'export', $.dpi_spec_string, optseq($.simple_identifier, '='),
+      'export', $.dpi_spec_string, optseq(field('c_name', $.simple_identifier), '='),
       choice(
-        seq('function', $.function_identifier),
-        seq('task', $.task_identifier)
+        seq('function', field('name', $.function_identifier)),
+        seq('task', field('name', $.task_identifier))
       ) ,
       ';'
     )
@@ -1516,31 +1518,17 @@ const rules = {
   ),
 
   task_body_declaration: $ => seq(
-    optional(choice(
-      seq($.interface_identifier, '.'),
-      $.class_scope
-    )),
-    $.task_identifier,
+    optchoice(seq($.interface_identifier, '.'), $.class_scope),
+    field('name', $.task_identifier),
     choice(
-      seq(
-        ';',
-        repeat($.tf_item_declaration)
-      ),
-      seq(
-        '(', optional($.tf_port_list), ')', ';',
-        repeat($.block_item_declaration)
-      )
+      seq(';', repeat($.tf_item_declaration)),
+      seq('(', optional($.tf_port_list), ')', ';', repeat($.block_item_declaration))
     ),
     repeat($.statement_or_null),
-    'endtask',
-    optional(seq(':', $.task_identifier))
+    enclosing('endtask', $.task_identifier)
   ),
 
-
-  tf_item_declaration: $ => choice(
-    $.block_item_declaration,
-    $.tf_port_declaration
-  ),
+  tf_item_declaration: $ => choice($.block_item_declaration, $.tf_port_declaration),
 
   tf_port_list: $ => sepBy1(',', $.tf_port_item),
 
@@ -1596,7 +1584,7 @@ const rules = {
   task_prototype: $ => seq(
     'task',
     optional($.dynamic_override_specifiers),
-    $.task_identifier,
+    field('name', $.task_identifier),
     optional(seq('(', optional($.tf_port_list), ')'))
   ),
 
@@ -4841,7 +4829,7 @@ const rules = {
   // // not be followed by white_space. A system_tf_identifier shall not be escaped.
   system_tf_identifier: $ => /\$[a-zA-Z0-9_$]+/,
 
-  task_identifier: $ => alias($._identifier, $.task_identifier),
+  task_identifier: $ => $._identifier,
   tf_identifier: $ => alias($._identifier, $.tf_identifier),
   // terminal_identifier: $ => alias($._identifier, $.terminal_identifier),
   // topmodule_identifier: $ => alias($._identifier, $.topmodule_identifier),
@@ -5176,6 +5164,7 @@ module.exports = grammar({
     $.covergroup_identifier,
 
     $.function_identifier,
+    $.task_identifier,
 
     // TODO: Not reviewed
 
