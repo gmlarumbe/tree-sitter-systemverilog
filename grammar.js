@@ -605,6 +605,7 @@ const rules = {
     // $.checker_instantiation    // INFO: Ambiguous with rest of instantiations
   ),
 
+
 // ** A.1.5 Configuration source text
   // config_declaration: $ => seq(
   //   'config', $.config_identifier, ';',
@@ -654,6 +655,7 @@ const rules = {
   //   optseq(':', 'config')
   // ),
 
+
 // ** A.1.6 Interface items
   _interface_or_generate_item: $ => prec('_interface_or_generate_item', choice(
     seq(repeat($.attribute_instance), choice($._module_common_item, $.extern_tf_declaration)),
@@ -683,6 +685,7 @@ const rules = {
     $.timeunits_declaration // A.10.3
   ),
 
+
 // ** A.1.7 Program items
   program_item: $ => choice(
     seq($.port_declaration, ';'),
@@ -707,6 +710,7 @@ const rules = {
     $.generate_region,
     $.elaboration_severity_system_task
   ),
+
 
 // ** A.1.8 Checker items
   checker_port_list: $ => sepBy1(',', $.checker_port_item),
@@ -758,6 +762,7 @@ const rules = {
     $.generate_region,
     $.elaboration_severity_system_task
   ),
+
 
 // ** A.1.9 Class items
   class_item: $ => choice(
@@ -849,6 +854,7 @@ const rules = {
     $.task_prototype,
     $.function_prototype
   ),
+
 
 // ** A.1.10 Constraints
   constraint_declaration: $ => seq(
@@ -971,6 +977,7 @@ const rules = {
     ';'
   ),
 
+
 // * A.2 Declarations
 // ** A.2.1 Declaration types
 // *** A.2.1.1 Module parameter declarations
@@ -1025,12 +1032,8 @@ const rules = {
   data_declaration: $ => prec('data_declaration', choice(
     seq(
       optional('const'),
-      // In a data_declaration, it shall be illegal to omit the explicit data_type
+      // A.10.4: In a data_declaration, it shall be illegal to omit the explicit data_type
       // before a list_of_variable_decl_assignments unless the var keyword is used.
-
-      // TODO: Maybe use $.var_data_type ? And replace it with these contents?
-      // INFO: I think it's not an option because var_data_type doesn't have
-      // the automatic/static lifetime into account
       choice(
         seq('var', optional($.lifetime), optional($.data_type_or_implicit)),
         seq(optional($.lifetime), $.data_type_or_implicit),
@@ -1043,93 +1046,58 @@ const rules = {
     $.nettype_declaration
   )),
 
-  // INFO: Original one
-  // package_import_declaration: $ => seq(
-  //   'import', sep1(',', $.package_import_item), ';'
-  // ),
-  // End of INFO
+  package_import_declaration: $ => seq('import', sepBy1(',', $.package_import_item), ';'),
 
-  // INFO: Mine, without precedences. WIP
-  package_import_declaration: $ => seq(
-    'import',
-    $.package_import_item, repeat(seq($.package_import_item, ",")),
+  package_export_declaration: $ => seq('export', choice('*::*', sepBy1(',', $.package_import_item)), ';'),
+
+  package_import_item: $ => seq($.package_identifier, '::', choice($._identifier, '*')),
+
+  genvar_declaration: $ => seq('genvar', $.list_of_genvar_identifiers, ';'),
+
+  net_declaration: $ => seq(
+    choice(
+      seq(
+        $.net_type,
+        optchoice($.drive_strength, $.charge_strength),
+        optchoice('vectored', 'scalared'),
+        optional($.data_type_or_implicit),
+        optional($.delay3),
+        $.list_of_net_decl_assignments,
+      ),
+      seq(
+        $.net_type_identifier,
+        optional($.delay_control),
+        $.list_of_net_decl_assignments,
+      ),
+      seq(
+        'interconnect',
+        optional($.implicit_data_type),
+        optseq('#', $.delay_value),
+        $.net_identifier,
+        repeat($.unpacked_dimension),
+        optseq(',', $.net_identifier, repeat($.unpacked_dimension)),
+      )),
     ';'
   ),
-  // End of INFO
-
-  package_import_item: $ => seq(
-    $.package_identifier, '::', choice($._identifier, '*')
-  ),
-
-  package_export_declaration: $ => seq(
-    'export', choice('*::*', sepBy1(',', $.package_import_item)), ';'
-  ),
-
-  genvar_declaration: $ => seq(
-    'genvar', $.list_of_genvar_identifiers, ';'
-  ),
-
-
-  // type_declaration: $ => seq(
-  //   'typedef',
-  //   choice(
-  //     seq($.data_type, $._type_identifier, repeat($._variable_dimension)),
-  //     seq(
-  //       $.interface_instance_identifier, optional($.constant_bit_select),
-  //       '.', $._type_identifier, $._type_identifier
-  //     ),
-  //     seq(
-  //       optional(choice(
-  //         'enum', 'struct', 'union', 'class', seq('interface', 'class')
-  //       )),
-  //       $._type_identifier
-  //     )
-  //   ),
-  //   ';'
-  // ),
-  net_declaration: $ => prec('net_declaration', choice(
-    seq(
-      $.net_type,
-      optchoice($.drive_strength, $.charge_strength),
-      optchoice('vectored', 'scalared'),
-      optional($.data_type_or_implicit),
-      optional($.delay3), // TODO: Removed temporarily by Larumbe
-      $.list_of_net_decl_assignments,
-      ';'
-    ),
-    seq(
-      $._net_type_identifier,
-      optional($.delay_control),
-      $.list_of_net_decl_assignments,
-      ';'
-    ),
-    // seq(
-    //   'interconnect',
-    //   optional($.implicit_data_type),
-    //   optseq('#', $.delay_value),
-    //   sep1(',', seq($._net_identifier, repeat($.unpacked_dimension))),
-    //   ';'
-    // )
-  )),
 
   type_declaration: $ => seq(
     'typedef',
     choice(
-      seq($._data_type_or_incomplete_class_scoped_type, $._type_identifier, repeat($._variable_dimension)),
-      seq($.interface_port_identifier, optional($.constant_bit_select), '.', $._type_identifier, $._type_identifier),
-      seq(optional($._forward_type), $._type_identifier)
+      seq($._data_type_or_incomplete_class_scoped_type, $.type_identifier, repeat($._variable_dimension)),
+      seq($.interface_port_identifier, optional($.constant_bit_select), '.', $.type_identifier, $.type_identifier),
+      seq(optional($._forward_type), $.type_identifier)
     ),
     ';'
   ),
 
-  _forward_type: $ => choice('enum', 'struct', 'union', 'class', 'interface class'),
+  _forward_type: $ => choice('enum', 'struct', 'union', seq(optional('interface'), 'class')),
 
   nettype_declaration: $ => prec('nettype_declaration', seq(
     'nettype',
     choice(
       seq(
         $.data_type,
-        $._net_type_identifier,
+        $.net_type_identifier,
         optional(seq(
           'with',
           optchoice($.package_scope, $.class_scope),
@@ -1138,8 +1106,8 @@ const rules = {
       ),
       seq(
         optchoice($.package_scope, $.class_scope),
-        $._net_type_identifier,
-        $._net_type_identifier
+        $.net_type_identifier,
+        $.net_type_identifier
       )
     ),
     ';'
@@ -1185,7 +1153,7 @@ const rules = {
     ),
     seq(
       optional(choice($.class_scope, $.package_scope)),
-      $._type_identifier,
+      $.type_identifier,
       repeat($.packed_dimension)
     ),
     $.class_type,
@@ -1208,7 +1176,7 @@ const rules = {
   enum_base_type: $ => choice(
     seq($.integer_atom_type, optional($._signing)),
     seq($.integer_vector_type, optional($._signing), optional($.packed_dimension)),
-    seq($._type_identifier, optional($.packed_dimension))
+    seq($.type_identifier, optional($.packed_dimension))
   ),
 
   enum_name_declaration: $ => seq(
@@ -1250,7 +1218,7 @@ const rules = {
     seq($.net_type, $.data_type_or_implicit),
     $.net_type,
     $.data_type_or_implicit,
-    $._net_type_identifier,
+    $.net_type_identifier,
     seq('interconnect', optional($.implicit_data_type))
   ),
 
@@ -1308,12 +1276,12 @@ const rules = {
   //
   // DANGER: Parsing could result in an endless loop due to recursivity?!
   incomplete_class_scoped_type: $ => prec('incomplete_class_scoped_type', choice(
-    seq($._type_identifier, '::', $.type_identifier_or_class_type),
+    seq($.type_identifier, '::', $.type_identifier_or_class_type),
     $.incomplete_class_scoped_type, '::', $.type_identifier_or_class_type
   )),
 
 
-  type_identifier_or_class_type: $ => choice($._type_identifier, $.class_type),
+  type_identifier_or_class_type: $ => choice($.type_identifier, $.class_type),
 
 
 // *** A.2.2.2 Strengths
@@ -1428,7 +1396,7 @@ const rules = {
 
   // INFO: Original by drom
   // net_decl_assignment: $ => prec.left(PREC.ASSIGN, seq(
-  //   $._net_identifier,
+  //   $.net_identifier,
   //   repeat($.unpacked_dimension),
   //   optseq('=', $.expression)
   // )),
@@ -1436,7 +1404,7 @@ const rules = {
 
   // INFO: Larumbe's one
   net_decl_assignment: $ => seq(
-    $._net_identifier,
+    $.net_identifier,
     repeat($.unpacked_dimension),
     optional(seq('=', $.expression))
   ),
@@ -1469,11 +1437,11 @@ const rules = {
   limit_value: $ => $.constant_mintypmax_expression,
 
   // type_assignment: $ => seq(
-  //   $._type_identifier,
+  //   $.type_identifier,
   //   optseq('=', $.data_type)
   // ),
   type_assignment: $ => seq(
-    $._type_identifier,
+    $.type_identifier,
     optional(seq('=', $.data_type))
   ),
 
@@ -1744,21 +1712,6 @@ const rules = {
     )
   ),
 
-  // overload_declaration: $ => seq(
-  //   'bind',
-  //   $.overload_operator,
-  //   'function',
-  //   $.data_type,
-  //   $.function_identifier,
-  //   '(',
-  //   $.overload_proto_formals,
-  //   ')',
-  //   ';'
-  // ),
-
-  // overload_operator: $ => choice('+', '++', '-', '--', '*', '**', '/', '%', '==', '!=', '<', '<=', '>', '>=', '='),
-
-  // overload_proto_formals: $ => sep1(',', $.data_type),
 
 // ** A.2.9 Interface declarations
   modport_declaration: $ => seq('modport', sepBy1(',', $.modport_item), ';'),
@@ -4858,7 +4811,7 @@ const rules = {
   index_variable_identifier: $ => alias($._identifier, $.index_variable_identifier),
   interface_identifier: $ => $._identifier,
   // interface_instance_identifier: $ => alias($._identifier, $.interface_instance_identifier),
-  interface_port_identifier: $ => alias($._identifier, $.interface_port_identifier),
+  interface_port_identifier: $ => $._identifier,
   // inout_port_identifier: $ => alias($._identifier, $.inout_port_identifier),
   // input_port_identifier: $ => alias($._identifier, $.input_port_identifier),
   instance_identifier: $ => alias($._identifier, $.instance_identifier),
@@ -4867,8 +4820,8 @@ const rules = {
   method_identifier: $ => alias($._identifier, $.method_identifier),
   modport_identifier: $ => $._identifier,
   module_identifier: $ => $._identifier,
-  _net_identifier: $ => $._identifier,
-  _net_type_identifier: $ => $._identifier,
+  net_identifier: $ => $._identifier,
+  net_type_identifier: $ => $._identifier,
   // output_port_identifier: $ => alias($._identifier, $.output_port_identifier),
   package_identifier: $ => $._identifier,
 
@@ -4914,11 +4867,11 @@ const rules = {
   ),
 
   // ps_or_hierarchical_net_identifier: $ => choice(
-  //   prec.left(PREC.PARENT, seq(optional($.package_scope), $._net_identifier)),
+  //   prec.left(PREC.PARENT, seq(optional($.package_scope), $.net_identifier)),
   //   $._hierarchical_net_identifier
   // ),
   ps_or_hierarchical_net_identifier: $ => choice(
-    seq(optional($.package_scope), $._net_identifier),
+    seq(optional($.package_scope), $.net_identifier),
     $._hierarchical_net_identifier
   ),
 
@@ -4962,7 +4915,7 @@ const rules = {
       $.package_scope,
       $.class_scope
     )),
-    $._type_identifier
+    $.type_identifier
   )),
 
   rs_production_identifier: $ => $._identifier,
@@ -4986,7 +4939,7 @@ const rules = {
   tf_identifier: $ => alias($._identifier, $.tf_identifier),
   // terminal_identifier: $ => alias($._identifier, $.terminal_identifier),
   // topmodule_identifier: $ => alias($._identifier, $.topmodule_identifier),
-  _type_identifier: $ => $._identifier,
+  type_identifier: $ => $._identifier,
   // _udp_identifier: $ => $._identifier,
   _variable_identifier: $ => $._identifier,
 
@@ -5307,6 +5260,12 @@ module.exports = grammar({
 
     $.elaboration_severity_system_task,
 
+    // A.2
+    $.net_identifier,
+    $.net_type_identifier,
+    $.type_identifier,
+    $.interface_port_identifier,
+
 
     // TODO: Not reviewed
 
@@ -5336,8 +5295,6 @@ module.exports = grammar({
     $.formal_port_identifier,
     $.genvar_identifier,
     $.tf_identifier,
-    $._type_identifier,
-    $._net_type_identifier,
     $._variable_identifier,
   //   $._udp_identifier,
     $.dynamic_array_variable_identifier,
@@ -5345,7 +5302,6 @@ module.exports = grammar({
   //   $.interface_instance_identifier,
     $.let_identifier,
   //   $.sequence_identifier,
-    $._net_identifier,
     $.member_identifier,
     $._block_identifier,
     $.instance_identifier,
@@ -5486,6 +5442,22 @@ module.exports = grammar({
     ['class_property', 'data_type_or_implicit'],
 
 
+    // nettype keyword means there is a nettype_declaration
+    //
+    // 'nettype'  _identifier  •  '\'  …
+    // 1:  'nettype'  (data_type  _identifier)  •  '\'  …                      (precedence: 'data_type')
+    // 2:  (nettype_declaration  'nettype'  _identifier  •  _identifier  ';')
+    ['nettype_declaration', 'data_type'],
+
+
+    // If it's inside a class consider it a class_item_qualifier since it seems more specific
+    //
+    //   'class'  _identifier  ';'  'static'  •  'string'  …
+    //   1:  'class'  _identifier  ';'  (class_item_qualifier  'static')  •  'string'  …  (precedence: 'class_item_qualifier')
+    //   2:  'class'  _identifier  ';'  (lifetime  'static')  •  'string'  …              (precedence: 'lifetime')
+    ['class_item_qualifier', 'lifetime'],
+
+
 
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
@@ -5622,7 +5594,7 @@ module.exports = grammar({
 
 
 
-    // First option follows the path: data_type_or_implicit -> data_type -> seq($._type_identifier, repeat($.packed_dimension))
+    // First option follows the path: data_type_or_implicit -> data_type -> seq($.type_identifier, repeat($.packed_dimension))
     // Second option follows the path: data_type_or_implicit -> implicit_data_type -> repeat1($.packed_dimension)
     // In theory this is not a legal case since a packed array should be set for vector types, like bit/logic, not for the
     // implicit one (which is int). Set to the first one for potential future conflicts and because it is not 'completely implicit'
@@ -5706,14 +5678,6 @@ module.exports = grammar({
     // ['hierarchical_identifier', 'list_of_arguments'],
 
 
-    // If it's inside a class, consider it a class_item_qualifier since it seems more generic
-    //
-    //   'class'  _identifier  ';'  'static'  •  'string'  …
-    //   1:  'class'  _identifier  ';'  (class_item_qualifier  'static')  •  'string'  …  (precedence: 'class_item_qualifier')
-    //   2:  'class'  _identifier  ';'  (lifetime  'static')  •  'string'  …              (precedence: 'lifetime')
-    ['class_item_qualifier', 'lifetime'],
-
-
 
 
 
@@ -5739,12 +5703,6 @@ module.exports = grammar({
     // 2:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …      (precedence: 'ps_parameter_identifier')
     // 3:  ''{'  (constant_primary  class_scope  _identifier)  •  ':'  …  (precedence: 'ps_parameter_identifier')
     ['ps_parameter_identifier', 'ps_type_identifier', '_structure_pattern_key'],
-
-
-    // 'nettype'  _identifier  •  '\'  …
-    // 1:  'nettype'  (data_type  _identifier)  •  '\'  …                      (precedence: 'data_type')
-    // 2:  (nettype_declaration  'nettype'  _identifier  •  _identifier  ';')
-    ['nettype_declaration', 'data_type'],
 
 
     // On action block, else must be related to it
@@ -6167,16 +6125,6 @@ module.exports = grammar({
     // 4:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  data_type_repeat3  '}'  data_type_repeat1)  (precedence: 'data_type')
     // 5:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  data_type_repeat3  '}')                     (precedence: 'data_type')
     [$._forward_type, $.data_type],
-
-
-    // interface_port_identifier would be of the form:
-    //  typedef if_port_id[5].member my_type_t (not sure if it's correct syntax)
-    // While the data_type branch could end with a _variable_dimension
-    //
-    // 'typedef'  _identifier  •  '['  …
-    // 1:  'typedef'  (data_type  _identifier  •  data_type_repeat1)       (precedence: 'data_type')
-    // 2:  'typedef'  (interface_port_identifier  _identifier)  •  '['  …
-    [$.data_type, $.interface_port_identifier],
 
 
     // 'typedef'  _identifier  •  '\'  …
