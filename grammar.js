@@ -1417,12 +1417,7 @@ const rules = {
 
 // ** A.2.5 Declaration ranges
   unpacked_dimension: $ => prec('unpacked_dimension', seq(
-    '[',
-    choice(
-      $.constant_range,
-      $.constant_expression
-    ),
-    ']'
+    '[', choice($.constant_range, $.constant_expression), ']'
   )),
 
   packed_dimension: $ => prec('packed_dimension', choice(
@@ -1442,7 +1437,7 @@ const rules = {
   )),
 
   queue_dimension: $ => prec('queue_dimension', seq(
-    '[', '$', optional(seq(':', $.constant_expression)), ']'
+    '[', '$', optseq(':', $.constant_expression), ']'
   )),
 
   unsized_dimension: $ => seq('[', ']'),
@@ -5425,6 +5420,50 @@ module.exports = grammar({
     ['list_of_arguments', 'mintypmax_expression'],
 
 
+    // Real conflict after adding the $ as a constant_primary, needed to index queues (e.g. a[0:$-1])
+    //
+    // 'input'  _identifier  '['  '$'  •  ':'  …
+    // 1:  'input'  _identifier  '['  (constant_primary  '$')  •  ':'  …                        (precedence: 'constant_primary')
+    // 2:  'input'  _identifier  (queue_dimension  '['  '$'  •  ':'  constant_expression  ']')
+    ['queue_dimension', 'constant_primary'],
+
+
+    // A.10.4: In packed_dimension, unsized_dimension is permitted only as the sole packed dimension in a DPI import
+    // declaration; see dpi_function_proto and dpi_task_proto.
+    // This is a much less likely case to happen, so prioritize $._variable_dimension
+    //
+    //   'localparam'  _identifier  unsized_dimension  •  '['  …
+    //   1:  'localparam'  _identifier  (_variable_dimension  unsized_dimension)  •  '['  …  (precedence: '_variable_dimension')
+    //   2:  'localparam'  _identifier  (packed_dimension  unsized_dimension)  •  '['  …
+    ['_variable_dimension', 'packed_dimension'],
+
+
+    // Dimensions after the identifier are unpacked
+    //
+    // 'input'  _identifier  '['  constant_range  ']'  •  '['  …
+    // 1:  'input'  _identifier  (packed_dimension  '['  constant_range  ']')  •  '['  …    (precedence: 'packed_dimension')
+    // 2:  'input'  _identifier  (unpacked_dimension  '['  constant_range  ']')  •  '['  …  (precedence: 'unpacked_dimension')
+    ['unpacked_dimension', 'packed_dimension'],
+
+
+    // First ansi-port (interface type or net_type) with unpacked array.
+    // It would be non-ansi if it didn't have the array (only a list of identifiers separated by commas)
+    //
+    //   module_keyword  module_identifier  '('  _identifier  '['  constant_expression  ']'  •  ')'  …
+    //     1:  module_keyword  module_identifier  '('  _identifier  (constant_bit_select1_repeat1  '['  constant_expression  ']')  •  ')'  …
+    //     2:  module_keyword  module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_expression  ']')  •  ')'  …            (precedence: 'unpacked_dimension')
+    ['unpacked_dimension', 'constant_bit_select'],
+
+
+    // Since it's a declaration it's not a part select but a packed dimension
+    //
+    //   'localparam'  _identifier  '='  _identifier  '['  constant_range  •  ']'  …
+    //   1:  'localparam'  _identifier  '='  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
+    //   2:  'localparam'  _identifier  '='  _identifier  (packed_dimension  '['  constant_range  •  ']')                (precedence: 'packed_dimension')
+    ['packed_dimension', '_constant_part_select_range'],
+
+
+
 
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
@@ -5461,17 +5500,6 @@ module.exports = grammar({
     // ['ps_parameter_identifier', 'primary'],
 
 
-    // Case 1 is for non-ansi port with constant_part_select.
-    // Case 2 is for first ansi-port (interface type or net_type) with unpacked array.
-    //
-    //   module_keyword  module_identifier  '('  _identifier  '['  constant_range  •  ']'  …
-    //     1:  module_keyword  module_identifier  '('  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …
-    //     2:  module_keyword  module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_range  •  ']')
-    ['unpacked_dimension', '_constant_part_select_range'],
-    //   module_keyword  module_identifier  '('  _identifier  '['  constant_expression  ']'  •  ')'  …
-    //     1:  module_keyword  module_identifier  '('  _identifier  (constant_bit_select1_repeat1  '['  constant_expression  ']')  •  ')'  …
-    //     2:  module_keyword  module_identifier  '('  _identifier  (unpacked_dimension  '['  constant_expression  ']')  •  ')'  …            (precedence: 'unpacked_dimension')
-    ['unpacked_dimension', 'constant_bit_select'],
 
 
     // module_nonansi_header  always_keyword  '@'  _identifier  •  ';'  …
@@ -5540,18 +5568,6 @@ module.exports = grammar({
 
 
 
-    // First option follows the path: data_type_or_implicit -> data_type -> seq($.type_identifier, repeat($.packed_dimension))
-    // Second option follows the path: data_type_or_implicit -> implicit_data_type -> repeat1($.packed_dimension)
-    // In theory this is not a legal case since a packed array should be set for vector types, like bit/logic, not for the
-    // implicit one (which is int). Set to the first one for potential future conflicts and because it is not 'completely implicit'
-    // if setting the packed dimension.
-    //
-    //
-    //   'localparam'  _identifier  unsized_dimension  •  '['  …
-    //   1:  'localparam'  _identifier  (_variable_dimension  unsized_dimension)  •  '['  …  (precedence: '_variable_dimension')
-    //   2:  'localparam'  _identifier  (packed_dimension  unsized_dimension)  •  '['  …
-    ['_variable_dimension', 'packed_dimension'],
-
 
     // Identify as a constant_mintypmax_expression -> constant_expression on the RHS instead of a data_type (since it's a declaration)
     //
@@ -5576,14 +5592,6 @@ module.exports = grammar({
     //   2:  _identifier  '#'  '('  (data_type  class_scope  •  _identifier  data_type_repeat1)  (precedence: 'data_type')
     //   3:  _identifier  '#'  '('  (data_type  class_scope  •  _identifier)                     (precedence: 'data_type')
     ['class_qualifier', 'data_type'],
-
-
-    // Since it's a declaration, it's not a part select but a packed dimension for a localparam
-    //
-    //   'localparam'  _identifier  '='  _identifier  '['  constant_range  •  ']'  …
-    //   1:  'localparam'  _identifier  '='  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
-    //   2:  'localparam'  _identifier  '='  _identifier  (packed_dimension  '['  constant_range  •  ']')                (precedence: 'packed_dimension')
-    ['packed_dimension', '_constant_part_select_range'],
 
 
     // If there is only one identifier, without package scope, consider it a hierarchical identifier with one level of nesting
@@ -5721,12 +5729,6 @@ module.exports = grammar({
     ['hierarchical_instance', 'checker_instantiation'],
     ['module_instantiation', 'concurrent_assertion_item'],
 
-    // Real conflict after adding the $ as a constant_primary, needed to index queues (e.g. a[0:$-1])
-    //
-    // 'input'  _identifier  '['  '$'  •  ':'  …
-    // 1:  'input'  _identifier  '['  (constant_primary  '$')  •  ':'  …                        (precedence: 'constant_primary')
-    // 2:  'input'  _identifier  (queue_dimension  '['  '$'  •  ':'  constant_expression  ']')
-    ['queue_dimension', 'constant_primary'],
 
 
     ///////////////////////////////////////////////////
@@ -5955,15 +5957,6 @@ module.exports = grammar({
     //   2:  'function'  function_identifier  ';'  (hierarchical_identifier  _identifier)  •  '['  …                             (precedence: 'hierarchical_identifier')
     //   3:  'function'  function_identifier  ';'  (hierarchical_identifier_repeat1  _identifier  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     [$.data_type, $.hierarchical_identifier],
-
-
-    // INFO: Even though localparams set only constants for vector types, and it would need to be packed,
-    // specify a conflict for some other potential cases where the parser cannot differentiate between these two
-    //
-    //   'localparam'  _identifier  '['  constant_range  ']'  •  '['  …
-    //   1:  'localparam'  _identifier  (packed_dimension  '['  constant_range  ']')  •  '['  …    (precedence: 'packed_dimension')
-    //   2:  'localparam'  _identifier  (unpacked_dimension  '['  constant_range  ']')  •  '['  …  (precedence: 'unpacked_dimension')
-    [$.unpacked_dimension, $.packed_dimension],
 
 
     // Avoid adding right associativity in data_type so that it can differentiate between data_types/net_types
