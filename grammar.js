@@ -1405,6 +1405,9 @@ const rules = {
   ),
 
   class_new: $ => choice(
+    // TODO: Removing dynamic precedences results in detection of other rules where new is
+    // not treated as a kewyord but as a hierarchical identifier. This could probably be
+    // solved better after fixing some conflicts with precedences
     prec.dynamic(1, seq(optional($.class_scope), 'new', optseq('(', optional($.list_of_arguments), ')'))),
     prec.dynamic(0, seq('new', $.expression))
   ),
@@ -1443,6 +1446,7 @@ const rules = {
   )),
 
   unsized_dimension: $ => seq('[', ']'),
+
 
 // ** A.2.6 Function declarations
   function_data_type_or_implicit1: $ => choice(
@@ -2832,35 +2836,23 @@ const rules = {
 
   final_construct: $ => seq('final', $.function_statement),
 
-  // TODO: Review, removed the prec.left(PREC.ASSIGN from choices
   blocking_assignment: $ => choice(
     seq($.variable_lvalue, '=', $.delay_or_event_control, $.expression),
-
-    prec(PREC.ASSIGN, seq(
-      $.nonrange_variable_lvalue, '=', $.dynamic_array_new
-    )),
-
-    // TODO: Is this the one for class_new?
-    // // seq(
-    // //   optional(choice(
-    // //     seq($.implicit_class_handle, '.'),
-    // //     $.class_scope,
-    // //     $.package_scope
-    // //   )),
-    // //   $._hierarchical_variable_identifier
-    // //   $.select,
-    // //   '=',
-    // //   $.class_new
-    // // ),
-
+    seq($.nonrange_variable_lvalue, '=', $.dynamic_array_new),
+    seq(
+      optchoice(
+        seq($.implicit_class_handle, '.'),
+        $.class_scope,
+        $.package_scope
+      ),
+      $._hierarchical_variable_identifier,
+      optional($.select),
+      '=',
+      $.class_new
+    ),
     $.operator_assignment,
-    $.inc_or_dec_expression, // INFO: New in 2023? Not in drom's
-    seq($.class_variable_identifier, optional(seq('=', $.class_new))), // DANGER: Out of LRM explicitly, but should be (8.8) typed constructor
-    $.shallow_copy, // DANGER: Not in LRM explicitly! 8.12
+    $.inc_or_dec_expression,
   ),
-
-  // shallow_copy: $ => seq($.variable_lvalue, '=', 'new', $._identifier),
-  shallow_copy: $ => seq($._identifier, '=', 'new', $._identifier),
 
   // INFO: Drom's one
   // operator_assignment: $ => prec.left(PREC.ASSIGN,
@@ -4041,8 +4033,8 @@ const rules = {
   //   sep1(',', seq('.', $._identifier, '(', optional($.expression), ')'))
   // ),
 
-  // list_of_arguments: $ => prec('list_of_arguments', choice(  // Reordered to avoid matching empty string
-  list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
+  list_of_arguments: $ => prec('list_of_arguments', choice(  // Reordered to avoid matching empty string
+  // list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
     // First case: mixing positional and named arguments
     seq(
       $.expression,
@@ -5425,6 +5417,14 @@ module.exports = grammar({
     ['list_of_port_identifiers', 'list_of_variable_port_identifiers'],
 
 
+    // For $.class_new only the 1st syntax is correct (2nd corresponds to a shallow copy but should have parenthesis)
+    //
+    // _identifier  '='  'new'  '('  expression  •  ')'  …
+    // 1:  _identifier  '='  'new'  '('  (list_of_arguments  expression)  •  ')'  …     (precedence: 'list_of_arguments')
+    // 2:  _identifier  '='  'new'  '('  (mintypmax_expression  expression)  •  ')'  …  (precedence: 'mintypmax_expression')
+    ['list_of_arguments', 'mintypmax_expression'],
+
+
 
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
@@ -6154,12 +6154,6 @@ module.exports = grammar({
 
     [$.ansi_port_declaration],
 
-    // Class new
-    [$.list_of_arguments, $.mintypmax_expression],
-
-    // Typed constructor
-    [$.blocking_assignment, $.shallow_copy, $.hierarchical_identifier],
-    [$.shallow_copy, $.tf_call, $.hierarchical_identifier],
 
     // Sequences
     [$.sequence_expr],
@@ -6385,6 +6379,17 @@ module.exports = grammar({
     [$.expression_or_dist, $.ordered_port_connection, $.event_expression],
     [$.expression_or_dist, $.named_port_connection, $.event_expression],
 
+
+    // TODO: After adding the class_new branch in blocking_assignment
+    [$.blocking_assignment, $.class_qualifier],
+    [$.blocking_assignment, $.class_qualifier],
+    [$.blocking_assignment, $._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.blocking_assignment, $.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.blocking_assignment, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.constant_primary, $.hierarchical_identifier],
+    [$.data_type, $.constant_primary, $.hierarchical_identifier],
+    [$.blocking_assignment, $.variable_lvalue],
+    [$.blocking_assignment, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
   ],
 
 });
