@@ -1065,7 +1065,7 @@ const rules = {
         $.list_of_net_decl_assignments,
       ),
       seq(
-        $.net_type_identifier,
+        $.nettype_identifier,
         optional($.delay_control),
         $.list_of_net_decl_assignments,
       ),
@@ -1097,7 +1097,7 @@ const rules = {
     choice(
       seq(
         $.data_type,
-        $.net_type_identifier,
+        $.nettype_identifier,
         optseq(
           'with',
           optchoice($.package_scope, $.class_scope),
@@ -1106,8 +1106,8 @@ const rules = {
       ),
       seq(
         optchoice($.package_scope, $.class_scope),
-        $.net_type_identifier,
-        $.net_type_identifier
+        $.nettype_identifier,
+        $.nettype_identifier
       )
     ),
     ';'
@@ -1118,13 +1118,13 @@ const rules = {
 
 // ** A.2.2 Declaration data types
 // *** A.2.2.1 Net and variable types
-  casting_type: $ => prec('casting_type', choice(
+  casting_type: $ => choice(
     $._simple_type,
     $.constant_primary,
     $._signing,
     'string',
     'const'
-  )),
+  ),
 
   data_type: $ => prec('data_type', choice(
     seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension)),
@@ -1156,7 +1156,7 @@ const rules = {
     ),
     $.class_type,
     'event',
-    // $.ps_covergroup_identifier,
+    $.ps_covergroup_identifier,
     $.type_reference
   )),
 
@@ -1165,7 +1165,7 @@ const rules = {
     $.implicit_data_type
   )),
 
-  // Changed to avoid matching empty string
+  // Modified to avoid matching empty string
   implicit_data_type: $ => prec.right(choice(
     seq($._signing, repeat($.packed_dimension)),
     repeat1($.packed_dimension)
@@ -1179,29 +1179,20 @@ const rules = {
 
   enum_name_declaration: $ => seq(
     $.enum_identifier,
-    optional(seq(
-      '[', $.integral_number, optional(seq(':', $.integral_number)), ']'
-    )),
-    optional(seq('=', $.constant_expression))
+    optseq('[', $.integral_number, optseq(':', $.integral_number), ']'),
+    optseq('=', $.constant_expression)
   ),
 
   class_scope: $ => seq($.class_type, '::'),
 
-  class_type: $ => prec('class_type', seq(
-    $.ps_class_identifier,
-    optional($.parameter_value_assignment),
-    repeat(prec('class_type', seq('::', $.class_identifier, optional($.parameter_value_assignment))))
-  )),
-
-  interface_class_type: $ => seq(
-    $.ps_class_identifier,
-    optional($.parameter_value_assignment)
+  class_type: $ => seq(
+    $.ps_class_identifier, optional($.parameter_value_assignment),
+    repeat(seq('::', $.class_identifier, optional($.parameter_value_assignment)))
   ),
 
-  _integer_type: $ => choice(
-    $.integer_vector_type,
-    $.integer_atom_type
-  ),
+  interface_class_type: $ => seq($.ps_class_identifier, optional($.parameter_value_assignment)),
+
+  _integer_type: $ => choice($.integer_vector_type, $.integer_atom_type),
 
   integer_atom_type: $ => choice('byte', 'shortint', 'int', 'longint', 'integer', 'time'),
 
@@ -1213,10 +1204,9 @@ const rules = {
 
   // Modified to avoid matching empty string
   net_port_type: $ => choice(
-    seq($.net_type, $.data_type_or_implicit),
     $.net_type,
-    $.data_type_or_implicit,
-    $.net_type_identifier,
+    seq(optional($.net_type), $.data_type_or_implicit),
+    $.nettype_identifier,
     seq('interconnect', optional($.implicit_data_type))
   ),
 
@@ -1229,12 +1219,12 @@ const rules = {
 
   _signing: $ => choice('signed', 'unsigned'),
 
-  _simple_type: $ => prec('_simple_type', choice(
+  _simple_type: $ => choice(
     $._integer_type,
     $.non_integer_type,
     $.ps_type_identifier,
     $.ps_parameter_identifier
-  )),
+  ),
 
   struct_union: $ => choice(
     'struct',
@@ -1249,18 +1239,11 @@ const rules = {
     ';'
   ),
 
-  data_type_or_void: $ => choice(
-    $.data_type,
-    'void'
-  ),
+  data_type_or_void: $ => choice($.data_type, 'void'),
 
   type_reference: $ => seq(
-    'type', '(',
-    choice(
-      $.expression,
-      $._data_type_or_incomplete_class_scoped_type
-    ),
-    ')'
+    'type',
+    '(', choice($.expression, $._data_type_or_incomplete_class_scoped_type), ')'
   ),
 
   _data_type_or_incomplete_class_scoped_type: $ => prec('_data_type_or_incomplete_class_scoped_type', choice(
@@ -1268,16 +1251,11 @@ const rules = {
     $.incomplete_class_scoped_type
   )),
 
-  // incomplete_class_scoped_type :: =
-  //    type_identifier :: type_identifier_or_class_type
-  //    | incomplete_class_scoped_type :: type_identifier_or_class_type
-  //
-  // DANGER: Parsing could result in an endless loop due to recursivity?!
+  // Set precedence to fix parsing conflict: could result in an endless loop due to recursivity
   incomplete_class_scoped_type: $ => prec('incomplete_class_scoped_type', choice(
     seq($.type_identifier, '::', $.type_identifier_or_class_type),
     $.incomplete_class_scoped_type, '::', $.type_identifier_or_class_type
   )),
-
 
   type_identifier_or_class_type: $ => choice($.type_identifier, $.class_type),
 
@@ -1286,10 +1264,8 @@ const rules = {
   drive_strength: $ => seq(
     '(',
     choice(
-      seq($.strength0, ',', $.strength1),
-      seq($.strength1, ',', $.strength0),
-      seq($.strength0, ',', 'highz1'),
-      seq($.strength1, ',', 'highz0'),
+      seq($.strength0, ',', choice($.strength1, 'highz1')),
+      seq($.strength1, ',', choice($.strength0, 'highz0')),
       seq('highz0', ',', $.strength1),
       seq('highz1', ',', $.strength0)
     ),
@@ -1303,19 +1279,21 @@ const rules = {
   charge_strength: $ => seq('(', choice('small', 'medium', 'large'), ')'),
 
 // *** A.2.2.3 Delays
-  delay3: $ => seq('#', choice(
-    $.delay_value,
-    seq(
-      '(',
-      $.mintypmax_expression,
-      optional(seq($.mintypmax_expression, optional($.mintypmax_expression))),
-      ')'
-    ))),
+  delay2: $ => seq(
+    '#',
+    choice(
+      $.delay_value,
+      seq('(', $.mintypmax_expression, optional($.mintypmax_expression), ')')
+    )
+  ),
 
-  // delay2: $ => seq('#', choice(
-  //   $.delay_value,
-  //   seq('(', $.mintypmax_expression, optional($.mintypmax_expression), ')')
-  // )),
+  delay3: $ => seq(
+    '#',
+    choice(
+      $.delay_value,
+      seq('(', $.mintypmax_expression, optseq($.mintypmax_expression, optional($.mintypmax_expression)), ')')
+    )
+  ),
 
   delay_value: $ => choice(
     $.unsigned_number,
@@ -1659,7 +1637,7 @@ const rules = {
       $.port_identifier,
     ),
     repeat($._variable_dimension),
-    optional(seq('=', $.expression))
+    optseq('=', $.expression)
   )),
 
   tf_port_direction: $ => prec('tf_port_direction', choice(
@@ -2108,15 +2086,15 @@ const rules = {
     'covergroup',
     choice(
       seq(
-        $.covergroup_identifier,
+        field('name', $.covergroup_identifier),
         optional(seq('(', optional($.tf_port_list), ')')),
         optional($.coverage_event),
       ),
-      seq('extends', $.covergroup_identifier)
+      seq('extends', field('parent', $.covergroup_identifier))
     ),
     ';',
     repeat($.coverage_spec_or_option),
-    'endgroup', optional(seq(':', $.covergroup_identifier))
+    enclosing('endgroup', $.covergroup_identifier),
   ),
 
   coverage_spec_or_option: $ => choice(
@@ -2859,16 +2837,9 @@ const rules = {
   continuous_assign: $ => seq(
     'assign',
     choice(
-      seq(
-        optional($.drive_strength),
-        // optional($.delay3), // TODO: Add in the future
-        $.list_of_net_assignments
-      ),
-      seq(
-        optional($.delay_control),
-        $.list_of_variable_assignments
-      )
-    ),
+      seq(optional($.drive_strength), optional($.delay3), $.list_of_net_assignments),
+      seq(optional($.delay_control), $.list_of_variable_assignments)
+    ) ,
     ';'
   ),
 
@@ -3053,10 +3024,13 @@ const rules = {
     seq('repeat', '(', $.expression, ')', $.event_control)
   ),
 
-  delay_control: $ => seq('#', choice(
-    $.delay_value,
-    seq('(', $.mintypmax_expression, ')')
-  )),
+  delay_control: $ => seq(
+    '#',
+    choice(
+      $.delay_value,
+      seq('(', $.mintypmax_expression, ')')
+    )
+  ),
 
   // TODO: Seems very different from the one by drom, probably
   // because of 2023 standard
@@ -4758,7 +4732,7 @@ const rules = {
   const_identifier: $ => alias($._identifier, $.const_identifier),
   constraint_identifier: $ => alias($._identifier, $.constraint_identifier),
 
-  covergroup_identifier: $ => alias($._identifier, $.covergroup_identifier),
+  covergroup_identifier: $ => $._identifier,
 
   // // covergroup_variable_identifier = _variable_identifier
   cover_point_identifier: $ => alias($._identifier, $.cover_point_identifier),
@@ -4819,7 +4793,7 @@ const rules = {
   modport_identifier: $ => $._identifier,
   module_identifier: $ => $._identifier,
   net_identifier: $ => $._identifier,
-  net_type_identifier: $ => $._identifier,
+  nettype_identifier: $ => $._identifier,
   // output_port_identifier: $ => alias($._identifier, $.output_port_identifier),
   package_identifier: $ => $._identifier,
 
@@ -4843,9 +4817,9 @@ const rules = {
     optional($.package_scope), $.class_identifier
   ),
 
-  // ps_covergroup_identifier: $ => seq(
-  //   optional($.package_scope), $.covergroup_identifier
-  // ),
+  ps_covergroup_identifier: $ => seq(
+    optional($.package_scope), $.covergroup_identifier
+  ),
 
   ps_checker_identifier: $ => seq(
     optional($.package_scope), $.checker_identifier
@@ -5260,9 +5234,11 @@ module.exports = grammar({
 
     // A.2
     $.net_identifier,
-    $.net_type_identifier,
+    $.nettype_identifier,
     $.type_identifier,
     $.interface_port_identifier,
+
+    $.covergroup_identifier,
 
 
     // TODO: Not reviewed
@@ -5282,13 +5258,12 @@ module.exports = grammar({
   //   $.ps_or_hierarchical_property_identifier,
 
     $.ps_class_identifier,
-  //   $.ps_covergroup_identifier,
+    $.ps_covergroup_identifier,
     $.ps_parameter_identifier,
     $.ps_type_identifier,
     $.ps_checker_identifier,
 
     $.parameter_identifier,
-    $.covergroup_identifier,
     $.enum_identifier,
     $.formal_port_identifier,
     $.genvar_identifier,
@@ -5830,6 +5805,8 @@ module.exports = grammar({
     ['interface_declaration'],
     ['program_declaration'],
     ['package_declaration'],
+
+    ['net_port_type'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5860,6 +5837,17 @@ module.exports = grammar({
     //     1:  module_keyword  module_identifier  (list_of_port_declarations  '('  ')')  •  ';'  …
     //     2:  module_keyword  module_identifier  (list_of_ports  '('  ')')  •  ';'  …
     [$.list_of_ports, $.list_of_port_declarations],
+
+
+    // In $.continuous_assign:
+    // - $.delay3 follows the branch $.list_of_net_assignments
+    // - $.delay_control follows the branch of $.list_of_variable_assignments
+    // Since a variable could also be driven from a $.continuous_assign, check more tokens to see which one is correct
+    //
+    // 'assign'  '#'  delay_value  •  '{'  …
+    // 1:  'assign'  (delay3  '#'  delay_value)  •  '{'  …
+    // 2:  'assign'  (delay_control  '#'  delay_value)  •  '{'  …
+    [$.delay3, $.delay_control],
 
 
     // INFO: To be reviewed
@@ -6423,7 +6411,6 @@ module.exports = grammar({
     [$.named_port_connection, $.named_checker_port_connection],
     [$.expression_or_dist, $.ordered_port_connection, $.event_expression],
     [$.expression_or_dist, $.named_port_connection, $.event_expression],
-
 
   ],
 
