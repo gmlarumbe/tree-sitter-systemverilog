@@ -988,43 +988,25 @@ const rules = {
       $.type_parameter_declaration,
     )),
 
-  _forward_type: $ => choice('enum', 'struct', 'union', 'class', 'interface class'),
+  type_parameter_declaration: $ => seq('type', optional($._forward_type), $.list_of_type_assignments),
 
-  type_parameter_declaration: $ => seq(
-    'type',
-    optional($._forward_type),
-    $.list_of_type_assignments
-  ),
+  any_parameter_declaration: $ => choice($.local_parameter_declaration, $.parameter_declaration),
 
-  any_parameter_declaration: $ => choice(
-    $.local_parameter_declaration,
-    $.parameter_declaration
-  ),
+  specparam_declaration: $ => seq('specparam', optional($.packed_dimension), $.list_of_specparam_assignments, ';'),
 
-  // specparam_declaration: $ => seq(
-  //   'specparam',
-  //   optional($.packed_dimension),
-  //   $.list_of_specparam_assignments,
-  //   ';'
-  // ),
 
 // *** A.2.1.2 Port declarations
-
-  inout_declaration: $ => seq(
-    'inout', optional($.net_port_type), $.list_of_port_identifiers
-  ),
+  inout_declaration: $ => seq('inout', optional($.net_port_type), $.list_of_port_identifiers),
 
   input_declaration: $ => seq(
-    'input',
-    choice(
+    'input', choice(
       prec.dynamic(0, seq(optional($.net_port_type), $.list_of_port_identifiers)),
       prec.dynamic(1, seq(optional($.variable_port_type), $.list_of_variable_identifiers))
     )
   ),
 
   output_declaration: $ => seq(
-    'output',
-    choice(
+    'output', choice(
       prec.dynamic(0, seq(optional($.net_port_type), $.list_of_port_identifiers)),
       prec.dynamic(1, seq(optional($.variable_port_type), $.list_of_variable_port_identifiers))
     )
@@ -1032,13 +1014,12 @@ const rules = {
 
   interface_port_declaration: $ => seq(
     $.interface_identifier,
-    optional(seq('.', $.modport_identifier)),
+    optseq('.', $.modport_identifier),
     $.list_of_interface_identifiers
   ),
 
-  ref_declaration: $ => seq(
-    'ref', $.variable_port_type, $.list_of_variable_identifiers
-  ),
+  ref_declaration: $ => seq('ref', $.variable_port_type, $.list_of_variable_identifiers),
+
 
 // *** A.2.1.3 Type declarations
   data_declaration: $ => prec('data_declaration', choice(
@@ -1088,6 +1069,24 @@ const rules = {
     'genvar', $.list_of_genvar_identifiers, ';'
   ),
 
+
+  // type_declaration: $ => seq(
+  //   'typedef',
+  //   choice(
+  //     seq($.data_type, $._type_identifier, repeat($._variable_dimension)),
+  //     seq(
+  //       $.interface_instance_identifier, optional($.constant_bit_select),
+  //       '.', $._type_identifier, $._type_identifier
+  //     ),
+  //     seq(
+  //       optional(choice(
+  //         'enum', 'struct', 'union', 'class', seq('interface', 'class')
+  //       )),
+  //       $._type_identifier
+  //     )
+  //   ),
+  //   ';'
+  // ),
   net_declaration: $ => prec('net_declaration', choice(
     seq(
       $.net_type,
@@ -1113,49 +1112,17 @@ const rules = {
     // )
   )),
 
-  // type_declaration: $ => seq(
-  //   'typedef',
-  //   choice(
-  //     seq($.data_type, $._type_identifier, repeat($._variable_dimension)),
-  //     seq(
-  //       $.interface_instance_identifier, optional($.constant_bit_select),
-  //       '.', $._type_identifier, $._type_identifier
-  //     ),
-  //     seq(
-  //       optional(choice(
-  //         'enum', 'struct', 'union', 'class', seq('interface', 'class')
-  //       )),
-  //       $._type_identifier
-  //     )
-  //   ),
-  //   ';'
-  // ),
   type_declaration: $ => seq(
     'typedef',
     choice(
-      seq($.data_type_or_incomplete_class_scoped_type, $._type_identifier, repeat($._variable_dimension)),
+      seq($._data_type_or_incomplete_class_scoped_type, $._type_identifier, repeat($._variable_dimension)),
       seq($.interface_port_identifier, optional($.constant_bit_select), '.', $._type_identifier, $._type_identifier),
       seq(optional($._forward_type), $._type_identifier)
     ),
     ';'
   ),
 
-  data_type_or_incomplete_class_scoped_type: $ => prec('data_type_or_incomplete_class_scoped_type', choice(
-    $.data_type,
-    $.incomplete_class_scoped_type
-  )),
-
-  // incomplete_class_scoped_type :: =
-  //    type_identifier :: type_identifier_or_class_type
-  //    | incomplete_class_scoped_type :: type_identifier_or_class_type
-  //
-  incomplete_class_scoped_type: $ => prec('incomplete_class_scoped_type', choice(
-    seq($._type_identifier, '::', $.type_identifier_or_class_type),
-    $.incomplete_class_scoped_type, '::', $.type_identifier_or_class_type
-  )),
-
-
-  type_identifier_or_class_type: $ => choice($._type_identifier, $.class_type),
+  _forward_type: $ => choice('enum', 'struct', 'union', 'class', 'interface class'),
 
   nettype_declaration: $ => prec('nettype_declaration', seq(
     'nettype',
@@ -1279,7 +1246,7 @@ const rules = {
   net_type: $ => choice('supply0', 'supply1', 'tri', 'triand', 'trior', 'trireg', 'tri0', 'tri1', 'uwire', 'wire', 'wand', 'wor'),
 
   // Modified to avoid matching empty string
-  net_port_type: $ => choice( // Reorder, avoid matching empty string
+  net_port_type: $ => choice(
     seq($.net_type, $.data_type_or_implicit),
     $.net_type,
     $.data_type_or_implicit,
@@ -1325,13 +1292,31 @@ const rules = {
     'type', '(',
     choice(
       $.expression,
-      $.data_type_or_incomplete_class_scoped_type
+      $._data_type_or_incomplete_class_scoped_type
     ),
     ')'
   ),
 
-// *** A.2.2.2 Strengths
+  _data_type_or_incomplete_class_scoped_type: $ => prec('_data_type_or_incomplete_class_scoped_type', choice(
+    $.data_type,
+    $.incomplete_class_scoped_type
+  )),
 
+  // incomplete_class_scoped_type :: =
+  //    type_identifier :: type_identifier_or_class_type
+  //    | incomplete_class_scoped_type :: type_identifier_or_class_type
+  //
+  // DANGER: Parsing could result in an endless loop due to recursivity?!
+  incomplete_class_scoped_type: $ => prec('incomplete_class_scoped_type', choice(
+    seq($._type_identifier, '::', $.type_identifier_or_class_type),
+    $.incomplete_class_scoped_type, '::', $.type_identifier_or_class_type
+  )),
+
+
+  type_identifier_or_class_type: $ => choice($._type_identifier, $.class_type),
+
+
+// *** A.2.2.2 Strengths
   drive_strength: $ => seq(
     '(',
     choice(
@@ -1408,7 +1393,7 @@ const rules = {
 
   // list_of_udp_port_identifiers: $ => sep1(',', $.port_identifier),
 
-  // list_of_specparam_assignments: $ => sep1(',', $.specparam_assignment),
+  list_of_specparam_assignments: $ => sepBy1(',', $.specparam_assignment),
 
   list_of_tf_variable_identifiers: $ => sepBy1(',', seq(
     $.port_identifier,
@@ -1463,10 +1448,25 @@ const rules = {
     optional(seq('=', $.constant_param_expression))
   ),
 
-  // specparam_assignment: $ => choice(
-  //   seq($.specparam_identifier, '=', $.constant_mintypmax_expression),
-  //   $.pulse_control_specparam
-  // ),
+  specparam_assignment: $ => choice(
+    seq($.specparam_identifier, '=', $.constant_mintypmax_expression),
+    $.pulse_control_specparam
+  ),
+
+  pulse_control_specparam: $ => choice(
+    seq('PATHPULSE$=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'),
+    // TODO: When implementing specify block
+    // seq(
+    //   'PATHPULSE$', $.specify_input_terminal_descriptor, '$', $.specify_output_terminal_descriptor,
+    //   '=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'
+    // )
+  ),
+
+  error_limit_value: $ => $.limit_value,
+
+  reject_limit_value: $ => $.limit_value,
+
+  limit_value: $ => $.constant_mintypmax_expression,
 
   // type_assignment: $ => seq(
   //   $._type_identifier,
@@ -1477,28 +1477,6 @@ const rules = {
     optional(seq('=', $.data_type))
   ),
 
-  // pulse_control_specparam: $ => choice(
-  //   seq(
-  //     'PATHPULSE$=',
-  //     '(',
-  //     $.reject_limit_value,
-  //     optseq(',', $.error_limit_value),
-  //     ')'
-  //   )
-  //   // seq(
-  //   //   'PATHPULSE$',
-  //   //   $.specify_input_terminal_descriptor,
-  //   //   '$',
-  //   //   $.specify_output_terminal_descriptor,
-  //   //   '=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'
-  //   // )
-  // ),
-
-  // error_limit_value: $ => $.limit_value,
-
-  // reject_limit_value: $ => $.limit_value,
-
-  // limit_value: $ => $.constant_mintypmax_expression,
 
   variable_decl_assignment: $ => choice(
     seq(
@@ -4998,7 +4976,7 @@ const rules = {
   // // shall have at least one character, and shall not have any spaces.
   simple_identifier: $ => /[a-zA-Z_][a-zA-Z0-9_$]*/,
 
-  // specparam_identifier: $ => alias($._identifier, $.specparam_identifier),
+  specparam_identifier: $ => $._identifier,
 
   // // The $ character in a system_tf_identifier shall
   // // not be followed by white_space. A system_tf_identifier shall not be escaped.
@@ -5321,6 +5299,7 @@ module.exports = grammar({
     $.port_identifier,
     $.modport_identifier,
     $.clocking_identifier,
+    $.specparam_identifier,
 
     $.var_data_type,
 
@@ -5356,7 +5335,6 @@ module.exports = grammar({
     $.enum_identifier,
     $.formal_port_identifier,
     $.genvar_identifier,
-  //   $.specparam_identifier,
     $.tf_identifier,
     $._type_identifier,
     $._net_type_identifier,
@@ -5481,6 +5459,32 @@ module.exports = grammar({
     // 8:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  class_constructor_declaration_repeat2  'endfunction'  ':'  'new')                               (precedence: 'class_constructor_declaration')
     // 9:  (class_constructor_declaration  'function'  'new'  ';'  'super'  •  '.'  'new'  ';'  class_constructor_declaration_repeat2  'endfunction')                                           (precedence: 'class_constructor_declaration')
     ['class_constructor_declaration', 'implicit_class_handle'],
+
+
+    // Not sure about this one, but the other way around creates an endless loop in the parsing process
+    //
+    // 'typedef'  incomplete_class_scoped_type  •  '\'  …
+    // 1:  'typedef'  (_data_type_or_incomplete_class_scoped_type  incomplete_class_scoped_type)  •  '\'  …
+    // 2:  'typedef'  (incomplete_class_scoped_type  incomplete_class_scoped_type)  •  '\'  …
+    ['_data_type_or_incomplete_class_scoped_type', 'incomplete_class_scoped_type'],
+
+
+    // pure virtual function will always be a function prototype overriden in the extended class
+    //
+    // 'class'  _identifier  ';'  'pure'  'virtual'  •  'function'  …
+    // 1:  'class'  _identifier  ';'  (class_method  'pure'  'virtual'  •  _method_prototype  ';')
+    // 2:  'class'  _identifier  ';'  (method_qualifier  'pure'  'virtual')  •  'function'  …
+    ['class_method', 'method_qualifier'],
+
+
+    // Since it is placed inside a class declaration consider it a class property
+    //
+    //   'class'  _identifier  ';'  'const'  data_type  •  simple_identifier  …
+    //   1:  'class'  _identifier  ';'  'const'  (data_type_or_implicit  data_type)  •  simple_identifier  …                     (precedence: 'data_type_or_implicit')
+    //   2:  'class'  _identifier  ';'  (class_property  'const'  data_type  •  const_identifier  ';')                            (precedence: 'class_property')
+    //   3:  'class'  _identifier  ';'  (class_property  'const'  data_type  •  const_identifier  '='  constant_expression  ';')  (precedence: 'class_property')
+    ['class_property', 'data_type_or_implicit'],
+
 
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -5710,27 +5714,7 @@ module.exports = grammar({
     ['class_item_qualifier', 'lifetime'],
 
 
-    // Since it comes after a class declaration, consider it a class property
-    //
-    //   'class'  _identifier  ';'  'const'  data_type  •  simple_identifier  …
-    //   1:  'class'  _identifier  ';'  'const'  (data_type_or_implicit  data_type)  •  simple_identifier  …                     (precedence: 'data_type_or_implicit')
-    //   2:  'class'  _identifier  ';'  (class_property  'const'  data_type  •  const_identifier  ';')                            (precedence: 'class_property')
-    //   3:  'class'  _identifier  ';'  (class_property  'const'  data_type  •  const_identifier  '='  constant_expression  ';')  (precedence: 'class_property')
-    ['class_property', 'data_type_or_implicit'],
 
-
-    // pure virtual function will always be a function prototype overriden in the extended class
-    //
-    // 'class'  _identifier  ';'  'pure'  'virtual'  •  'function'  …
-    // 1:  'class'  _identifier  ';'  (class_method  'pure'  'virtual'  •  _method_prototype  ';')
-    // 2:  'class'  _identifier  ';'  (method_qualifier  'pure'  'virtual')  •  'function'  …
-    ['class_method', 'method_qualifier'],
-
-
-    // 'typedef'  incomplete_class_scoped_type  •  '\'  …
-    // 1:  'typedef'  (data_type_or_incomplete_class_scoped_type  incomplete_class_scoped_type)  •  '\'  …
-    // 2:  'typedef'  (incomplete_class_scoped_type  incomplete_class_scoped_type)  •  '\'  …
-    ['data_type_or_incomplete_class_scoped_type', 'incomplete_class_scoped_type'],
 
 
     // With struct array initializations:
