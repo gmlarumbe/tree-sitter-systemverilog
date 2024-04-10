@@ -1098,11 +1098,11 @@ const rules = {
       seq(
         $.data_type,
         $.net_type_identifier,
-        optional(seq(
+        optseq(
           'with',
           optchoice($.package_scope, $.class_scope),
           $.tf_identifier
-        ))
+        )
       ),
       seq(
         optchoice($.package_scope, $.class_scope),
@@ -1127,20 +1127,18 @@ const rules = {
   )),
 
   data_type: $ => prec('data_type', choice(
-    prec.right(seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension))),
+    seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension)),
     seq($.integer_atom_type, optional($._signing)),
     $.non_integer_type,
     seq(
       $.struct_union,
-      optional(seq('packed', optional($._signing))),
-      // '{', repeat1($.struct_union_member), '}',
-      '{', repeat1(choice($._directives, $.struct_union_member)), '}', // INFO: _directives out of LRM, for sv-tests/generic/typedef tests
+      optseq('packed', optional($._signing)),
+      '{', repeat1(choice($._directives, $.struct_union_member)), '}', // _directives out of LRM, (e.g. allow use of `ifdefs in structs)
       repeat($.packed_dimension)
     ),
     seq(
       'enum', optional($.enum_base_type),
-      // '{', sepBy1(',', $.enum_name_declaration), '}',
-      '{', choice($._directives, sepBy1(',', $.enum_name_declaration)), '}', // INFO: _directives out of LRM, for sv-tests/generic/typedef tests
+      '{', choice($._directives, sepBy1(',', $.enum_name_declaration)), '}', // _directives out of LRM, (e.g. allow use of `ifdefs in structs)
       repeat($.packed_dimension)
     ),
     'string',
@@ -1149,15 +1147,15 @@ const rules = {
       'virtual', optional('interface'),
       $.interface_identifier,
       optional($.parameter_value_assignment),
-      optional(seq('.', $.modport_identifier))
+      optseq('.', $.modport_identifier)
     ),
     seq(
-      optional(choice($.class_scope, $.package_scope)),
+      optchoice($.class_scope, $.package_scope),
       $.type_identifier,
       repeat($.packed_dimension)
     ),
     $.class_type,
-    // 'event',
+    'event',
     // $.ps_covergroup_identifier,
     $.type_reference
   )),
@@ -1238,6 +1236,11 @@ const rules = {
     $.ps_parameter_identifier
   )),
 
+  struct_union: $ => choice(
+    'struct',
+    seq('union', optchoice('soft', 'tagged'))
+  ),
+
   struct_union_member: $ => seq(
     repeat($.attribute_instance),
     optional($.random_qualifier),
@@ -1249,11 +1252,6 @@ const rules = {
   data_type_or_void: $ => choice(
     $.data_type,
     'void'
-  ),
-
-  struct_union: $ => choice(
-    'struct',
-    seq('union', optional(choice('soft', 'tagged')))
   ),
 
   type_reference: $ => seq(
