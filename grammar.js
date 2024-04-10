@@ -1444,7 +1444,7 @@ const rules = {
 
 
 // ** A.2.6 Function declarations
-  function_data_type_or_implicit1: $ => choice(
+  _function_data_type_or_implicit: $ => choice(
     $.data_type_or_void,
     $.implicit_data_type
   ),
@@ -1457,64 +1457,41 @@ const rules = {
   ),
 
   function_body_declaration: $ => seq(
-    optional($.function_data_type_or_implicit1),
-    optional(choice(
-      seq($.interface_identifier, '.'),
-      $.class_scope
-    )),
-    $.function_identifier,
+    optional($._function_data_type_or_implicit),
+    optchoice(seq($.interface_identifier, '.'), $.class_scope),
+    field('name', $.function_identifier),
     choice(
       seq(';', repeat($.tf_item_declaration)),
       seq('(', optional($.tf_port_list), ')', ';', repeat($.block_item_declaration))
     ),
     repeat($.function_statement_or_null),
-    'endfunction',
-    optional(seq(':', $.function_identifier))
+    enclosing('endfunction', $.function_identifier)
   ),
 
   function_prototype: $ => seq(
     'function',
     optional($.dynamic_override_specifiers),
     $.data_type_or_void,
-    $.function_identifier,
-    optional(seq('(', optional($.tf_port_list), ')'))
+    field('name', $.function_identifier),
+    optseq('(', optional($.tf_port_list), ')')
   ),
 
+  // TODO: Replace $.simple_identifier to $.c_identifier: might it have to do with tree-sitter $word => ?
   dpi_import_export: $ => choice(
     seq(
-      'import',
-      $.dpi_spec_string,
-      optional($.dpi_function_import_property),
-      optional(seq($.simple_identifier, '=')), // TODO: Change to $c_identifier: might it have to do with tree-sitter $word => ?
-      // optional(seq($.c_identifier, '=')),
-      $.dpi_function_proto,
+      'import', $.dpi_spec_string,
+      choice(
+        seq(optional($.dpi_function_import_property), optseq($.simple_identifier, '='), $.dpi_function_proto),
+        seq(optional($.dpi_task_import_property), optseq($.simple_identifier, '='), $.dpi_task_proto)
+      ),
       ';'
     ),
     seq(
-      'import',
-      $.dpi_spec_string,
-      optional($.dpi_task_import_property),
-      optional(seq($.simple_identifier, '=')), // TODO: Change to $c_identifier: might it have to do with tree-sitter $word => ?
-      // optional(seq($.c_identifier, '=')),
-      $.dpi_task_proto,
-      ';'
-    ),
-    seq(
-      'export',
-      $.dpi_spec_string,
-      optional(seq($.simple_identifier, '=')), // TODO: Change to $c_identifier: might it have to do with tree-sitter $word => ?
-      // optional(seq($.c_identifier, '=')),
-      'function',
-      $.function_identifier,
-      ';'
-    ),
-    seq(
-      'export',
-      $.dpi_spec_string,
-      optional(seq($.simple_identifier, '=')), // TODO: Change to $c_identifier: might it have to do with tree-sitter $word => ?
-      // optional(seq($.c_identifier, '=')),
-      'task',
-      $.task_identifier,
+      'export', $.dpi_spec_string, optseq($.simple_identifier, '='),
+      choice(
+        seq('function', $.function_identifier),
+        seq('task', $.task_identifier)
+      ) ,
       ';'
     )
   ),
@@ -1690,6 +1667,7 @@ const rules = {
   ),
 
   import_export: $ => choice('import', 'export'),
+
 
 // ** A.2.10 Assertion declarations
   concurrent_assertion_item: $ => prec('concurrent_assertion_item', choice(
@@ -2042,6 +2020,7 @@ const rules = {
     $.list_of_variable_decl_assignments,
     ';'
   ),
+
 
 // ** A.2.11 Covergroup declarations
   covergroup_declaration: $ => seq(
@@ -4697,7 +4676,7 @@ const rules = {
   escaped_identifier: $ => seq('\\', /[^\s]*/),
   // formal_identifier: $ => alias($._identifier, $.formal_identifier),
   formal_port_identifier: $ => alias($._identifier, $.formal_port_identifier),
-  function_identifier: $ => alias($._identifier, $.function_identifier),
+  function_identifier: $ => $._identifier,
   generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
   genvar_identifier: $ => $._identifier,
   _hierarchical_array_identifier: $ => $.hierarchical_identifier,
@@ -5196,6 +5175,7 @@ module.exports = grammar({
 
     $.covergroup_identifier,
 
+    $.function_identifier,
 
     // TODO: Not reviewed
 
