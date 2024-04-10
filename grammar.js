@@ -1356,33 +1356,11 @@ const rules = {
 
 
 // ** A.2.4 Declaration assignments
-  defparam_assignment: $ => seq(
-    $._hierarchical_parameter_identifier,
-    '=',
-    $.constant_mintypmax_expression
-  ),
+  defparam_assignment: $ => seq($._hierarchical_parameter_identifier, '=', $.constant_mintypmax_expression),
 
-  // INFO: Original by drom
-  // net_decl_assignment: $ => prec.left(PREC.ASSIGN, seq(
-  //   $.net_identifier,
-  //   repeat($.unpacked_dimension),
-  //   optseq('=', $.expression)
-  // )),
-  // End of INFO
+  net_decl_assignment: $ => seq($.net_identifier, repeat($.unpacked_dimension), optseq('=', $.expression)),
 
-  // INFO: Larumbe's one
-  net_decl_assignment: $ => seq(
-    $.net_identifier,
-    repeat($.unpacked_dimension),
-    optseq('=', $.expression)
-  ),
-  // End of INFO
-
-  param_assignment: $ => seq(
-    $.parameter_identifier,
-    repeat($._variable_dimension),
-    optseq('=', $.constant_param_expression)
-  ),
+  param_assignment: $ => seq($.parameter_identifier, repeat($._variable_dimension), optseq('=', $.constant_param_expression)),
 
   specparam_assignment: $ => choice(
     seq($.specparam_identifier, '=', $.constant_mintypmax_expression),
@@ -1390,56 +1368,49 @@ const rules = {
   ),
 
   pulse_control_specparam: $ => choice(
-    seq('PATHPULSE$=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'),
-    // TODO: When implementing specify block
-    // seq(
-    //   'PATHPULSE$', $.specify_input_terminal_descriptor, '$', $.specify_output_terminal_descriptor,
-    //   '=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'
-    // )
+    seq('PATHPULSE$', '=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'),
+    seq(
+      'PATHPULSE$', $.specify_input_terminal_descriptor, '$', $.specify_output_terminal_descriptor,
+      '=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'
+    )
   ),
 
-  error_limit_value: $ => $.limit_value,
+  error_limit_value: $ => $._limit_value,
 
-  reject_limit_value: $ => $.limit_value,
+  reject_limit_value: $ => $._limit_value,
 
-  limit_value: $ => $.constant_mintypmax_expression,
+  _limit_value: $ => $.constant_mintypmax_expression,
 
-  // type_assignment: $ => seq(
-  //   $.type_identifier,
-  //   optseq('=', $.data_type)
-  // ),
   type_assignment: $ => seq(
     $.type_identifier,
-    optional(seq('=', $.data_type))
+    optseq('=', $._data_type_or_incomplete_class_scoped_type)
   ),
-
 
   variable_decl_assignment: $ => choice(
     seq(
-      $.variable_identifier,
+      field('name', $.variable_identifier),
       repeat($._variable_dimension),
-      optional(seq('=', $.expression))
+      optseq('=', $.expression)
     ),
     seq(
-      $.dynamic_array_variable_identifier,
+      field('name', $.dynamic_array_variable_identifier),
       $.unsized_dimension,
       repeat($._variable_dimension),
-      optional(seq('=', $.dynamic_array_new))
+      optseq('=', $.dynamic_array_new)
     ),
     seq(
-      $.class_variable_identifier,
-      optional(seq('=', $.class_new))
+      field('name', $.class_variable_identifier),
+      optseq('=', $.class_new)
     )
   ),
 
   class_new: $ => choice(
-    prec.dynamic(1, seq(optional($.class_scope), 'new', optional(seq('(', optional($.list_of_arguments), ')')))),
+    prec.dynamic(1, seq(optional($.class_scope), 'new', optseq('(', optional($.list_of_arguments), ')'))),
     prec.dynamic(0, seq('new', $.expression))
   ),
 
-  dynamic_array_new: $ => seq(
-    'new', '[', $.expression, ']', optional(seq('(', $.expression, ')'))
-  ),
+  dynamic_array_new: $ => seq('new', '[', $.expression, ']', optseq('(', $.expression, ')')),
+
 
 // ** A.2.5 Declaration ranges
   unpacked_dimension: $ => prec('unpacked_dimension', seq(
@@ -3577,26 +3548,31 @@ const rules = {
 
   // list_of_path_outputs: $ => sep1(',', $.specify_output_terminal_descriptor),
 
+
 // ** A.7.3 Specify block terminals
-  // specify_input_terminal_descriptor: $ => seq(
-  //   $.input_identifier, optseq('[', $._constant_range_expression, ']')
-  // ),
+  // TODO: Double check
+  specify_input_terminal_descriptor: $ => seq(
+    $.input_identifier, optseq('[', $._constant_range_expression, ']')
+  ),
 
-  // specify_output_terminal_descriptor: $ => seq(
-  //   $.output_identifier, optseq('[', $._constant_range_expression, ']')
-  // ),
+  // TODO: Double check
+  specify_output_terminal_descriptor: $ => seq(
+    $.output_identifier, optseq('[', $._constant_range_expression, ']')
+  ),
 
-  // input_identifier: $ => choice(
-  //   $.input_port_identifier,
-  //   $.inout_port_identifier,
-  //   seq($.interface_identifier, '.', $.port_identifier) // FIXME glue dot?
-  // ),
+  // TODO: Double check
+  input_identifier: $ => choice(
+    $.input_port_identifier,
+    $.inout_port_identifier,
+    seq($.interface_identifier, '.', $.port_identifier) // FIXME glue dot?
+  ),
 
-  // output_identifier: $ => choice(
-  //   $.output_port_identifier,
-  //   $.inout_port_identifier,
-  //   seq($.interface_identifier, '.', $.port_identifier)
-  // ),
+  // TODO: Double check
+  output_identifier: $ => choice(
+    $.output_port_identifier,
+    $.inout_port_identifier,
+    seq($.interface_identifier, '.', $.port_identifier)
+  ),
 
 // ** A.7.4 Specify path delays
   // path_delay_value: $ => choice(
@@ -4729,7 +4705,7 @@ const rules = {
   // // covergroup_variable_identifier = variable_identifier
   cover_point_identifier: $ => alias($._identifier, $.cover_point_identifier),
   cross_identifier: $ => alias($._identifier, $.cross_identifier),
-  dynamic_array_variable_identifier: $ => alias($.variable_identifier, $.dynamic_array_variable_identifier),
+  dynamic_array_variable_identifier: $ => $.variable_identifier,
   enum_identifier: $ => alias($._identifier, $.enum_identifier),
   escaped_identifier: $ => seq('\\', /[^\s]*/),
   // formal_identifier: $ => alias($._identifier, $.formal_identifier),
@@ -4776,8 +4752,8 @@ const rules = {
   interface_identifier: $ => $._identifier,
   // interface_instance_identifier: $ => alias($._identifier, $.interface_instance_identifier),
   interface_port_identifier: $ => $._identifier,
-  // inout_port_identifier: $ => alias($._identifier, $.inout_port_identifier),
-  // input_port_identifier: $ => alias($._identifier, $.input_port_identifier),
+  inout_port_identifier: $ => $._identifier,
+  input_port_identifier: $ => $._identifier,
   instance_identifier: $ => alias($._identifier, $.instance_identifier),
   // library_identifier: $ => alias($._identifier, $.library_identifier),
   member_identifier: $ => alias($._identifier, $.member_identifier),
@@ -4786,7 +4762,7 @@ const rules = {
   module_identifier: $ => $._identifier,
   net_identifier: $ => $._identifier,
   nettype_identifier: $ => $._identifier,
-  // output_port_identifier: $ => alias($._identifier, $.output_port_identifier),
+  output_port_identifier: $ => $._identifier,
   package_identifier: $ => $._identifier,
 
   package_scope: $ => prec('package_scope', choice(
@@ -5237,6 +5213,7 @@ module.exports = grammar({
     // TODO: Not reviewed
 
     // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
+    $._hierarchical_parameter_identifier,
     $._hierarchical_net_identifier,
     $._hierarchical_variable_identifier,
     $._hierarchical_tf_identifier,
@@ -5271,9 +5248,9 @@ module.exports = grammar({
     $._block_identifier,
     $.instance_identifier,
     $.property_identifier,
-  //   // $.input_port_identifier,
-  //   // $.output_port_identifier,
-  //   // $.inout_port_identifier,
+    $.input_port_identifier,
+    $.output_port_identifier,
+    $.inout_port_identifier,
   //   // $.input_identifier,
   //   // $.output_identifier,
     $.cover_point_identifier,
