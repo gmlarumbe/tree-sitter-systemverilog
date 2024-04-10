@@ -84,6 +84,8 @@ function enclosing(keyword, identifier) {
 
 
 
+
+
 /**
  *
  * @param {(Rule|string|RegExp)[]} rules
@@ -1007,15 +1009,15 @@ const rules = {
 
   input_declaration: $ => seq(
     'input', choice(
-      prec.dynamic(0, seq(optional($.net_port_type), $.list_of_port_identifiers)),
-      prec.dynamic(1, seq(optional($.variable_port_type), $.list_of_variable_identifiers))
+      prec.dynamic(0, seq(optional($.net_port_type), $.list_of_port_identifiers)),         // For non-builtin types, give typedef types (variables) higher precedence
+      prec.dynamic(1, seq(optional($.variable_port_type), $.list_of_variable_identifiers)) // than netttype types (nets) (check core/module/nonansi_1)
     )
   ),
 
   output_declaration: $ => seq(
     'output', choice(
-      prec.dynamic(0, seq(optional($.net_port_type), $.list_of_port_identifiers)),
-      prec.dynamic(1, seq(optional($.variable_port_type), $.list_of_variable_port_identifiers))
+      prec.dynamic(0, seq(optional($.net_port_type), $.list_of_port_identifiers)),              // For non-builtin types, give typedef types (variables) higher precedence
+      prec.dynamic(1, seq(optional($.variable_port_type), $.list_of_variable_port_identifiers)) // than netttype types (nets) (check core/module/nonansi_1)
     )
   ),
 
@@ -1278,6 +1280,7 @@ const rules = {
 
   charge_strength: $ => seq('(', choice('small', 'medium', 'large'), ')'),
 
+
 // *** A.2.2.3 Delays
   delay2: $ => seq(
     '#',
@@ -1303,6 +1306,7 @@ const rules = {
     '1step'
   ),
 
+
 // ** A.2.3 Declaration lists
   list_of_defparam_assignments: $ => sepBy1(',', $.defparam_assignment),
 
@@ -1314,20 +1318,12 @@ const rules = {
 
   list_of_param_assignments: $ => sepBy1(',', $.param_assignment),
 
-  // INFO: Original by drom
-  // list_of_port_identifiers: $ => sep1(',', seq(
-  //   $.port_identifier,
-  //   repeat($.unpacked_dimension)
-  // )),
-  // End of INFO:
-
-  // INFO: Larumbe's one
-  list_of_port_identifiers: $ => prec('list_of_port_identifiers', sepBy1prec(',', 'list_of_port_identifiers', seq(
-    $.port_identifier,
-    repeat(prec('list_of_port_identifiers', $.unpacked_dimension))
-  ))),
-  // End of INFO
-
+  list_of_port_identifiers: $ => prec('list_of_port_identifiers',
+    sepBy1prec(',', 'list_of_port_identifiers', seq(
+      $.port_identifier,
+      repeat(prec('list_of_port_identifiers', $.unpacked_dimension))
+    ))
+  ),
 
   list_of_udp_port_identifiers: $ => sepBy1(',', $.port_identifier),
 
@@ -1343,16 +1339,21 @@ const rules = {
 
   list_of_variable_decl_assignments: $ => sepBy1(',', $.variable_decl_assignment),
 
-  list_of_variable_identifiers: $ => prec('list_of_variable_identifiers', sepBy1prec(',', 'list_of_variable_identifiers', seq(
-    $._variable_identifier,
-    repeat(prec('list_of_variable_identifiers', $._variable_dimension))
-  ))),
+  list_of_variable_identifiers: $ => prec('list_of_variable_identifiers',
+    sepBy1prec(',', 'list_of_variable_identifiers', seq(
+      $.variable_identifier,
+      repeat(prec('list_of_variable_identifiers', $._variable_dimension))
+    ))
+  ),
 
-  list_of_variable_port_identifiers: $ => prec('list_of_variable_port_identifiers', sepBy1prec(',', 'list_of_variable_port_identifiers', seq(
-    $.port_identifier,
-    repeat(prec('list_of_variable_port_identifiers', $._variable_dimension)),
-    optseq('=', $.constant_expression)
-  ))),
+  list_of_variable_port_identifiers: $ => prec('list_of_variable_port_identifiers',
+    sepBy1prec(',', 'list_of_variable_port_identifiers', seq(
+      $.port_identifier,
+      repeat(prec('list_of_variable_port_identifiers', $._variable_dimension)),
+      optseq('=', $.constant_expression)
+    ))
+  ),
+
 
 // ** A.2.4 Declaration assignments
   defparam_assignment: $ => seq(
@@ -1373,14 +1374,14 @@ const rules = {
   net_decl_assignment: $ => seq(
     $.net_identifier,
     repeat($.unpacked_dimension),
-    optional(seq('=', $.expression))
+    optseq('=', $.expression)
   ),
   // End of INFO
 
   param_assignment: $ => seq(
     $.parameter_identifier,
     repeat($._variable_dimension),
-    optional(seq('=', $.constant_param_expression))
+    optseq('=', $.constant_param_expression)
   ),
 
   specparam_assignment: $ => choice(
@@ -1415,7 +1416,7 @@ const rules = {
 
   variable_decl_assignment: $ => choice(
     seq(
-      $._variable_identifier,
+      $.variable_identifier,
       repeat($._variable_dimension),
       optional(seq('=', $.expression))
     ),
@@ -2235,7 +2236,7 @@ const rules = {
 
   _cross_item: $ => choice(
     $.cover_point_identifier,
-    $._variable_identifier
+    $.variable_identifier
   ),
 
   cross_body: $ => choice(
@@ -2282,7 +2283,7 @@ const rules = {
   ),
 
   bins_expression: $ => choice(
-    $._variable_identifier,
+    $.variable_identifier,
     // prec.left(PREC.PARENT, seq($.cover_point_identifier, optseq('.', $._bin_identifier)))
     seq($.cover_point_identifier, optional(seq('.', $._bin_identifier)))
   ),
@@ -2759,7 +2760,7 @@ const rules = {
   // ),
 
   // udp_reg_declaration: $ => seq(
-  //   repeat($.attribute_instance), 'reg', $._variable_identifier
+  //   repeat($.attribute_instance), 'reg', $.variable_identifier
   // ),
 
 // ** A.5.3 UDP body
@@ -3000,7 +3001,7 @@ const rules = {
     seq(repeat($.attribute_instance), ';')
   ),
 
-  variable_identifier_list: $ => sepBy1(',', $._variable_identifier),
+  variable_identifier_list: $ => sepBy1(',', $.variable_identifier),
 
 
 // ** A.6.5 Timing control statements
@@ -3200,7 +3201,7 @@ const rules = {
   // INFO: Modified from Drom's one
   pattern: $ => prec('pattern', choice(
     seq('(', $.pattern, ')'),
-    seq('.', $._variable_identifier),
+    seq('.', $.variable_identifier),
     '.*',
     $.constant_expression,
     seq('tagged', $.member_identifier, optional($.pattern)),
@@ -3286,7 +3287,7 @@ const rules = {
 
   for_variable_declaration: $ => prec.left(seq(
     optional('var'), $.data_type,
-    sepBy1(',', seq($._variable_identifier, '=', $.expression))
+    sepBy1(',', seq($.variable_identifier, '=', $.expression))
   )),
 
   for_step: $ => sepBy1(',', $._for_step_assignment),
@@ -3858,7 +3859,7 @@ const rules = {
 
   // event_based_flag: $ => $.constant_expression,
 
-  // notifier: $ => $._variable_identifier,
+  // notifier: $ => $.variable_identifier,
 
   // reference_event: $ => $.timing_check_event,
 
@@ -4717,7 +4718,7 @@ const rules = {
   // cell_identifier: $ => alias($._identifier, $.cell_identifier),
   checker_identifier: $ => $._identifier,
   class_identifier: $ => $._identifier,
-  class_variable_identifier: $ => $._variable_identifier,
+  class_variable_identifier: $ => $.variable_identifier,
   clocking_identifier: $ => $._identifier,
   // config_identifier: $ => alias($._identifier, $.config_identifier),
   const_identifier: $ => alias($._identifier, $.const_identifier),
@@ -4725,10 +4726,10 @@ const rules = {
 
   covergroup_identifier: $ => $._identifier,
 
-  // // covergroup_variable_identifier = _variable_identifier
+  // // covergroup_variable_identifier = variable_identifier
   cover_point_identifier: $ => alias($._identifier, $.cover_point_identifier),
   cross_identifier: $ => alias($._identifier, $.cross_identifier),
-  dynamic_array_variable_identifier: $ => alias($._variable_identifier, $.dynamic_array_variable_identifier),
+  dynamic_array_variable_identifier: $ => alias($.variable_identifier, $.dynamic_array_variable_identifier),
   enum_identifier: $ => alias($._identifier, $.enum_identifier),
   escaped_identifier: $ => seq('\\', /[^\s]*/),
   // formal_identifier: $ => alias($._identifier, $.formal_identifier),
@@ -4904,7 +4905,7 @@ const rules = {
   // topmodule_identifier: $ => alias($._identifier, $.topmodule_identifier),
   type_identifier: $ => $._identifier,
   // _udp_identifier: $ => $._identifier,
-  _variable_identifier: $ => $._identifier,
+  variable_identifier: $ => $._identifier,
 
 // ** A.9.4 White space
 
@@ -5259,7 +5260,7 @@ module.exports = grammar({
     $.enum_identifier,
     $.formal_port_identifier,
     $.tf_identifier,
-    $._variable_identifier,
+    $.variable_identifier,
   //   $._udp_identifier,
     $.dynamic_array_variable_identifier,
     $.class_variable_identifier,
@@ -5422,15 +5423,14 @@ module.exports = grammar({
     ['class_item_qualifier', 'lifetime'],
 
 
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // INFO: To be reviewed
-    ////////////////////////////////////////////////////////////////////////////////
-
+    // In declarations after the identifier:
+    //  - Variables:  $._variable_dimension (includes $.unpacked_dimension plus $.associative_dimension and $.queue_dimension)
+    //  - Nets: $.unpacked_dimension
+    // If no type is specified explicitly it is considered a net.
+    //
     // module_nonansi_header  'input'  _identifier  •  ';'  …
     //   1:  module_nonansi_header  'input'  _identifier  (_variable_dimension  unpacked_dimension)  •  ';'  …
     //   2:  module_nonansi_header  'input'  _identifier  (list_of_port_identifiers_repeat1  unpacked_dimension)  •  ';'  …
-    // ['list_of_port_identifiers_repeat', '_variable_dimension'],
     ['list_of_port_identifiers', '_variable_dimension'],
 
 
@@ -5447,6 +5447,11 @@ module.exports = grammar({
     //   2:  module_nonansi_header  'output'  (list_of_variable_port_identifiers  _identifier)  •  ';'  …
     ['list_of_port_identifiers', 'list_of_variable_port_identifiers'],
 
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // INFO: To be reviewed
+    ////////////////////////////////////////////////////////////////////////////////
 
     // TODO: Review this one after deinlining hierarchical_identifier
     // Set higher precedence to hierarchical_identifier than to select/constant_select since

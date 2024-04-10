@@ -7,5 +7,6 @@ output [3:0] a, b;
 output foo, bar;
 output baz;
 input mytype bus1;
+output mytype bus2;
 
 endmodule
