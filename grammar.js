@@ -1308,16 +1308,10 @@ const rules = {
 
   list_of_genvar_identifiers: $ => sepBy1(',', $.genvar_identifier),
 
-  list_of_interface_identifiers: $ => sepBy1(',', seq(
-    $.interface_identifier,
-    repeat($.unpacked_dimension)
-  )),
+  list_of_interface_identifiers: $ => sepBy1(',', seq($.interface_identifier, repeat($.unpacked_dimension))),
 
   list_of_net_decl_assignments: $ => sepBy1(',', $.net_decl_assignment),
 
-  // list_of_param_assignments: $ => sep1(',', $.param_assignment),
-  // list_of_param_assignments: $ => prec.right(sepBy1(',', $.param_assignment)),
-  // list_of_param_assignments: $ => prec.left(sepBy1(',', $.param_assignment)),
   list_of_param_assignments: $ => sepBy1(',', $.param_assignment),
 
   // INFO: Original by drom
@@ -1335,19 +1329,16 @@ const rules = {
   // End of INFO
 
 
-  // list_of_udp_port_identifiers: $ => sep1(',', $.port_identifier),
+  list_of_udp_port_identifiers: $ => sepBy1(',', $.port_identifier),
 
   list_of_specparam_assignments: $ => sepBy1(',', $.specparam_assignment),
 
   list_of_tf_variable_identifiers: $ => sepBy1(',', seq(
     $.port_identifier,
     repeat($._variable_dimension),
-    optional(seq('=', $.expression))
+    optseq('=', $.expression)
   )),
 
-  // list_of_type_assignments: $ => sep1(',', $.type_assignment),
-  // list_of_type_assignments: $ => prec.right(sepBy1(',', $.type_assignment)),
-  // list_of_type_assignments: $ => prec.left(sepBy1(',', $.type_assignment)),
   list_of_type_assignments: $ => sepBy1(',', $.type_assignment),
 
   list_of_variable_decl_assignments: $ => sepBy1(',', $.variable_decl_assignment),
@@ -1360,7 +1351,7 @@ const rules = {
   list_of_variable_port_identifiers: $ => prec('list_of_variable_port_identifiers', sepBy1prec(',', 'list_of_variable_port_identifiers', seq(
     $.port_identifier,
     repeat(prec('list_of_variable_port_identifiers', $._variable_dimension)),
-    optional(seq('=', $.constant_expression))
+    optseq('=', $.constant_expression)
   ))),
 
 // ** A.2.4 Declaration assignments
@@ -4744,7 +4735,7 @@ const rules = {
   formal_port_identifier: $ => alias($._identifier, $.formal_port_identifier),
   function_identifier: $ => alias($._identifier, $.function_identifier),
   generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
-  genvar_identifier: $ => alias($._identifier, $.genvar_identifier),
+  genvar_identifier: $ => $._identifier,
   _hierarchical_array_identifier: $ => $.hierarchical_identifier,
   _hierarchical_block_identifier: $ => $.hierarchical_identifier,
   _hierarchical_event_identifier: $ => $.hierarchical_identifier,
@@ -5225,6 +5216,7 @@ module.exports = grammar({
     $.modport_identifier,
     $.clocking_identifier,
     $.specparam_identifier,
+    $.genvar_identifier,
 
     $.var_data_type,
 
@@ -5266,7 +5258,6 @@ module.exports = grammar({
     $.parameter_identifier,
     $.enum_identifier,
     $.formal_port_identifier,
-    $.genvar_identifier,
     $.tf_identifier,
     $._variable_identifier,
   //   $._udp_identifier,
