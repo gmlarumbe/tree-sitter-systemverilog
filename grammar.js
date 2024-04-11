@@ -1747,85 +1747,49 @@ const rules = {
     $.property_expr
   ),
 
-  // TODO: TODO: TODO(GML): Left here
-  // TODO: Review/fix
   property_expr: $ => choice(
     $.sequence_expr,
-    seq('strong', '(', $.sequence_expr, ')'),
-    seq('weak', '(', $.sequence_expr, ')'),
-    prec.left(PREC.PARENT, seq('(', $.property_expr, ')')),
-
-    // FIXME no assosiativity rules per spec
-    prec.left(PREC.nexttime, seq('not', $.property_expr)),
+    seq(choice('strong', 'weak'), '(', $.sequence_expr, ')'),
+    paren_expr($.property_expr),
+    prec(PREC.nexttime, seq('not', $.property_expr)),
     prec.left(PREC.or, seq($.property_expr, 'or', $.property_expr)),
     prec.left(PREC.and, seq($.property_expr, 'and', $.property_expr)),
-
-    prec.right(PREC.INCIDENCE, seq($.sequence_expr, '|->', $.property_expr)),
-    prec.right(PREC.INCIDENCE, seq($.sequence_expr, '|=>', $.property_expr)),
-
-    // FIXME no assosiativity rules per spec
-    prec.right(seq('if', '(', $.expression_or_dist, ')', $.property_expr, optional(seq('else', $.property_expr)))), // FIXME spec bug ( ) are not red seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase'),  // FIXME spec bug ( ) are not red
+    prec.right(PREC.INCIDENCE, seq($.sequence_expr, choice('|->', '|=>', '#-#', '#=#'), $.property_expr)),
+    prec.right(seq('if', '(', $.expression_or_dist, ')', $.property_expr, optseq('else', $.property_expr))),
     prec.right(seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase')),
-    prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#-#', $.property_expr)),
-    prec.right(PREC.INCIDENCE, seq($.sequence_expr, '#=#', $.property_expr)),
-
-    // FIXME no assosiativity rules per spec
-    prec.left(PREC.nexttime, seq('nexttime', $.property_expr)),
-    prec.left(PREC.nexttime, seq('nexttime', '[', $.constant_expression, ']', $.property_expr)), // FIXME spec bug constant _expression with the space
-    prec.left(PREC.nexttime, seq('s_nexttime', $.property_expr)),
-    prec.left(PREC.nexttime, seq('s_nexttime', '[', $.constant_expression, ']', $.property_expr)),
-
-    prec.left(PREC.always, seq('always', $.property_expr)),
-    prec.left(PREC.always, seq('always', '[', $.cycle_delay_const_range_expression, ']', $.property_expr)),
-    prec.left(PREC.always, seq('s_always', '[', $.constant_range, ']', $.property_expr)),
-    prec.left(PREC.always, seq('s_eventually', $.property_expr)),
-    prec.left(PREC.always, seq('eventually', '[', $.constant_range, ']', $.property_expr)),
-    prec.left(PREC.always, seq('s_eventually', '[', $.cycle_delay_const_range_expression, ']', $.property_expr)),
-
-    prec.right(PREC.until, seq(
-      $.property_expr,
-      choice('until', 's_until', 'until_with', 's_until_with', 'implies'),
-      $.property_expr
-    )),
-
+    prec.left(PREC.nexttime, seq(choice('nexttime', 's_nexttime'), optseq('[', $.constant_expression, ']'), $.property_expr)),
+    prec.left(PREC.always, seq(choice('always', 's_eventually'), optseq('[', $.cycle_delay_const_range_expression, ']'), $.property_expr)),
+    prec.left(PREC.always, seq(choice('s_always', 'eventually'), '[', $.constant_range, ']', $.property_expr)),
+    prec.right(PREC.until, seq($.property_expr, choice('until', 's_until', 'until_with', 's_until_with', 'implies'), $.property_expr)),
     prec.right(PREC.iff, seq($.property_expr, 'iff', $.property_expr)),
-
-    // FIXME no assosiativity rules per spec
-    prec.left(PREC.always, seq(
-      choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'),
-      '(', $.expression_or_dist, ')', $.property_expr
-    )),
+    prec(PREC.always, seq(choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'), '(', $.expression_or_dist, ')', $.property_expr)),
     $.property_instance,
-    prec.left(seq($.clocking_event, $.property_expr)) // FIXME no assosiativity rules per spec
+    seq($.clocking_event, $.property_expr)
   ),
 
   property_case_item: $ => choice(
-    seq(
-      sepBy1(',', $.expression_or_dist), ':', $.property_expr, ';'
-    ),
-    seq(
-      'default', optional(':'), $.property_expr, ';'
-    )
+    seq(sepBy1(',', $.expression_or_dist), ':', $.property_expr, ';'),
+    seq('default', optional(':'), $.property_expr, ';')
   ),
 
   sequence_declaration: $ => seq(
     'sequence',
-    $._sequence_identifier,
-    optional(seq('(', optional($.sequence_port_list), ')')), ';',
+    $.sequence_identifier,
+    optseq('(', optional($.sequence_port_list), ')'), ';',
     repeat($.assertion_variable_declaration),
     $.sequence_expr, optional(';'),
-    'endsequence', optional(seq(':', $._sequence_identifier))
+    enclosing('endsequence', $.sequence_identifier)
   ),
 
   sequence_port_list: $ => sepBy1(',', $.sequence_port_item),
 
   sequence_port_item: $ => seq(
     repeat($.attribute_instance),
-    optional(seq('local', optional($.sequence_lvar_port_direction))),
+    optseq('local', optional($.sequence_lvar_port_direction)),
     optional($.sequence_formal_type), // Contains empty string branch $.data_type_or_implicit
     $.formal_port_identifier,
     repeat($._variable_dimension),
-    optional(seq('=', $._sequence_actual_arg))
+    optseq('=', $._sequence_actual_arg)
   ),
 
   sequence_lvar_port_direction: $ => choice('input', 'inout', 'output'),
@@ -1836,46 +1800,32 @@ const rules = {
     'untyped'
   ),
 
-  // TODO: Come here when time dictates
-  // sequence_expr: $ => choice(
-  //   // prec.left(sep1(',', $.cycle_delay_range)), // FIXME precedence?
-  //   // prec.left(PREC.SHARP2, seq($.sequence_expr, repeat1(seq($.cycle_delay_range, $.sequence_expr)))),
-  //   // seq($.expression_or_dist, optional($._boolean_abbrev)),
-  //   // seq($.sequence_instance, optional($.sequence_abbrev)),
-  //   // prec.left(seq('(', $.sequence_expr, repseq(',', $._sequence_match_item), ')', optional($.sequence_abbrev))),
-  //   // prec.left(PREC.and, seq($.sequence_expr, 'and', $.sequence_expr)),
-  //   // prec.left(PREC.intersect, seq($.sequence_expr, 'intersect', $.sequence_expr)),
-  //   // prec.left(PREC.or, seq($.sequence_expr, 'or', $.sequence_expr)),
-  //   // seq('first_match', '(', $.sequence_expr, repseq(',', $._sequence_match_item), ')'),
-  //   // prec.right(PREC.throughout, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
-  //   // prec.left(PREC.within, seq($.sequence_expr, 'within', $.sequence_expr)),
-  //   // prec.left(seq($.clocking_event, $.sequence_expr)) // FIXME precedence?
-  // ),
-
-  // TODO: Come here when time dictates
   sequence_expr: $ => choice(
-    repeat1(seq($.cycle_delay_range, $.sequence_expr)),
-    seq($.sequence_expr, repeat1(seq($.cycle_delay_range, $.sequence_expr))),
+    repseq1($.cycle_delay_range, $.sequence_expr),
+    seq($.sequence_expr, repseq1($.cycle_delay_range, $.sequence_expr)),
     seq($.expression_or_dist, optional($._boolean_abbrev)),
     seq($.sequence_instance, optional($.sequence_abbrev)),
-    seq('(', $.sequence_expr, repeat(seq(',', $._sequence_match_item)), ')', optional($.sequence_abbrev)),
+    seq('(', $.sequence_expr, repseq(',', $._sequence_match_item), ')', optional($.sequence_abbrev)),
     prec.left(PREC.and, seq($.sequence_expr, 'and', $.sequence_expr)),
     prec.left(PREC.intersect, seq($.sequence_expr, 'intersect', $.sequence_expr)),
     prec.left(PREC.or, seq($.sequence_expr, 'or', $.sequence_expr)),
-    seq('first_match', '(', $.sequence_expr, repeat(seq(',', $._sequence_match_item)), ')'),
+    seq('first_match', '(', $.sequence_expr, repseq(',', $._sequence_match_item), ')'),
     prec.right(PREC.throughout, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
     prec.left(PREC.within, seq($.sequence_expr, 'within', $.sequence_expr)),
     seq($.clocking_event, $.sequence_expr)
   ),
 
   cycle_delay_range: $ => choice(
-    seq('##', $.constant_primary),
-    seq('##', '[', $.cycle_delay_const_range_expression, ']'),
+    seq('##',
+      choice(
+        $.constant_primary,
+        seq('[', $.cycle_delay_const_range_expression, ']')
+      )),
     '##[*]',
     '##[+]'
   ),
 
-  // sequence_method_call: $ => seq($.sequence_instance, '.', $.method_identifier),
+  sequence_method_call: $ => seq($.sequence_instance, '.', $.method_identifier),
 
   _sequence_match_item: $ => choice(
     $.operator_assignment,
@@ -1885,7 +1835,7 @@ const rules = {
 
   sequence_instance: $ => seq(
     $.ps_or_hierarchical_sequence_identifier,
-    optional(seq('(', optional($.sequence_list_of_arguments), ')'))
+    optseq('(', optional($.sequence_list_of_arguments), ')')
   ),
 
   sequence_list_of_arguments: $ => list_of_args($, 'sequence_list_of_arguments', $._sequence_actual_arg),
@@ -1924,11 +1874,7 @@ const rules = {
     seq($.constant_expression, ':', '$')
   )),
 
-  assertion_variable_declaration: $ => seq(
-    $.var_data_type,
-    $.list_of_variable_decl_assignments,
-    ';'
-  ),
+  assertion_variable_declaration: $ => seq($.var_data_type, $.list_of_variable_decl_assignments, ';'),
 
 
 // ** A.2.11 Covergroup declarations
@@ -4597,7 +4543,7 @@ const rules = {
   ),
 
   ps_or_hierarchical_sequence_identifier: $ => choice(
-    seq(optional($.package_scope), $._sequence_identifier),
+    seq(optional($.package_scope), $.sequence_identifier),
     $._hierarchical_sequence_identifier
   ),
 
@@ -4636,7 +4582,7 @@ const rules = {
 
   rs_production_identifier: $ => $._identifier,
 
-  _sequence_identifier: $ => $._identifier,
+  sequence_identifier: $ => $._identifier,
 
   _signal_identifier: $ => $._identifier,
 
@@ -4999,6 +4945,9 @@ module.exports = grammar({
     // TODO: Inlined to avoid conflicts but there is a problem with the precedence of
     // pattern (PREC.MATCHES) and subexpressions, I think these should be numeric instead of named?
     $._constant_conditional_expression,
+
+    $.sequence_identifier,
+
 
     // TODO: Not reviewed
 
@@ -5487,16 +5436,16 @@ module.exports = grammar({
 
     // Conflict exclusive to sequence declarations:
     //
-    //   'sequence'  _sequence_identifier  '('  _identifier  '='  '$'  •  ')'  …
-    //   1:  'sequence'  _sequence_identifier  '('  _identifier  '='  (_sequence_actual_arg  '$')  •  ')'  …
-    //   2:  'sequence'  _sequence_identifier  '('  _identifier  '='  (primary  '$')  •  ')'  …               (precedence: 'primary')
+    //   'sequence'  sequence_identifier  '('  _identifier  '='  '$'  •  ')'  …
+    //   1:  'sequence'  sequence_identifier  '('  _identifier  '='  (_sequence_actual_arg  '$')  •  ')'  …
+    //   2:  'sequence'  sequence_identifier  '('  _identifier  '='  (primary  '$')  •  ')'  …               (precedence: 'primary')
     ['_sequence_actual_arg', 'primary'],
     ['_sequence_actual_arg', 'event_expression'],
 
 
-    // 'sequence'  _sequence_identifier  ';'  '##'  '['  constant_expression  ':'  '$'  •  ']'  …
-    // 1:  'sequence'  _sequence_identifier  ';'  '##'  '['  (cycle_delay_const_range_expression  constant_expression  ':'  '$')  •  ']'  …  (precedence: 'cycle_delay_const_range_expression')
-    // 2:  'sequence'  _sequence_identifier  ';'  '##'  '['  constant_expression  ':'  (constant_primary  '$')  •  ']'  …                    (precedence: 'constant_primary')
+    // 'sequence'  sequence_identifier  ';'  '##'  '['  constant_expression  ':'  '$'  •  ']'  …
+    // 1:  'sequence'  sequence_identifier  ';'  '##'  '['  (cycle_delay_const_range_expression  constant_expression  ':'  '$')  •  ']'  …  (precedence: 'cycle_delay_const_range_expression')
+    // 2:  'sequence'  sequence_identifier  ';'  '##'  '['  constant_expression  ':'  (constant_primary  '$')  •  ']'  …                    (precedence: 'constant_primary')
     ['cycle_delay_const_range_expression', 'constant_primary'],
 
 
@@ -6142,11 +6091,11 @@ module.exports = grammar({
     [$.tf_call, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
     [$.tf_call, $.primary, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
     [$.tf_call, $.primary, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $._sequence_identifier],
-    [$.tf_call, $.hierarchical_identifier, $._sequence_identifier],
+    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.sequence_identifier],
+    [$.tf_call, $.hierarchical_identifier, $.sequence_identifier],
     [$.tf_call, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.ps_or_hierarchical_property_identifier, $._sequence_identifier],
-    [$.tf_call, $._sequence_identifier],
+    [$.tf_call, $.ps_or_hierarchical_property_identifier, $.sequence_identifier],
+    [$.tf_call, $.sequence_identifier],
 
     // TODO: Add procedural assertion item probably these could be removed by inlining
     [$.concurrent_assertion_item, $._procedural_assertion_statement],
@@ -6182,8 +6131,8 @@ module.exports = grammar({
 
     // TODO: Fixing constant_primary on casting_type
     [$.interface_port_declaration, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $._sequence_identifier],
-    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $._sequence_identifier],
+    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.sequence_identifier],
+    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.sequence_identifier],
     [$.port_reference, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.select_expression, $.tf_call, $.constant_primary, $.hierarchical_identifier],
 
@@ -6207,6 +6156,12 @@ module.exports = grammar({
     [$.blocking_assignment, $.variable_lvalue],
     [$.blocking_assignment, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
+
+    // TODO: After inlining sequence_identifier:
+    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
+    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_sequence_identifier],
+    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
+    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_sequence_identifier],
   ],
 
 });
