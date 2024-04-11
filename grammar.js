@@ -108,40 +108,73 @@ function list_of_args($, precedence, arg) {
   ))
 }
 
-
-/**
- *
- * @param {GrammarSymbols<string>} $
- * @param {number} prior
- * @param {Rule|string} ops
- *
- * @returns {PrecLeftRule}
- *
- */
-function exprOp($, prior, ops) {
-  return prec.left(prior, seq($.expression, ops, repeat($.attribute_instance), $.expression));
+function binary_expr($, expr) {
+  const table = [
+    ['+', PREC.ADD],
+    ['-', PREC.ADD],
+    ['*', PREC.MULTIPLY],
+    ['/', PREC.MULTIPLY],
+    ['%', PREC.MULTIPLY],
+    ['==', PREC.EQUAL],
+    ['!=', PREC.EQUAL],
+    ['===', PREC.EQUAL],
+    ['!==', PREC.EQUAL],
+    ['==?', PREC.EQUAL],
+    ['!=?', PREC.EQUAL],
+    ['&&', PREC.LOGICAL_AND],
+    ['||', PREC.LOGICAL_OR],
+    ['**', PREC.POWER],
+    ['>', PREC.RELATIONAL],
+    ['<', PREC.RELATIONAL],
+    ['>=', PREC.RELATIONAL],
+    ['<=', PREC.RELATIONAL],
+    ['&', PREC.BITWISE_AND],
+    ['|', PREC.BITWISE_OR],
+    ['^', PREC.EXCLUSIVE_OR],
+    ['^~', PREC.EXCLUSIVE_OR],
+    ['~^', PREC.EXCLUSIVE_OR],
+    ['>>', PREC.SHIFT],
+    ['<<', PREC.SHIFT],
+    ['>>>', PREC.SHIFT],
+    ['<<<', PREC.SHIFT],
+    ['->', PREC.IMPLICATION],
+    ['<->', PREC.IMPLICATION],
+  ];
+  return choice(...table.map(([operator, precedence]) => {
+    return prec.left(precedence, seq(
+      field('left', expr),
+      // @ts-ignore
+      field('operator', operator),
+      repeat($.attribute_instance),
+      field('right', expr),
+    ));
+  }));
 }
 
-/**
- *
- * @param {GrammarSymbols<string>} $
- * @param {number} prior
- * @param {Rule|string} ops
- *
- * @returns {PrecLeftRule}
- *
- */
-function constExprOp($, prior, ops) {
-  return prec.left(prior, seq($.constant_expression, ops, repeat($.attribute_instance), $.constant_expression));
+function unary_expr($, arg) {
+  return prec.left(PREC.UNARY, seq(
+    field('operator', $.unary_operator),
+    repeat($.attribute_instance),
+    field('argument', arg)
+  ));
 }
 
-/**
- *
- * @param {string} command
- *
- * @returns {AliasRule}
- *
- */
+function conditional_expr($, pred, expr) {
+  return prec.right(PREC.CONDITIONAL, seq(
+    pred,
+    '?',
+    repeat($.attribute_instance), expr,
+    ':',
+    expr
+  ));
+}
+
+function paren_expr(expr) {
+  return prec.left(PREC.PARENT, seq(
+    '(', expr, ')'
+  ));
+}
+
 function directive(command) {
   return alias(new RegExp('`' + command), 'directive_' + command);
 }
@@ -3934,44 +3967,14 @@ const rules = {
     seq($.variable_lvalue, repeat($.attribute_instance), $.inc_or_dec_operator)
   )),
 
-  conditional_expression: $ => prec.right(PREC.CONDITIONAL, seq(
-    $.cond_predicate,
-    '?',
-    repeat($.attribute_instance), $.expression,
-    ':',
-    $.expression
-  )),
+  conditional_expression: $ => conditional_expr($, $.cond_predicate, $.expression),
 
   constant_expression: $ => choice(
     $.constant_primary,
-
-    prec.left(PREC.UNARY, seq(
-      $.unary_operator, repeat($.attribute_instance), $.constant_primary
-    )),
-
-    // TODO: Review these expressions and precedences
-    constExprOp($, PREC.ADD, choice('+', '-')),
-    constExprOp($, PREC.MULTIPLY, choice('*', '/', '%')),
-    constExprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
-    constExprOp($, PREC.LOGICAL_AND, '&&'),
-    constExprOp($, PREC.LOGICAL_OR, '||'),
-    constExprOp($, PREC.POWER, '**'),
-    constExprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
-    constExprOp($, PREC.BITWISE_AND, '&'),
-    constExprOp($, PREC.BITWISE_OR, '|'),
-    constExprOp($, PREC.EXCLUSIVE_OR, choice('^', '^~', '~^')),
-    constExprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
-    constExprOp($, PREC.IMPLICATION, choice('->', '<->')),
-
-    prec.right(PREC.CONDITIONAL, seq(
-      $.constant_expression,
-      '?',
-      repeat($.attribute_instance), $.constant_expression,
-      ':',
-      $.constant_expression
-    )),
-
-    $.text_macro_usage, // INFO: Out of LRM but needed for some basic preprocessing parsing
+    $._constant_unary_expression,
+    $._constant_binary_expression,
+    $._constant_conditional_expression,
+    $.text_macro_usage, // Out of LRM
   ),
 
   constant_mintypmax_expression: $ => prec('constant_mintypmax_expression', seq(
@@ -4006,62 +4009,6 @@ const rules = {
   constant_indexed_range: $ => seq(
     $.constant_expression, choice('+:', '-:'), $.constant_expression
   ),
-
-  // DANGER: The ones below are not part of the LRM but added to
-  // simplify the grammar
-  _binary_expression: $ => {
-    const table = [
-      ['+', PREC.ADD],
-      ['-', PREC.ADD],
-      ['*', PREC.MULTIPLY],
-      ['/', PREC.MULTIPLY],
-      ['%', PREC.MULTIPLY],
-      ['==', PREC.EQUAL],
-      ['!=', PREC.EQUAL],
-      ['===', PREC.EQUAL],
-      ['!==', PREC.EQUAL],
-      ['==?', PREC.EQUAL],
-      ['!=?', PREC.EQUAL],
-      ['&&', PREC.LOGICAL_AND],
-      ['||', PREC.LOGICAL_OR],
-      ['**', PREC.POWER],
-      ['>', PREC.RELATIONAL],
-      ['<', PREC.RELATIONAL],
-      ['>=', PREC.RELATIONAL],
-      ['<=', PREC.RELATIONAL],
-      ['&', PREC.BITWISE_AND],
-      ['|', PREC.BITWISE_OR],
-      ['^', PREC.EXCLUSIVE_OR],
-      ['^~', PREC.EXCLUSIVE_OR],
-      ['~^', PREC.EXCLUSIVE_OR],
-      ['>>', PREC.SHIFT],
-      ['<<', PREC.SHIFT],
-      ['>>>', PREC.SHIFT],
-      ['<<<', PREC.SHIFT],
-      ['->', PREC.IMPLICATION],
-      ['<->', PREC.IMPLICATION],
-    ];
-    return choice(...table.map(([operator, precedence]) => {
-      return prec.left(precedence, seq(
-        field('left', $.expression),
-        // @ts-ignore
-        field('operator', operator),
-        repeat($.attribute_instance),
-        field('right', $.expression),
-      ));
-    }));
-  },
-
-  _unary_expression: $ => prec.left(PREC.UNARY, seq(
-    field('operator', $.unary_operator),
-    repeat($.attribute_instance),
-    field('argument', $.primary)
-  )),
-
-  _parenthesized_expression : $ => prec.left(PREC.PARENT, seq(
-    '(', $.operator_assignment, ')'
-  )),
-  // End of DANGER
 
   expression: $ => choice(
     $.primary,
@@ -4137,6 +4084,21 @@ const rules = {
   ),
 
   _genvar_expression: $ => $.constant_expression,
+
+  // INFO: The ones below are not part of the LRM but added to
+  // simplify the writing of the grammar
+  _binary_expression: $ => binary_expr($, $.expression),
+
+  _constant_binary_expression: $ => binary_expr($, $.constant_expression),
+
+  _constant_unary_expression: $ => unary_expr($, $.constant_primary),
+
+  _constant_conditional_expression: $ => conditional_expr($, $.constant_expression, $.constant_expression),
+
+  _unary_expression: $ => unary_expr($, $.primary),
+
+  _parenthesized_expression: $ => paren_expr($.operator_assignment),
+
 
 // ** A.8.4 Primaries
   // TODO: Probably the ones with prec.dynamic below can be grouped with some aliases/inlining or whatever
@@ -5033,6 +4995,10 @@ module.exports = grammar({
     $.task_identifier,
 
     $._binary_expression,
+    $._constant_binary_expression,
+    // TODO: Inlined to avoid conflicts but there is a problem with the precedence of
+    // pattern (PREC.MATCHES) and subexpressions, I think these should be numeric instead of named?
+    $._constant_conditional_expression,
 
     // TODO: Not reviewed
 
