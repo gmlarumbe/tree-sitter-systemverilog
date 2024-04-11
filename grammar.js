@@ -740,7 +740,7 @@ const rules = {
 
   checker_port_direction: $ => choice('input', 'output'),
 
-  checker_or_generate_item: $ => choice(
+  checker_or_generate_item: $ => prec('checker_or_generate_item', choice(
     $._checker_or_generate_item_declaration,
     $.initial_construct,
     $.always_construct,
@@ -753,9 +753,9 @@ const rules = {
     // The proper way to do it would be uncommenting the $.checker_instantiation
     // in $.concurrent_assertion_item and removing the one below.
     $.checker_instantiation
-  ),
+  )),
 
-  _checker_or_generate_item_declaration: $ => choice(
+  _checker_or_generate_item_declaration: $ => prec('_checker_or_generate_item_declaration', choice(
     seq(optional('rand'), $.data_declaration),
     $.function_declaration,
     $.checker_declaration,
@@ -768,14 +768,14 @@ const rules = {
       seq('disable', 'iff', $.expression_or_dist)
     ), ';'),
     ';'
-  ),
+  )),
 
-  _checker_generate_item: $ => choice(
+  _checker_generate_item: $ => prec('_checker_generate_item', choice(
     $.loop_generate_construct,
     $.conditional_generate_construct,
     $.generate_region,
     $.elaboration_severity_system_task
-  ),
+  )),
 
 
 // ** A.1.9 Class items
@@ -2361,14 +2361,9 @@ const rules = {
     $.case_generate_construct
   ),
 
-  // prec.right because:
-  //
-  // 'if'  '('  constant_expression  ')'  'if'  '('  constant_expression  ')'  generate_block  •  'else'  …
-  // 1:  'if'  '('  constant_expression  ')'  (if_generate_construct  'if'  '('  constant_expression  ')'  generate_block  •  'else'  generate_block)
-  // 2:  'if'  '('  constant_expression  ')'  (if_generate_construct  'if'  '('  constant_expression  ')'  generate_block)  •  'else'  …
   if_generate_construct: $ => prec.right(seq(
     'if', '(', $.constant_expression, ')', $.generate_block,
-    optional(seq('else', $.generate_block))
+    optseq('else', $.generate_block)
   )),
 
   case_generate_construct: $ => prec.right(seq(
@@ -2385,20 +2380,21 @@ const rules = {
   generate_block: $ => choice(
     $._generate_item,
     seq(
-      optional(seq($.generate_block_identifier, ':')),
+      optseq($.generate_block_identifier, ':'),
       'begin',
-      optional(seq(':', $.generate_block_identifier)),
+      optseq(':', $.generate_block_identifier),
       repeat($._generate_item),
       'end',
-      optional(seq(':', $.generate_block_identifier))
+      optseq(':', $.generate_block_identifier)
     )
   ),
 
   _generate_item: $ => choice(
     $._module_or_generate_item,
     $._interface_or_generate_item,
-    // alias($.checker_or_generate_item, $.checker_item)
+    alias($.checker_or_generate_item, $.checker_item)
   ),
+
 
 // * A.5 UDP declaration and instantiation
 // ** A.5.1 UDP declaration
@@ -5154,6 +5150,24 @@ module.exports = grammar({
     // 1:  (checker_instantiation  _identifier  name_of_instance  '('  ')'  •  ';')     (precedence: 'checker_instantiation')
     // 2:  _identifier  (hierarchical_instance  name_of_instance  '('  ')')  •  ';'  …  (precedence: 'hierarchical_instance')
     ['hierarchical_instance', 'checker_instantiation'],
+    // 'generate'  ';'  •  ';'  …
+    // 1:  'generate'  (_checker_or_generate_item_declaration  ';')  •  ';'  …  (precedence: '_checker_or_generate_item_declaration')
+    // 2:  'generate'  (_package_or_generate_item_declaration  ';')  •  ';'  …  (precedence: '_package_or_generate_item_declaration')
+    ['_package_or_generate_item_declaration', '_checker_or_generate_item_declaration'],
+    // 'generate'  severity_system_task  •  ';'  …
+    // 1:  'generate'  (_checker_generate_item  severity_system_task)  •  ';'  …
+    // 2:  'generate'  (_module_common_item  severity_system_task)  •  ';'  …     (precedence: '_module_common_item')
+    ['_module_common_item', '_checker_generate_item'],
+    // 'generate'  genvar_declaration  •  ';'  …
+    // 1:  'generate'  (_checker_or_generate_item_declaration  genvar_declaration)  •  ';'  …  (precedence: '_checker_or_generate_item_declaration')
+    // 2:  'generate'  (_module_or_generate_item_declaration  genvar_declaration)  •  ';'  …   (precedence: '_module_or_generate_item_declaration')
+    ['_module_or_generate_item_declaration', '_checker_or_generate_item_declaration'],
+    // 'generate'  continuous_assign  •  ';'  …
+    // 1:  'generate'  (_module_common_item  continuous_assign)  •  ';'  …       (precedence: '_module_common_item')
+    // 2:  'generate'  (checker_or_generate_item  continuous_assign)  •  ';'  …
+    ['_module_common_item', 'checker_or_generate_item'],
+
+
 
 
     // module, interface and program instantiations have the exact same syntax:
@@ -5492,6 +5506,7 @@ module.exports = grammar({
     ['property_list_of_arguments'],
     ['sequence_list_of_arguments'],
     ['_bind_instantiation'],
+    ['_checker_or_generate_item_declaration'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -6100,6 +6115,9 @@ module.exports = grammar({
     [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_sequence_identifier],
     [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
     [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_sequence_identifier],
+
+    // TODO: After adding checker as a generate item:
+    [$.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.checker_instantiation],
   ],
 
 });
