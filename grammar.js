@@ -50,6 +50,7 @@ const PREC = {
                   // sync_accept_on, sync_reject_on
 };
 
+
 function sepBy1(sep, rule) {
   return seq(rule, repeat(seq(sep, rule)))
 }
@@ -62,13 +63,6 @@ function sepBy1prec(sep, precedence, rule) {
   return seq(rule, repeat(prec(precedence, seq(sep, rule))))
 }
 
-/**
- *
- * @param {(Rule|string|RegExp)[]} rules
- *
- * @return {ChoiceRule}
- *
- */
 function optseq(...rules) {
   return optional(seq(...rules));
 }
@@ -81,53 +75,39 @@ function enclosing(keyword, identifier) {
   return seq(keyword, optseq(':', identifier));
 }
 
-
-
-
-
-
-/**
- *
- * @param {(Rule|string|RegExp)[]} rules
- *
- * @return {RepeatRule}
- *
- */
 function repseq(...rules) {
   return repeat(seq(...rules));
 }
 
-// /**
-//  * Creates a rule to match one or more of the rules separated by the separator
-//  *
-//  * @param {string} separator - The separator to use.
-//  * @param {Rule} rule
-//  *
-//  * @return {PrecLeftRule}
-//  *
-//  */
-// function sep1(separator, rule) {
-//   return prec.left(seq(
-//     rule,
-//     repeat(prec.left(seq(separator, rule)))
-//   ));
-// }
+function repseq1(...rules) {
+  return repeat1(seq(...rules));
+}
 
-// /**
-//  *
-//  * @param {number} precedence
-//  * @param {string} separator
-//  * @param {Rule} rule
-//  *
-//  * @returns {PrecLeftRule}
-//  *
-//  */
-// function psep1(precedence, separator, rule) {
-//   return prec.left(precedence, seq(
-//     rule,
-//     repeat(prec.left(seq(separator, rule)))
-//   ));
-// }
+// Written according to $.list_of_arguments and modified to avoid
+// matching the empty string
+function list_of_args($, precedence, arg) {
+  return prec(precedence, choice(
+    // First case: mixing positional and named arguments
+    seq(
+      arg,
+      repseq(',', optional(arg)),
+      repseq(',', '.', $._identifier, '(', optional(arg), ')')
+    ),
+    seq(
+      optional(arg),
+      repseq1(',', optional(arg)),
+      repseq(',', '.', $._identifier, '(', optional(arg), ')')
+    ),
+    seq(
+      optional(arg),
+      repseq(',', optional(arg)),
+      repseq1(',', '.', $._identifier, '(', optional(arg), ')')
+    ),
+    // Second case: using only named arguments
+    sepBy1(',', seq('.', $._identifier, '(', optional(arg), ')'))
+  ))
+}
+
 
 /**
  *
@@ -165,6 +145,7 @@ function constExprOp($, prior, ops) {
 function directive(command) {
   return alias(new RegExp('`' + command), 'directive_' + command);
 }
+
 
 /*
     Verilog parser grammar based on IEEE Std 1800-2023.
@@ -1532,34 +1513,14 @@ const rules = {
 
   tf_port_list: $ => sepBy1(',', $.tf_port_item),
 
-  // INFO: drom's writing
-  // tf_port_item: $ => seq(
-  //   repeat($.attribute_instance),
-  //   optional($.tf_port_direction),
-  //   optional('var'),
-  //   choice(
-  //     seq(
-  //       $.data_type_or_implicit,
-  //       optseq(
-  //         $.port_identifier,
-  //         repeat($._variable_dimension),
-  //         optseq('=', $.expression)
-  //       )
-  //     ),
-  //     seq(
-  //       $.port_identifier,
-  //       repeat($._variable_dimension),
-  //       optseq('=', $.expression)
-  //     )
-  //   )
-  // ),
-
-  // INFO: My rewriting/refactoring: COULD match the empty string
+  // Modified to avoid matching the empty string
   tf_port_item: $ => prec('tf_port_item', seq(
     repeat($.attribute_instance),
     optional($.tf_port_direction),
     optional('var'),
     choice(
+      // A.10.28: In a tf_port_item, it shall be illegal to omit the explicit
+      // port_identifier except within a function_prototype or task_prototype.
       seq($.data_type_or_implicit, optional($.port_identifier)),
       $.port_identifier,
     ),
@@ -1588,19 +1549,14 @@ const rules = {
     optional(seq('(', optional($.tf_port_list), ')'))
   ),
 
-  // INFO: These were not present on drom's 2017 grammar
-  // dynamic_override_specifiers ::= [ initial_or_extends_specifier ] [ final_specifier ]
-  dynamic_override_specifiers: $ => choice( // Reorder to avoid matching the empty string
+  // Modified to avoid matching the empty string
+  dynamic_override_specifiers: $ => choice(
     seq($.initial_or_extends_specifier, optional($.final_specifier)),
     $.final_specifier
   ),
 
-  // initial_or_extends_specifier ::=
-  //   : initial
-  //   | : extends
   initial_or_extends_specifier: $ => seq(':', choice('initial', 'extends')),
 
-  // final_specifier ::= : final
   final_specifier: $ => seq(':', 'final'),
 
 
@@ -1610,7 +1566,6 @@ const rules = {
     choice(
       $.data_declaration,
       seq($.any_parameter_declaration, ';'),
-      // $.overload_declaration,   // INFO: Removed from 1800-2023
       $.let_declaration
     )
   ),
@@ -1659,8 +1614,13 @@ const rules = {
 
 // ** A.2.10 Assertion declarations
   concurrent_assertion_item: $ => prec('concurrent_assertion_item', choice(
-    seq(optional(seq($._block_identifier, ':')), $._concurrent_assertion_statement),
+    seq(optseq($._block_identifier, ':'), $._concurrent_assertion_statement),
     // $.checker_instantiation
+    //
+    // INFO: Out of LRM: This is a workaround to support checker_instantiations
+    //       and avoid multiple conflicts with module/interface/program instantiations.
+    //       The proper way to do it would be uncommenting the $.checker_instantiation
+    //       here and removing the one in $.checker_or_generate_item
   )),
 
   _concurrent_assertion_statement: $ => choice(
@@ -1688,14 +1648,10 @@ const rules = {
   ),
 
   cover_sequence_statement: $ => seq(
-    'cover', 'sequence', '(',
+    'cover', 'sequence',
+    '(',
     optional($.clocking_event),
-    // optional(prec.right(PREC.iff, seq(
-    //   'disable', 'iff', '(', $.expression_or_dist, ')'
-    // ))),
-    optional(seq(
-      'disable', 'iff', '(', $.expression_or_dist, ')'
-    )),
+    optseq('disable', 'iff', '(', $.expression_or_dist, ')'),
     $.sequence_expr,
     ')',
     $.statement_or_null
@@ -1707,47 +1663,12 @@ const rules = {
 
   property_instance: $ => seq(
     $.ps_or_hierarchical_property_identifier,
-    optional(seq('(', optional($.property_list_of_arguments), ')'))
+    optseq('(', optional($.property_list_of_arguments), ')')
   ),
 
-  // property_list_of_arguments: $ => choice(
-  //   seq(
-  //     sep1(',', optional($._property_actual_arg)),
-  //     repeat1(seq( // TODO remove 1
-  //       ',', '.', $._identifier, '(', optional($._property_actual_arg), ')'
-  //     ))
-  //   ),
-  //   sep1(',', seq(
-  //     '.', $._identifier, '(', optional($._property_actual_arg), ')'
-  //   ))
-  // ),
+  property_list_of_arguments: $ => list_of_args($, 'property_list_of_arguments', $._property_actual_arg),
 
-  // INFO: Copied from list_of_arguments
-  property_list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
-    // First case: mixing positional and named arguments
-    seq(
-      $.expression,
-      repeat(seq(',', optional($._property_actual_arg))),
-      repeat(seq(',', '.', $._identifier, '(', optional($._property_actual_arg), ')'))
-    ),
-    seq(
-      optional($._property_actual_arg),
-      repeat1(seq(',', optional($._property_actual_arg))),
-      repeat(seq(',', '.', $._identifier, '(', optional($._property_actual_arg), ')'))
-    ),
-    seq(
-      optional($._property_actual_arg),
-      repeat(seq(',', optional($._property_actual_arg))),
-      repeat1(seq(',', '.', $._identifier, '(', optional($._property_actual_arg), ')'))
-    ),
-    // Second case: using only named arguments
-    sepBy1(',', seq('.', $._identifier, '(', optional($._property_actual_arg), ')'))
-  )),
-
-  _property_actual_arg: $ => choice(
-    $.property_expr,
-    $._sequence_actual_arg
-  ),
+  _property_actual_arg: $ => choice($.property_expr, $._sequence_actual_arg),
 
   _assertion_item_declaration: $ => choice(
     $.property_declaration,
@@ -1757,27 +1678,24 @@ const rules = {
 
   property_declaration: $ => seq(
     'property',
-    $.property_identifier,
-    optional(seq('(', optional($.property_port_list), ')')),
+    field('name', $.property_identifier),
+    optseq('(', optional($.property_port_list), ')'),
     ';',
     repeat($.assertion_variable_declaration),
     $.property_spec,
     optional(';'),
-    'endproperty', optional(seq(':', $.property_identifier))
+    enclosing('endproperty', $.property_identifier)
   ),
 
   property_port_list: $ => sepBy1(',', $.property_port_item),
 
   property_port_item: $ => seq(
     repeat($.attribute_instance),
-    optional(seq(
-      'local',
-      optional($.property_lvar_port_direction)
-    )),
+    optseq('local', optional($.property_lvar_port_direction)),
     optional($.property_formal_type), // Contains empty string branch $.data_type_or_implicit
     $.formal_port_identifier,
     repeat($._variable_dimension),
-    optional(seq('=', $._property_actual_arg))
+    optseq('=', $._property_actual_arg)
   ),
 
   property_lvar_port_direction: $ => 'input',
@@ -1789,15 +1707,11 @@ const rules = {
 
   property_spec: $ => seq(
     optional($.clocking_event),
-    // optional(prec.right(PREC.iff, seq(
-    //   'disable', 'iff', '(', $.expression_or_dist, ')'
-    // ))),
-    optional(seq(
-      'disable', 'iff', '(', $.expression_or_dist, ')'
-    )),
+    optseq('disable', 'iff', '(', $.expression_or_dist, ')'),
     $.property_expr
   ),
 
+  // TODO: TODO: TODO(GML): Left here
   // TODO: Review/fix
   property_expr: $ => choice(
     $.sequence_expr,
@@ -1938,36 +1852,7 @@ const rules = {
     optional(seq('(', optional($.sequence_list_of_arguments), ')'))
   ),
 
-  // sequence_list_of_arguments: $ => choice(
-  //   // seq(
-  //   //   sep1(',', optional($._sequence_actual_arg)),
-  //   //   repseq(',', '.', $._identifier, '(', optional($._sequence_actual_arg), ')')
-  //   // ),
-  //   sep1(',', seq('.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
-  // ),
-
-  // INFO: Copied from list_of_arguments
-  sequence_list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
-    // First case: mixing positional and named arguments
-    seq(
-      $._sequence_actual_arg,
-      repeat(seq(',', optional($._sequence_actual_arg))),
-      repeat(seq(',', '.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
-    ),
-    seq(
-      optional($._sequence_actual_arg),
-      repeat1(seq(',', optional($._sequence_actual_arg))),
-      repeat(seq(',', '.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
-    ),
-    seq(
-      optional($._sequence_actual_arg),
-      repeat(seq(',', optional($._sequence_actual_arg))),
-      repeat1(seq(',', '.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
-    ),
-    // Second case: using only named arguments
-    sepBy1(',', seq('.', $._identifier, '(', optional($._sequence_actual_arg), ')'))
-  )),
-
+  sequence_list_of_arguments: $ => list_of_args($, 'sequence_list_of_arguments', $._sequence_actual_arg),
 
   _sequence_actual_arg: $ => prec('_sequence_actual_arg', choice(
     $.event_expression,
@@ -2246,6 +2131,7 @@ const rules = {
 
   _covergroup_expression: $ => $.expression,
 
+
 // ** A.2.12 Let declarations
   let_declaration: $ => seq(
     'let', $.let_identifier,
@@ -2276,34 +2162,9 @@ const rules = {
     optional(seq('(', optional($.let_list_of_arguments), ')'))
   )),
 
-  // INFO: Copied from $.list_of_arguments
-  let_list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
-    // First case: mixing positional and named arguments
-    seq(
-      $.let_actual_arg,
-      repeat(seq(',', optional($.let_actual_arg))),
-      repeat(seq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')'))
-    ),
-    seq(
-      optional($.let_actual_arg),
-      repeat1(seq(',', optional($.let_actual_arg))),
-      repeat(seq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')'))
-    ),
-    seq(
-      optional($.let_actual_arg),
-      repeat(seq(',', optional($.let_actual_arg))),
-      repeat1(seq(',', '.', $._identifier, '(', optional($.let_actual_arg), ')'))
-    ),
-    // Second case: using only named arguments
-    sepBy1(',', seq('.', $._identifier, '(', optional($.let_actual_arg), ')'))
-  )),
+  let_list_of_arguments: $ => alias($.list_of_arguments, $.let_list_of_arguments),
 
-
-  let_actual_arg: $ => $.expression,
-
-  // let_list_of_arguments: $ => alias($.list_of_arguments, $.let_list_of_arguments),
-
-  // let_actual_arg: $ => alias($.expression, $.let_actual_arg),
+  let_actual_arg: $ => $.expression, // Unused since $.let_list_of_arguments is aliased
 
 
 // * A.3 Primitive instances
@@ -3987,48 +3848,7 @@ const rules = {
 
   function_subroutine_call: $ => $.subroutine_call,
 
-  // list_of_arguments: $ => choice(
-  //   // seq(
-  //   //   sep1(',', optional($.expression)),
-  //   //   repseq(',', '.', $._identifier, '(', optional($.expression), ')')
-  //   // ),
-  //   sep1(',', seq('.', $._identifier, '(', optional($.expression), ')'))
-  // ),
-
-  list_of_arguments: $ => prec('list_of_arguments', choice(  // Reordered to avoid matching empty string
-  // list_of_arguments: $ => prec.left(PREC.PARENT, choice(  // Reordered to avoid matching empty string
-    // First case: mixing positional and named arguments
-    seq(
-      $.expression,
-      repeat(seq(',', optional($.expression))),
-      repeat(seq(',', '.', $._identifier, '(', optional($.expression), ')'))
-    ),
-    seq(
-      optional($.expression),
-      repeat1(seq(',', optional($.expression))),
-      repeat(seq(',', '.', $._identifier, '(', optional($.expression), ')'))
-    ),
-    seq(
-      optional($.expression),
-      repeat(seq(',', optional($.expression))),
-      repeat1(seq(',', '.', $._identifier, '(', optional($.expression), ')'))
-    ),
-    // Second case: using only named arguments
-    sepBy1(',', seq('.', $._identifier, '(', optional($.expression), ')'))
-  )),
-
-  // list_of_arguments_parent: $ => seq(
-  //   '(',
-  //   choice(
-  //     sep1(',', $.expression),
-  //     // sep1(',', optional($.expression)), // FIXME
-  //     seq(
-  //       repseq(',', '.', $._identifier, '(', optional($.expression), ')')
-  //     ),
-  //     sep1(',', seq(',', '.', $._identifier, '(', optional($.expression), ')'))
-  //   ),
-  //   ')'
-  // ),
+  list_of_arguments: $ => list_of_args($, 'list_of_arguments', $.expression),
 
   method_call: $ => seq(
     $._method_call_root,
@@ -4036,8 +3856,8 @@ const rules = {
       '.',
       '::'  // INFO Out of LRM: Needed to support static method calls
     ),
-    $.method_call_body)
-  ,
+    $.method_call_body
+  ),
 
   method_call_body: $ => choice(
     seq(
@@ -4728,7 +4548,7 @@ const rules = {
   port_identifier: $ => $._identifier,
   // production_identifier: $ => alias($._identifier, $.production_identifier),
   program_identifier: $ => $._identifier,
-  property_identifier: $ => alias($._identifier, $.property_identifier),
+  property_identifier: $ => $._identifier,
 
   // Set prec.left because of:
   // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '::'  …
@@ -5284,14 +5104,6 @@ module.exports = grammar({
     ['ansi_port_declaration', '_variable_dimension'],
 
 
-    // For a port list the tf_port_direction is in a higher level in the tree, for the 'ref' conflict
-    //
-    //   'function'  function_identifier  '('  'ref'  •  'var'  …
-    //   1:  'function'  function_identifier  '('  (port_direction  'ref')  •  'var'  …
-    //   2:  'function'  function_identifier  '('  (tf_port_direction  'ref')  •  'var'  …
-    ['tf_port_direction', 'port_direction'],
-
-
     // $.data_type corresponds to variables, $.net_type to $.net_port_type
     //
     // 'input'  data_type  •  '\'  …
@@ -5432,6 +5244,12 @@ module.exports = grammar({
     ['packed_dimension', '_constant_part_select_range'],
 
 
+    // $.port_direction would be for module/interface/program
+    //
+    //   'function'  function_identifier  '('  'ref'  •  'var'  …
+    //   1:  'function'  function_identifier  '('  (port_direction  'ref')  •  'var'  …
+    //   2:  'function'  function_identifier  '('  (tf_port_direction  'ref')  •  'var'  …
+    ['tf_port_direction', 'port_direction'],
 
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -5546,12 +5364,15 @@ module.exports = grammar({
     ['ps_parameter_identifier', 'data_type'],
 
 
+    // INFO: This one is not useful anymore, since there is a conflic with data_type and class_type in conflicts
+    // Revisit!
+    //
     // tf_port_item seems more generic, so resolve it to this node for this particular case
     //
     //   'function'  function_identifier  '('  _identifier  •  ')'  …
     //   1:  'function'  function_identifier  '('  (data_type  _identifier)  •  ')'  …      (precedence: 'data_type')
     //   2:  'function'  function_identifier  '('  (tf_port_item  _identifier)  •  ')'  …n
-    ['tf_port_item', 'data_type'],
+    // ['tf_port_item', 'data_type'],
 
 
     // Even though the class_scope is implicitly a data_type, it should not be needed to set it as a node
@@ -5751,6 +5572,11 @@ module.exports = grammar({
     ['package_declaration'],
 
     ['net_port_type'],
+    ['tf_port_item'],
+    ['tf_port_direction'],
+    ['port_direction'],
+    ['property_list_of_arguments'],
+    ['sequence_list_of_arguments'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
