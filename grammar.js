@@ -538,8 +538,8 @@ const rules = {
 
   _module_common_item: $ => prec('_module_common_item', choice(
     $._module_or_generate_item_declaration,
-    // $.interface_instantiation, // INFO: Ambiguous with module_instantiation and program_instantiation
-    // $.program_instantiation,   // INFO: Ambiguous with module_instantiation and interface_instantiation
+    $.interface_instantiation,
+    $.program_instantiation,
     $._assertion_item,
     $.bind_directive,
     $.continuous_assign,
@@ -612,12 +612,12 @@ const rules = {
 
   bind_target_instance_list: $ => sepBy1(',', $.bind_target_instance),
 
-  _bind_instantiation: $ => choice(
-    // $.program_instantiation,   // INFO: Ambiguous with rest of instantiations
+  _bind_instantiation: $ => prec('_bind_instantiation', choice(
+    $.program_instantiation,
     $.module_instantiation,
-    // $.interface_instantiation, // INFO: Ambiguous with rest of instantiations
-    // $.checker_instantiation    // INFO: Ambiguous with rest of instantiations
-  ),
+    $.interface_instantiation,
+    // $.checker_instantiation
+  )),
 
 
 // ** A.1.5 Configuration source text
@@ -2247,17 +2247,17 @@ const rules = {
     '#', '(', optional($.list_of_parameter_value_assignments), ')'
   ),
 
+  // The basic $.ordered_parameter_assignment branch would be: sepBy1(',', $.ordered_parameter_assignment)
+  // Current entry also supports empty positional arguments for parameters
   list_of_parameter_value_assignments: $ => choice(
-    // INFO: ordered_parameter_assignment equivalent to: sepBy1(',', $.ordered_parameter_assignment)
-    // But the line below also supports empty positional arguments
     seq(choice(',', $.ordered_parameter_assignment), repeat(choice(',', (seq(',', $.ordered_parameter_assignment))))),
     sepBy1(',', $.named_parameter_assignment),
   ),
 
   ordered_parameter_assignment: $ => $.param_expression,
 
+  // Optional $_directives out of LRM (supports ifdefs in parameter lists)
   named_parameter_assignment: $ => seq(
-    // INFO: optional directives out of LRM, supports e.g. ifdefs in parameter lists
     optional($._directives), '.', $.parameter_identifier, '(', optional($.param_expression), ')'
   ),
 
@@ -2270,55 +2270,45 @@ const rules = {
     repeat($.unpacked_dimension)
   ),
 
-  // Reordered
+  // The basic $.ordered_port_connection branch would be: sepBy1(',', $.ordered_port_connection)
+  // Current entry also supports empty positional arguments for ports
   list_of_port_connections: $ => choice(
-    // INFO: ordered_port equivalent to: sepBy1(',', $.ordered_port_connection)
-    // But the line below also supports empty positional arguments
     seq(choice(',', $.ordered_port_connection), repeat(choice(',', (seq(',', $.ordered_port_connection))))),
     sepBy1(',', $.named_port_connection)
   ),
 
   ordered_port_connection: $ => seq(
     repeat($.attribute_instance),
-    $.expression // INFO: Removed the optional so that it doesn't match the empty string
+    $.expression // Removed optional to avoid matching empty string
   ),
 
-  // from spec:
-  // named_port_connection: $ =>
-  //   { attribute_instance } . port_identifier [ ( [ expression ] ) ]
-  // | { attribute_instance } .*
+  // Optional $_directives out of LRM (supports ifdefs in parameter lists)
   named_port_connection: $ => seq(
     repeat($.attribute_instance),
     choice(
-      // INFO: optional directives out of LRM, supports e.g. ifdefs in parameter lists
-      seq(optional($._directives), '.', field('port_name', $.port_identifier), optional(seq('(', optional(field('connection', $.expression)), ')'))),
+      seq(optional($._directives), '.', field('port_name', $.port_identifier), optseq('(', optional(field('connection', $.expression)), ')')),
       '.*'
     )
   ),
 
+
 // *** A.4.1.2 Interface instantiation
-  interface_instantiation: $ => prec('interface_instantiation', seq(
-    $.interface_identifier,
-    optional($.parameter_value_assignment),
-    sepBy1(',', $.hierarchical_instance),
-    ';'
-  )),
+  interface_instantiation: $ => prec('interface_instantiation',
+    alias($.module_instantiation, $.interface_instantiation)
+  ),
+
 
 // *** A.4.1.3 Program instantiation
-  program_instantiation: $ => prec('program_instantiation', seq(
-    $.program_identifier,
-    optional($.parameter_value_assignment),
-    sepBy1(',', $.hierarchical_instance),
-    ';'
-  )),
+  program_instantiation: $ => prec('program_instantiation',
+    alias($.module_instantiation, $.program_instantiation)
+  ),
+
 
 // *** A.4.1.4 Checker instantiation
   checker_instantiation: $ => prec('checker_instantiation', seq(
     $.ps_checker_identifier,
     $.name_of_instance,
-    '(',
-    optional($.list_of_checker_port_connections),
-    ')',
+    '(', optional($.list_of_checker_port_connections), ')',
     ';'
   )),
 
@@ -2327,41 +2317,18 @@ const rules = {
     sepBy1(',', $.named_checker_port_connection)
   ),
 
-  ordered_checker_port_connection: $ => seq(
+  ordered_checker_port_connection: $ => seq( // Similar to $.ordered_port_connection
     repeat($.attribute_instance),
-    $._property_actual_arg
+    $._property_actual_arg // Removed optional to avoid matching empty string
   ),
 
-  named_checker_port_connection: $ => choice( // TODO: Could be rewritten the same as named_port_connection, or even aliased
-    seq(
-      repeat($.attribute_instance), '.', $.formal_port_identifier,
-      optseq('(', optional($._property_actual_arg), ')')
-    ),
-    seq(
-      repeat($.attribute_instance), '.*'
+  named_checker_port_connection: $ => seq( // Similar to $.named_port_connection
+    repeat($.attribute_instance),
+    choice(
+      seq(optional($._directives), '.', field('port_name', $.formal_port_identifier), optseq('(', optional(field('connection', $._property_actual_arg)), ')')),
+      '.*'
     )
   ),
-
-  //   choice(
-  //     sep1(',', optseq(
-  //       repeat($.attribute_instance),
-  //       optional($._property_actual_arg)
-  //     )),
-  //     // sep1(',', $.named_checker_port_connection)
-  //     sep1(',', choice(
-  //       seq(
-  //         repeat($.attribute_instance), '.', $.formal_port_identifier,
-  //         optseq('(', optional($._property_actual_arg), ')')
-  //       ),
-  //       seq(
-  //         repeat($.attribute_instance), '.*'
-  //       )
-  //     ))
-  //   ),
-  //   ')',
-  //   ';'
-  // ),
-
 
 
 // ** A.4.2 Generated instantiation
@@ -5182,6 +5149,29 @@ module.exports = grammar({
     ['_assignment_pattern_expression_type', 'primary'],
 
 
+    // Make checkers less relevant
+    //
+    // _identifier  name_of_instance  '('  ')'  •  ';'  …
+    // 1:  (checker_instantiation  _identifier  name_of_instance  '('  ')'  •  ';')     (precedence: 'checker_instantiation')
+    // 2:  _identifier  (hierarchical_instance  name_of_instance  '('  ')')  •  ';'  …  (precedence: 'hierarchical_instance')
+    ['hierarchical_instance', 'checker_instantiation'],
+
+
+    // module, interface and program instantiations have the exact same syntax:
+    //
+    //   module_instantiation  •  ';'  …
+    //   1:  (_module_or_generate_item  module_instantiation)  •  ';'  …  (precedence: '_module_or_generate_item')
+    //   2:  (interface_instantiation  module_instantiation)  •  ';'  …   (precedence: 'interface_instantiation')
+    //   3:  (program_instantiation  module_instantiation)  •  ';'  …     (precedence: 'program_instantiation')
+    ['_module_or_generate_item', 'interface_instantiation', 'program_instantiation'],
+    // 'bind'  bind_target_scope  module_instantiation  •  ';'  …
+    // 1:  'bind'  bind_target_scope  (_bind_instantiation  module_instantiation)  •  ';'  …      (precedence: '_bind_instantiation')
+    // 2:  'bind'  bind_target_scope  (interface_instantiation  module_instantiation)  •  ';'  …  (precedence: 'interface_instantiation')
+    // 3:  'bind'  bind_target_scope  (program_instantiation  module_instantiation)  •  ';'  …    (precedence: 'program_instantiation')
+    ['_bind_instantiation', 'interface_instantiation', 'program_instantiation'],
+
+
+
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5445,11 +5435,6 @@ module.exports = grammar({
     ['subroutine_call_statement', '_module_common_item'],
 
 
-    // Make checkers less important
-    ['hierarchical_instance', 'checker_instantiation'],
-    ['module_instantiation', 'concurrent_assertion_item'],
-
-
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5507,6 +5492,7 @@ module.exports = grammar({
     ['port_direction'],
     ['property_list_of_arguments'],
     ['sequence_list_of_arguments'],
+    ['_bind_instantiation'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
