@@ -1939,70 +1939,33 @@ const rules = {
     ';'
   ),
 
-  // TODO: Refactor: Last sentence is common, and first one is common in first 4 choices
   bins_or_options: $ => choice(
+    // Branch 1
     $.coverage_option,
+    // Branches 2-5
     seq(
-      optional('wildcard'),
-      $.bins_keyword,
-      $._bin_identifier,
-      optional(seq('[', optional($._covergroup_expression), ']')),
-      '=',
-      '{', $.covergroup_range_list, '}',
-      optional(seq('with', '(', $._with_covergroup_expression, ')')),
-      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-      optional(seq('iff', '(', $.expression, ')'))
+      optional('wildcard'), $.bins_keyword, $._bin_identifier,
+      choice(
+        // Branches 2-4
+        seq(optseq('[', optional($._covergroup_expression), ']'), '=',
+          choice(
+            seq('{', $.covergroup_range_list, '}', optseq('with', '(', $._with_covergroup_expression, ')')),
+            seq($.cover_point_identifier, 'with', '(', $._with_covergroup_expression, ')'),
+            $._set_covergroup_expression
+          )),
+        // Branch 5
+        seq(optseq('[', ']'), '=', $.trans_list),
+      ),
+      optseq('iff', '(', $.expression, ')')
     ),
-    seq(
-      optional('wildcard'),
-      $.bins_keyword,
-      $._bin_identifier,
-      optional(seq('[', optional($._covergroup_expression), ']')),
-      '=',
-      $.cover_point_identifier,
-      'with', '(', $._with_covergroup_expression, ')',
-      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-      optional(seq('iff', '(', $.expression, ')'))
-    ),
-    seq(
-      optional('wildcard'),
-      $.bins_keyword,
-      $._bin_identifier,
-      optional(seq('[', optional($._covergroup_expression), ']')),
-      '=',
-      $._set_covergroup_expression,
-      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-      optional(seq('iff', '(', $.expression, ')'))
-    ),
-    seq(
-      optional('wildcard'),
-      $.bins_keyword,
-      $._bin_identifier,
-      optional(seq('[', ']')),
-      '=',
-      $.trans_list,
-      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-      optional(seq('iff', '(', $.expression, ')'))
-    ),
-    seq(
-      $.bins_keyword,
-      $._bin_identifier,
-      optional(seq('[', optional($._covergroup_expression), ']')),
-      '=',
-      'default',
-      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-      optional(seq('iff', '(', $.expression, ')'))
-    ),
-    seq(
-      $.bins_keyword,
-      $._bin_identifier,
-      '=',
-      'default',
-      'sequence',
-      // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-      optional(seq('iff', '(', $.expression, ')'))
-    )
-  ),
+    // Branches 6-7
+    seq($.bins_keyword, $._bin_identifier,
+      choice(
+        seq(optseq('[', optional($._covergroup_expression), ']'), '=', 'default'),
+        seq('=', 'default', 'sequence')
+      ),
+      optseq('iff', '(', $.expression, ')')
+    )),
 
   bins_keyword: $ => choice('bins', 'illegal_bins', 'ignore_bins'),
 
@@ -2010,25 +1973,22 @@ const rules = {
 
   trans_set: $ => sepBy1('=>', $.trans_range_list),
 
-  trans_range_list: $ => choice(
+  trans_range_list: $ => seq(
     $.trans_item,
-    seq($.trans_item, '[*', $.repeat_range, ']'),
-    seq($.trans_item, '[->', $.repeat_range, ']'),
-    seq($.trans_item, '[=', $.repeat_range, ']')
+    optseq(choice('[*', '[->', '[='), $.repeat_range, ']')
   ),
 
   trans_item: $ => $.covergroup_range_list,
 
   repeat_range: $ => seq(
-    $._covergroup_expression, optional(seq(':', $._covergroup_expression))
+    $._covergroup_expression, optseq(':', $._covergroup_expression)
   ),
 
   cover_cross: $ => seq(
-    optional(seq($.cross_identifier, ':')),
+    optseq($.cross_identifier, ':'),
     'cross',
     $.list_of_cross_items,
-    // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')'))),
-    optional(seq('iff', '(', $.expression, ')')),
+    optseq('iff', '(', $.expression, ')'),
     $.cross_body
   ),
 
@@ -2049,15 +2009,14 @@ const rules = {
     seq($.bins_selection_or_option, ';')
   ),
 
-  bins_selection_or_option: $ => choice(
-    seq(repeat($.attribute_instance), $.coverage_option),
-    seq(repeat($.attribute_instance), $.bins_selection)
+  bins_selection_or_option: $ => seq(
+    repeat($.attribute_instance),
+    choice($.coverage_option, $.bins_selection)
   ),
 
   bins_selection: $ => seq(
     $.bins_keyword, $._bin_identifier, '=', $.select_expression,
-    // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')')))
-    optional(seq('iff', '(', $.expression, ')'))
+    optseq('iff', '(', $.expression, ')')
   ),
 
   select_expression: $ => choice(
@@ -2065,39 +2024,37 @@ const rules = {
     prec.left(PREC.UNARY, seq('!', $.select_condition)),
     prec.left(PREC.LOGICAL_AND, seq($.select_expression, '&&', $.select_expression)),
     prec.left(PREC.LOGICAL_OR, seq($.select_expression, '||', $.select_expression)),
-    prec.left(PREC.PARENT, seq('(', $.select_expression, ')')),
-    seq(
-      $.select_expression, 'with', '(', $._with_covergroup_expression, ')',
-      optional(seq('matches', $._integer_covergroup_expression))
-    ),
+    paren_expr($.select_expression),
+    seq($.select_expression, 'with', '(', $._with_covergroup_expression, ')', optseq('matches', $._integer_covergroup_expression)),
     $.cross_identifier,
-    seq(
-      $._cross_set_expression,
-      optional(seq('matches', $._integer_covergroup_expression))
-    )
+    seq($._cross_set_expression, optseq('matches', $._integer_covergroup_expression))
   ),
 
   select_condition: $ => seq(
     'binsof', '(', $.bins_expression, ')',
-    optional(seq('intersect', '{', $.covergroup_range_list, '}'))
+    optseq('intersect', '{', $.covergroup_range_list, '}')
   ),
 
   bins_expression: $ => choice(
     $.variable_identifier,
-    // prec.left(PREC.PARENT, seq($.cover_point_identifier, optseq('.', $._bin_identifier)))
-    seq($.cover_point_identifier, optional(seq('.', $._bin_identifier)))
+    seq($.cover_point_identifier, optseq('.', $._bin_identifier))
   ),
 
   covergroup_range_list: $ => sepBy1(',', $.covergroup_value_range),
 
   covergroup_value_range: $ => choice(
     $._covergroup_expression,
-    seq('[', $._covergroup_expression, ':', $._covergroup_expression, ']'),
-    seq('[', '$', ':', $._covergroup_expression, ']'),
-    seq('[', $._covergroup_expression, ':', '$', ']'),
-    seq('[', $._covergroup_expression, '+/-', $._covergroup_expression, ']'),
-    seq('[', $._covergroup_expression, '+%-', $._covergroup_expression, ']'),
-  ),
+    seq(
+      '[',
+      choice(
+        seq($._covergroup_expression, ':', $._covergroup_expression),
+        seq('$', ':', $._covergroup_expression),
+        seq($._covergroup_expression, ':', '$'),
+        seq($._covergroup_expression, '+/-', $._covergroup_expression),
+        seq($._covergroup_expression, '+%-', $._covergroup_expression)
+      ),
+      ']'
+    )),
 
   _with_covergroup_expression: $ => $._covergroup_expression,
 
