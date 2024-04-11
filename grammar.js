@@ -1944,7 +1944,7 @@ const rules = {
     $.coverage_option,
     // Branches 2-5
     seq(
-      optional('wildcard'), $.bins_keyword, $._bin_identifier,
+      optional('wildcard'), $.bins_keyword, field('name', $._bin_identifier),
       choice(
         // Branches 2-4
         seq(optseq('[', optional($._covergroup_expression), ']'), '=',
@@ -1959,7 +1959,7 @@ const rules = {
       optseq('iff', '(', $.expression, ')')
     ),
     // Branches 6-7
-    seq($.bins_keyword, $._bin_identifier,
+    seq($.bins_keyword, field('name', $._bin_identifier),
       choice(
         seq(optseq('[', optional($._covergroup_expression), ']'), '=', 'default'),
         seq('=', 'default', 'sequence')
@@ -1985,7 +1985,7 @@ const rules = {
   ),
 
   cover_cross: $ => seq(
-    optseq($.cross_identifier, ':'),
+    optseq(field('name', $.cross_identifier), ':'),
     'cross',
     $.list_of_cross_items,
     optseq('iff', '(', $.expression, ')'),
@@ -4379,7 +4379,7 @@ const rules = {
 
   // // covergroup_variable_identifier = variable_identifier
   cover_point_identifier: $ => $._identifier,
-  cross_identifier: $ => alias($._identifier, $.cross_identifier),
+  cross_identifier: $ => $._identifier,
   dynamic_array_variable_identifier: $ => $.variable_identifier,
   enum_identifier: $ => alias($._identifier, $.enum_identifier),
   escaped_identifier: $ => seq('\\', /[^\s]*/),
