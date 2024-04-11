@@ -2866,21 +2866,14 @@ const rules = {
     seq('repeat', '(', $.expression, ')', $.statement_or_null),
     seq('while', '(', $.expression, ')', $.statement_or_null),
     seq(
-      'for', '(',
-      optional($.for_initialization), ';',
-      optional($.expression), ';',
-      optional($.for_step),
-      ')',
+      'for',
+      '(', optional($.for_initialization), ';', optional($.expression), ';', optional($.for_step), ')',
       $.statement_or_null
     ),
     seq('do', $.statement_or_null, 'while', '(', $.expression, ')', ';'),
     seq(
-      'foreach', '(',
-      $.ps_or_hierarchical_array_identifier,
-      '[',
-      optional($.loop_variables),
-      ']',
-      ')',
+      'foreach',
+      '(', $.ps_or_hierarchical_array_identifier, '[', optional($.loop_variables), ']', ')',
       $.statement
     )
   ),
@@ -2906,16 +2899,18 @@ const rules = {
   // Modified to avoid matching empty string
   loop_variables: $ => seq(
     $.index_variable_identifier,
-    repeat(seq(',', optional($.index_variable_identifier)))
+    repseq(',', optional($.index_variable_identifier))
   ),
+
 
 // ** A.6.9 Subroutine call statements
   subroutine_call_statement: $ => prec('subroutine_call_statement', choice(
     seq($.subroutine_call, ';'),
     seq('void\'', '(', $.function_subroutine_call, ')', ';'),
-    $.severity_system_task,    // INFO: Out of LRM
-    $.simulation_control_task, // INFO: Out of LRM
+    $.severity_system_task,   // Out of LRM: allow $fatal/$error/$warning/$info in procedural code
+    $.simulation_control_task // Out of LRM: allow $stop/$finish/$exit in procedural code
   )),
+
 
 // ** A.6.10 Assertion statements
   _assertion_item: $ => choice(
@@ -5154,6 +5149,20 @@ module.exports = grammar({
     ['_structure_pattern_key', '_array_pattern_key'],
 
 
+    // Add support for severity_system_task out of LRM:
+    // - The $.snippets rule creates this conflict, consider it the lower level node
+    //
+    // severity_system_task  •  'resetall_compiler_directive_token1'  …
+    // 1:  (_module_common_item  severity_system_task)  •  'resetall_compiler_directive_token1'  …        (precedence: '_module_common_item')
+    // 2:  (subroutine_call_statement  severity_system_task)  •  'resetall_compiler_directive_token1'  …
+    ['subroutine_call_statement', '_module_common_item'],
+
+
+
+
+
+
+
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5372,12 +5381,6 @@ module.exports = grammar({
     // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     ['hierarchical_identifier', '_directives'],
     ['_method_call_root', '_directives'],
-
-
-    // severity_system_task  •  'resetall_compiler_directive_token1'  …
-    // 1:  (_module_common_item  severity_system_task)  •  'resetall_compiler_directive_token1'  …        (precedence: '_module_common_item')
-    // 2:  (subroutine_call_statement  severity_system_task)  •  'resetall_compiler_directive_token1'  …
-    ['subroutine_call_statement', '_module_common_item'],
 
 
 
