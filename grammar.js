@@ -10,17 +10,17 @@
 
 const PREC = {
   // Table 11-2—Operator precedence and associativity
-  PARENT: 37,     // () [] :: .                                          Left
-  UNARY: 36,      // + - ! ~ & ~& | ~| ^ ~^ ^~ ++ -- (unary)
-  POW: 35,        // **                                                  Left
-  MUL: 34,        // * / %                                               Left
-  ADD: 33,        // + - (binary)                                        Left
-  SHIFT: 32,      // << >> <<< >>>                                       Left
-  RELATIONAL: 31, // < <= > >= inside dist                               Left
-  EQUAL: 30,      // == != === !== ==? !=?                               Left
-  AND: 29,        // & (binary)                                          Left
-  XOR: 28,        // ^ ~^ ^~ (binary)                                    Left
-  OR: 27,         // | (binary)                                          Left
+  PARENT: 37,       // () [] :: .                                          Left
+  UNARY: 36,        // + - ! ~ & ~& | ~| ^ ~^ ^~ ++ -- (unary)
+  POWER: 35,        // **                                                  Left
+  MULTIPLY: 34,     // * / %                                               Left
+  ADD: 33,          // + - (binary)                                        Left
+  SHIFT: 32,        // << >> <<< >>>                                       Left
+  RELATIONAL: 31,   // < <= > >= inside dist                               Left
+  EQUAL: 30,        // == != === !== ==? !=?                               Left
+  BITWISE_AND: 29,  // & (binary)                                          Left
+  EXCLUSIVE_OR: 28, // ^ ~^ ^~ (binary)                                    Left
+  BITWISE_OR: 27,   // | (binary)                                          Left
 
   // A.10.30: The matches operator shall have higher precedence than the && and || operators
   MATCHES: 26,
@@ -1224,6 +1224,9 @@ const rules = {
 
   data_type_or_void: $ => choice($.data_type, 'void'),
 
+  // A.10.21) An expression that is used as the argument in a type_reference
+  // shall not contain any hierarchical references or references to elements of
+  // dynamic objects.
   type_reference: $ => seq(
     'type',
     '(', choice($.expression, $._data_type_or_incomplete_class_scoped_type), ')'
@@ -3025,12 +3028,12 @@ const rules = {
     optional($._assignment_pattern_expression_type), $.assignment_pattern
   ),
 
-  _assignment_pattern_expression_type: $ => choice(
+  _assignment_pattern_expression_type: $ => prec('_assignment_pattern_expression_type', choice(
     $.ps_type_identifier,
     $.ps_parameter_identifier,
     $.integer_atom_type,
     $.type_reference
-  ),
+  )),
 
   // _constant_assignment_pattern_expression: $ => prec('_constant_assignment_pattern_expression', $.assignment_pattern_expression),
   _constant_assignment_pattern_expression: $ => $.assignment_pattern_expression,
@@ -3926,10 +3929,10 @@ const rules = {
   ),
 
 // ** A.8.3 Expressions
-  inc_or_dec_expression: $ => choice(
+  inc_or_dec_expression: $ => prec.left(PREC.UNARY, choice(
     seq($.inc_or_dec_operator, repeat($.attribute_instance), $.variable_lvalue),
     seq($.variable_lvalue, repeat($.attribute_instance), $.inc_or_dec_operator)
-  ),
+  )),
 
   conditional_expression: $ => prec.right(PREC.CONDITIONAL, seq(
     $.cond_predicate,
@@ -3948,15 +3951,15 @@ const rules = {
 
     // TODO: Review these expressions and precedences
     constExprOp($, PREC.ADD, choice('+', '-')),
-    constExprOp($, PREC.MUL, choice('*', '/', '%')),
+    constExprOp($, PREC.MULTIPLY, choice('*', '/', '%')),
     constExprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
     constExprOp($, PREC.LOGICAL_AND, '&&'),
     constExprOp($, PREC.LOGICAL_OR, '||'),
-    constExprOp($, PREC.POW, '**'),
+    constExprOp($, PREC.POWER, '**'),
     constExprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
-    constExprOp($, PREC.AND, '&'),
-    constExprOp($, PREC.OR, '|'),
-    constExprOp($, PREC.XOR, choice('^', '^~', '~^')),
+    constExprOp($, PREC.BITWISE_AND, '&'),
+    constExprOp($, PREC.BITWISE_OR, '|'),
+    constExprOp($, PREC.EXCLUSIVE_OR, choice('^', '^~', '~^')),
     constExprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
     constExprOp($, PREC.IMPLICATION, choice('->', '<->')),
 
@@ -4004,36 +4007,72 @@ const rules = {
     $.constant_expression, choice('+:', '-:'), $.constant_expression
   ),
 
-  // TODO: Review precedences, and exprOp function, all this section in general
+  // DANGER: The ones below are not part of the LRM but added to
+  // simplify the grammar
+  _binary_expression: $ => {
+    const table = [
+      ['+', PREC.ADD],
+      ['-', PREC.ADD],
+      ['*', PREC.MULTIPLY],
+      ['/', PREC.MULTIPLY],
+      ['%', PREC.MULTIPLY],
+      ['==', PREC.EQUAL],
+      ['!=', PREC.EQUAL],
+      ['===', PREC.EQUAL],
+      ['!==', PREC.EQUAL],
+      ['==?', PREC.EQUAL],
+      ['!=?', PREC.EQUAL],
+      ['&&', PREC.LOGICAL_AND],
+      ['||', PREC.LOGICAL_OR],
+      ['**', PREC.POWER],
+      ['>', PREC.RELATIONAL],
+      ['<', PREC.RELATIONAL],
+      ['>=', PREC.RELATIONAL],
+      ['<=', PREC.RELATIONAL],
+      ['&', PREC.BITWISE_AND],
+      ['|', PREC.BITWISE_OR],
+      ['^', PREC.EXCLUSIVE_OR],
+      ['^~', PREC.EXCLUSIVE_OR],
+      ['~^', PREC.EXCLUSIVE_OR],
+      ['>>', PREC.SHIFT],
+      ['<<', PREC.SHIFT],
+      ['>>>', PREC.SHIFT],
+      ['<<<', PREC.SHIFT],
+      ['->', PREC.IMPLICATION],
+      ['<->', PREC.IMPLICATION],
+    ];
+    return choice(...table.map(([operator, precedence]) => {
+      return prec.left(precedence, seq(
+        field('left', $.expression),
+        // @ts-ignore
+        field('operator', operator),
+        repeat($.attribute_instance),
+        field('right', $.expression),
+      ));
+    }));
+  },
+
+  _unary_expression: $ => prec.left(PREC.UNARY, seq(
+    field('operator', $.unary_operator),
+    repeat($.attribute_instance),
+    field('argument', $.primary)
+  )),
+
+  _parenthesized_expression : $ => prec.left(PREC.PARENT, seq(
+    '(', $.operator_assignment, ')'
+  )),
+  // End of DANGER
+
   expression: $ => choice(
     $.primary,
-
-    prec.left(PREC.UNARY, seq(
-      $.unary_operator, repeat($.attribute_instance), $.primary
-    )),
-    prec.left(PREC.UNARY, $.inc_or_dec_expression),
-    prec.left(PREC.PARENT, seq('(', $.operator_assignment, ')')),
-
-    // TODO: Review precedences and operators, but they look good overall
-    exprOp($, PREC.ADD, choice('+', '-')),
-    exprOp($, PREC.MUL, choice('*', '/', '%')),
-    exprOp($, PREC.EQUAL, choice('==', '!=', '===', '!==', '==?', '!=?')),
-    exprOp($, PREC.LOGICAL_AND, '&&'),
-    exprOp($, PREC.LOGICAL_OR, '||'),
-    exprOp($, PREC.POW, '**'),
-    exprOp($, PREC.RELATIONAL, choice('<', '<=', '>', '>=')),
-    exprOp($, PREC.AND, '&'),
-    exprOp($, PREC.OR, '|'),
-    exprOp($, PREC.XOR, choice('^', '^~', '~^')),
-    exprOp($, PREC.SHIFT, choice('>>', '<<', '>>>', '<<<')),
-    exprOp($, PREC.IMPLICATION, choice('->', '<->')),
-
+    $._unary_expression,
+    $.inc_or_dec_expression,
+    $._parenthesized_expression,
+    $._binary_expression,
     $.conditional_expression,
     $.inside_expression,
     $.tagged_union_expression,
-
-    $.type_reference,// DANGER: Out of LRM explicitly, but should be (6.23)
-    $.text_macro_usage, // DANGER: Out of LRM
+    $.text_macro_usage, // Out of LRM
   ),
 
   tagged_union_expression: $ => seq(
@@ -4162,6 +4201,7 @@ const rules = {
     'null',
     '$root', // DANGER: Out of LRM but needed for sv-tests/chapter-20/20.14--coverage
     '\'{}',  // DANGER: Out of LRM but fixes errors in some UVM files
+    $.type_reference, // DANGER: Out of LRM explicitly, but should be for type comparison (6.23)
   )),
 
   class_qualifier: $ => prec('class_qualifier', choice( // Reordered to avoid matching empty string
@@ -4950,6 +4990,12 @@ module.exports = grammar({
   rules: rules,
   extras: $ => [/\s/, $.comment],
 
+// ** Supertypes
+  supertypes: $ => [
+    $._property_actual_arg,
+
+  ],
+
 // ** Inline
   inline: $ => [
     // Reviewed
@@ -4985,6 +5031,8 @@ module.exports = grammar({
 
     $.function_identifier,
     $.task_identifier,
+
+    $._binary_expression,
 
     // TODO: Not reviewed
 
@@ -5250,6 +5298,20 @@ module.exports = grammar({
     //   1:  'function'  function_identifier  '('  (port_direction  'ref')  •  'var'  …
     //   2:  'function'  function_identifier  '('  (tf_port_direction  'ref')  •  'var'  …
     ['tf_port_direction', 'port_direction'],
+
+
+    // Both cases would be illegal since they have a 'nested' type_reference as a consequence
+    // of it being a branch of $.primary, needed for type comparison (see sv-tests/6.23).
+    // Choose the 1st one since it's the one that conforms to the LRM
+    //
+    // 'type'  '('  type_reference  •  ')'  …
+    // 1:  'type'  '('  (data_type  type_reference)  •  ')'  …  (precedence: 'data_type')
+    // 2:  'type'  '('  (primary  type_reference)  •  ')'  …    (precedence: 'primary')
+    ['data_type', 'primary'],
+    // 'assign'  '#'  '('  type_reference  •  ''{'  …
+    // 1:  'assign'  '#'  '('  (_assignment_pattern_expression_type  type_reference)  •  ''{'  …
+    // 2:  'assign'  '#'  '('  (primary  type_reference)  •  ''{'  …                              (precedence: 'primary')
+    ['_assignment_pattern_expression_type', 'primary'],
 
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -6178,6 +6240,7 @@ module.exports = grammar({
     [$.data_type, $.constant_primary, $.hierarchical_identifier],
     [$.blocking_assignment, $.variable_lvalue],
     [$.blocking_assignment, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+
   ],
 
 });
