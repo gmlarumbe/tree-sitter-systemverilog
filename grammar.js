@@ -2720,25 +2720,11 @@ const rules = {
   ),
 
 // ** A.6.6 Conditional statements
-  // conditional_statement: $ => prec.left(seq(
-  //   optional($.unique_priority),
-  //   'if', '(', $.cond_predicate, ')', $.statement_or_null,
-  //   // repseq('else', 'if', '(', $.cond_predicate, ')', $.statement_or_null),
-  //   optseq('else', $.statement_or_null)
-  // )),
-
-  // prec.right because of:
-  // module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  'if'  '('  cond_predicate  ')'  statement_or_null  •  'else'  …
-  // 1:  module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null  •  'else'  statement_or_null)
-  // 2:  module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null  •  conditional_statement_repeat1  'else'  statement_or_null)
-  // 3:  module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null  •  conditional_statement_repeat1)
-  // 4:  module_nonansi_header  always_keyword  'if'  '('  cond_predicate  ')'  (conditional_statement  'if'  '('  cond_predicate  ')'  statement_or_null)  •  'else'  …
-  // Trying to make cond_statement the whole if/else if/else block
   conditional_statement: $ => prec.right(seq(
     optional($.unique_priority),
     'if', '(', $.cond_predicate, ')', $.statement_or_null,
-    repeat(seq('else', 'if', '(', $.cond_predicate, ')', $.statement_or_null)),
-    optional(seq('else', $.statement_or_null))
+    repseq('else', 'if', '(', $.cond_predicate, ')', $.statement_or_null),
+    optseq('else', $.statement_or_null)
   )),
 
   unique_priority: $ => choice('unique', 'unique0', 'priority'),
@@ -2750,27 +2736,10 @@ const rules = {
     $.cond_pattern
   ),
 
-  cond_pattern: $ => seq(
-    $.expression,
-    'matches',
-    $.pattern
-  ),
+  cond_pattern: $ => seq($.expression, 'matches', $.pattern),
+
 
 // ** A.6.7 Case statements
-  // case_statement: $ => seq(
-  //   optional($.unique_priority),
-  //   seq(
-  //     $.case_keyword,
-  //     '(', $.case_expression, ')',
-  //     choice(
-  //       repeat1($.case_item),
-  //       seq('matches', repeat1($.case_pattern_item)),
-  //       seq('inside', repeat1($.case_inside_item)) // only case
-  //     )
-  //   ),
-  //   'endcase'
-  // ),
-
   case_statement: $ => prec.right(seq(
     optional($.unique_priority),
     choice(
@@ -2814,16 +2783,29 @@ const rules = {
   case_item_expression: $ => $.expression,
 
   randcase_statement: $ => seq(
-    'randcase', $.randcase_item, repeat($.randcase_item), 'endcase'
+    'randcase', repeat1($.randcase_item), 'endcase'
   ),
 
   randcase_item: $ => seq($.expression, ':', $.statement_or_null),
 
   range_list: $ => sepBy1(',', $.value_range),
 
+  value_range: $ => choice(
+    $.expression,
+    seq('[',
+      choice(
+        seq($.expression, ':', $.expression),
+        seq('$', ':', $.expression),
+        seq($.expression, ':', '$'),
+        seq($.expression, '+/-', $.expression),
+        seq($.expression, '+%-', $.expression)
+      ),
+      ']'
+    )
+  ),
 
-  // A.6.7.1 Patterns
-  // INFO: Modified from Drom's one
+
+// *** A.6.7.1 Patterns
   pattern: $ => prec('pattern', choice(
     seq('(', $.pattern, ')'),
     seq('.', $.variable_identifier),
@@ -2871,14 +2853,12 @@ const rules = {
     $.type_reference
   )),
 
-  // _constant_assignment_pattern_expression: $ => prec('_constant_assignment_pattern_expression', $.assignment_pattern_expression),
   _constant_assignment_pattern_expression: $ => $.assignment_pattern_expression,
 
   assignment_pattern_net_lvalue: $ => seq('\'{', sepBy1(',', $.net_lvalue), '}'),
 
-  assignment_pattern_variable_lvalue: $ => seq(
-    '\'{', sepBy1(',', $.variable_lvalue), '}'
-  ),
+  assignment_pattern_variable_lvalue: $ => seq('\'{', sepBy1(',', $.variable_lvalue), '}'),
+
 
 // ** A.6.8 Looping statements
   loop_statement: $ => choice(
@@ -3840,15 +3820,6 @@ const rules = {
 
   inside_expression: $ => prec.left(PREC.RELATIONAL, seq(
     $.expression, 'inside', '{', $.range_list, '}'
-  )),
-
-  value_range: $ => prec('value_range', choice(
-    $.expression,
-    seq('[', $.expression, ':', $.expression, ']'),
-    seq('[', '$', ':', $.expression, ']'),
-    seq('[', $.expression, ':', '$', ']'),
-    seq('[', $.expression, '+', '/', '-', $.expression, ']'),
-    seq('[', $.expression, '+', '%', '-', $.expression, ']'),
   )),
 
   mintypmax_expression: $ => prec('mintypmax_expression', seq(
@@ -5165,6 +5136,23 @@ module.exports = grammar({
     ['event_expression', 'sequence_expr'],
 
 
+    // Guess that 'matches' should be followed by a pattern (according to $.cond_pattern)
+    //
+    //   module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  constant_expression  •  ')'  …
+    //   1:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (constant_mintypmax_expression  constant_expression)  •  ')'  …
+    //   2:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (pattern  constant_expression)  •  ')'  …
+    ['pattern', 'constant_mintypmax_expression'],
+
+
+    // struct/array initializations:
+    //   Consider higher priority a structure pattern even though it could be an assignment to an array,
+    //   but the parser cannot know that...
+    //
+    //   ''{'  assignment_pattern_key  •  ':'  …
+    //   1:  ''{'  (_array_pattern_key  assignment_pattern_key)  •  ':'  …
+    //   2:  ''{'  (_structure_pattern_key  assignment_pattern_key)  •  ':'  …
+    ['_structure_pattern_key', '_array_pattern_key'],
+
 
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
@@ -5228,12 +5216,6 @@ module.exports = grammar({
     // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
     // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  (_part_select_range  constant_range)  •  ']'  …
     ['_constant_part_select_range', '_part_select_range'],
-
-
-    //   module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  constant_expression  •  ')'  …
-    //   1:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (constant_mintypmax_expression  constant_expression)  •  ')'  …
-    //   2:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (pattern  constant_expression)  •  ')'  …
-    ['pattern', 'constant_mintypmax_expression'],
 
 
     // For regular identifiers, assume that they are always hierarchical if they have no package scope or hierarchical path
@@ -5333,14 +5315,6 @@ module.exports = grammar({
 
 
 
-    // With struct array initializations:
-    // Consider higher priority a structure pattern even though it could be an assignment to an array,
-    // but the parser cannot know that...
-    //
-    //   ''{'  assignment_pattern_key  •  ':'  …
-    //   1:  ''{'  (_array_pattern_key  assignment_pattern_key)  •  ':'  …
-    //   2:  ''{'  (_structure_pattern_key  assignment_pattern_key)  •  ':'  …
-    ['_structure_pattern_key', '_array_pattern_key'],
 
 
     // In this case, set this order to simplify precedences that yield the same result
