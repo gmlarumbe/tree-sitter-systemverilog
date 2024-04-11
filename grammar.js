@@ -10,44 +10,42 @@
 
 const PREC = {
   // Table 11-2—Operator precedence and associativity
-  PARENT: 37,       // () [] :: .                                          Left
-  UNARY: 36,        // + - ! ~ & ~& | ~| ^ ~^ ^~ ++ -- (unary)
-  POWER: 35,        // **                                                  Left
-  MULTIPLY: 34,     // * / %                                               Left
-  ADD: 33,          // + - (binary)                                        Left
-  SHIFT: 32,        // << >> <<< >>>                                       Left
-  RELATIONAL: 31,   // < <= > >= inside dist                               Left
-  EQUAL: 30,        // == != === !== ==? !=?                               Left
-  BITWISE_AND: 29,  // & (binary)                                          Left
-  EXCLUSIVE_OR: 28, // ^ ~^ ^~ (binary)                                    Left
-  BITWISE_OR: 27,   // | (binary)                                          Left
-
-  // A.10.30: The matches operator shall have higher precedence than the && and || operators
-  MATCHES: 26,
-
-  LOGICAL_AND: 25, // &&                                                 Left
-  LOGICAL_OR: 24,  // ||                                                 Left
-  CONDITIONAL: 23, // ?: (conditional operator)                          Right
-  IMPLICATION: 22, // -> <->                                             Right
-  ASSIGN: 21,      // = += -= *= /= %= &= ^= |= <<= >>= <<<=             None
-                   // >>>= := :/ <=
-  CONCAT: 20,      // {} {{}}                                            Concatenation
+  PARENT: 37,              // () [] :: .                                          Left
+  UNARY: 36,               // + - ! ~ & ~& | ~| ^ ~^ ^~ ++ -- (unary)
+  POWER: 35,               // **                                                  Left
+  MULTIPLY: 34,            // * / %                                               Left
+  ADD: 33,                 // + - (binary)                                        Left
+  SHIFT: 32,               // << >> <<< >>>                                       Left
+  RELATIONAL: 31,          // < <= > >= inside dist                               Left
+  EQUAL: 30,               // == != === !== ==? !=?                               Left
+  BITWISE_AND: 29,         // & (binary)                                          Left
+  EXCLUSIVE_OR: 28,        // ^ ~^ ^~ (binary)                                    Left
+  BITWISE_OR: 27,          // | (binary)                                          Left
+  MATCHES: 26,             // A.10.30: The matches operator shall have higher
+                           // precedence than the && and || operators
+  LOGICAL_AND: 25,         // &&                                                  Left
+  LOGICAL_OR: 24,          // ||                                                  Left
+  CONDITIONAL: 23,         // ?: (conditional operator)                           Right
+  IMPLICATION: 22,         // -> <->                                              Right
+  ASSIGN: 21,              // = += -= *= /= %= &= ^= |= <<= >>= <<<=              None
+                           // >>>= := :/ <=
+  CONCAT: 20,              // {} {{}}                                             Concatenation
 
   // Table 16-3—Sequence and property operator precedence and associativity
-  SPARENT: 19,    // [* ] [= ] [-> ]
-  SHARP2: 18,     // ##                                                  Left
-  throughout: 17, // throughout                                          Right
-  within: 16,     // within                                              Left
-  intersect: 15,  // intersect                                           Left
-  nexttime: 14,   // not, nexttime, s_nexttime                           —
-  and: 13,        // and                                                 Left
-  or: 12,         // or                                                  Left
-  iff: 11,        // iff                                                 Right
-  until: 10,      // until, s_until, until_with, s_until_with, implies   Right
-  INCIDENCE: 9,   // |->, |=>, #-#, #=#                                  Right
-  always: 8       // always, s_always, eventually, s_eventually,          —
-                  // if-else, case , accept_on, reject_on,
-                  // sync_accept_on, sync_reject_on
+  SEQ_PARENT: 19,          // [* ] [= ] [-> ]
+  SEQ_SHARP2: 18,          // ##                                                  Left
+  SEQ_THROUGHOUT: 17,      // throughout                                          Right
+  SEQ_WITHIN: 16,          // within                                              Left
+  SEQ_INTERSECT: 15,       // intersect                                           Left
+  PROP_NEXTTIME: 14,       // not, nexttime, s_nexttime                           —
+  PROP_SEQ_AND: 13,        // and                                                 Left
+  PROP_SEQ_OR: 12,         // or                                                  Left
+  PROP_IFF: 11,            // iff                                                 Right
+  PROP_UNTIL: 10,          // until, s_until, until_with, s_until_with, implies   Right
+  PROP_INCIDENCE: 9,       // |->, |=>, #-#, #=#                                  Right
+  PROP_ALWAYS: 8           // always, s_always, eventually, s_eventually,          —
+                           // if-else, case , accept_on, reject_on,
+                           // sync_accept_on, sync_reject_on
 };
 
 
@@ -767,7 +765,7 @@ const rules = {
     $.clocking_declaration,
     seq('default', choice(
       seq('clocking', $.clocking_identifier),
-      prec.right(PREC.iff, seq('disable', 'iff', $.expression_or_dist))
+      seq('disable', 'iff', $.expression_or_dist)
     ), ';'),
     ';'
   ),
@@ -1751,18 +1749,18 @@ const rules = {
     $.sequence_expr,
     seq(choice('strong', 'weak'), '(', $.sequence_expr, ')'),
     paren_expr($.property_expr),
-    prec(PREC.nexttime, seq('not', $.property_expr)),
-    prec.left(PREC.or, seq($.property_expr, 'or', $.property_expr)),
-    prec.left(PREC.and, seq($.property_expr, 'and', $.property_expr)),
-    prec.right(PREC.INCIDENCE, seq($.sequence_expr, choice('|->', '|=>', '#-#', '#=#'), $.property_expr)),
+    prec(PREC.PROP_NEXTTIME, seq('not', $.property_expr)),
+    prec.left(PREC.PROP_SEQ_OR, seq($.property_expr, 'or', $.property_expr)),
+    prec.left(PREC.PROP_SEQ_AND, seq($.property_expr, 'and', $.property_expr)),
+    prec.right(PREC.PROP_INCIDENCE, seq($.sequence_expr, choice('|->', '|=>', '#-#', '#=#'), $.property_expr)),
     prec.right(seq('if', '(', $.expression_or_dist, ')', $.property_expr, optseq('else', $.property_expr))),
     prec.right(seq('case', '(', $.expression_or_dist, ')', repeat1($.property_case_item), 'endcase')),
-    prec.left(PREC.nexttime, seq(choice('nexttime', 's_nexttime'), optseq('[', $.constant_expression, ']'), $.property_expr)),
-    prec.left(PREC.always, seq(choice('always', 's_eventually'), optseq('[', $.cycle_delay_const_range_expression, ']'), $.property_expr)),
-    prec.left(PREC.always, seq(choice('s_always', 'eventually'), '[', $.constant_range, ']', $.property_expr)),
-    prec.right(PREC.until, seq($.property_expr, choice('until', 's_until', 'until_with', 's_until_with', 'implies'), $.property_expr)),
-    prec.right(PREC.iff, seq($.property_expr, 'iff', $.property_expr)),
-    prec(PREC.always, seq(choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'), '(', $.expression_or_dist, ')', $.property_expr)),
+    prec.left(PREC.PROP_NEXTTIME, seq(choice('nexttime', 's_nexttime'), optseq('[', $.constant_expression, ']'), $.property_expr)),
+    prec.left(PREC.PROP_ALWAYS, seq(choice('always', 's_eventually'), optseq('[', $.cycle_delay_const_range_expression, ']'), $.property_expr)),
+    prec.left(PREC.PROP_ALWAYS, seq(choice('s_always', 'eventually'), '[', $.constant_range, ']', $.property_expr)),
+    prec.right(PREC.PROP_UNTIL, seq($.property_expr, choice('until', 's_until', 'until_with', 's_until_with', 'implies'), $.property_expr)),
+    prec.right(PREC.PROP_IFF, seq($.property_expr, 'iff', $.property_expr)),
+    prec(PREC.PROP_ALWAYS, seq(choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'), '(', $.expression_or_dist, ')', $.property_expr)),
     $.property_instance,
     seq($.clocking_event, $.property_expr)
   ),
@@ -1774,7 +1772,7 @@ const rules = {
 
   sequence_declaration: $ => seq(
     'sequence',
-    $.sequence_identifier,
+    field('name', $.sequence_identifier),
     optseq('(', optional($.sequence_port_list), ')'), ';',
     repeat($.assertion_variable_declaration),
     $.sequence_expr, optional(';'),
@@ -1806,12 +1804,12 @@ const rules = {
     seq($.expression_or_dist, optional($._boolean_abbrev)),
     seq($.sequence_instance, optional($.sequence_abbrev)),
     seq('(', $.sequence_expr, repseq(',', $._sequence_match_item), ')', optional($.sequence_abbrev)),
-    prec.left(PREC.and, seq($.sequence_expr, 'and', $.sequence_expr)),
-    prec.left(PREC.intersect, seq($.sequence_expr, 'intersect', $.sequence_expr)),
-    prec.left(PREC.or, seq($.sequence_expr, 'or', $.sequence_expr)),
+    prec.left(PREC.PROP_SEQ_AND, seq($.sequence_expr, 'and', $.sequence_expr)),
+    prec.left(PREC.SEQ_INTERSECT, seq($.sequence_expr, 'intersect', $.sequence_expr)),
+    prec.left(PREC.PROP_SEQ_OR, seq($.sequence_expr, 'or', $.sequence_expr)),
     seq('first_match', '(', $.sequence_expr, repseq(',', $._sequence_match_item), ')'),
-    prec.right(PREC.throughout, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
-    prec.left(PREC.within, seq($.sequence_expr, 'within', $.sequence_expr)),
+    prec.right(PREC.SEQ_THROUGHOUT, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
+    prec.left(PREC.SEQ_WITHIN, seq($.sequence_expr, 'within', $.sequence_expr)),
     seq($.clocking_event, $.sequence_expr)
   ),
 
@@ -1883,7 +1881,7 @@ const rules = {
     choice(
       seq(
         field('name', $.covergroup_identifier),
-        optional(seq('(', optional($.tf_port_list), ')')),
+        optseq('(', optional($.tf_port_list), ')'),
         optional($.coverage_event),
       ),
       seq('extends', field('parent', $.covergroup_identifier))
@@ -1893,9 +1891,12 @@ const rules = {
     enclosing('endgroup', $.covergroup_identifier),
   ),
 
-  coverage_spec_or_option: $ => choice(
-    seq(repeat($.attribute_instance), $._coverage_spec),
-    seq(repeat($.attribute_instance), $.coverage_option, ';')
+  coverage_spec_or_option: $ => seq(
+    repeat($.attribute_instance),
+    choice(
+      $._coverage_spec,
+      seq($.coverage_option, ';')
+    ),
   ),
 
   coverage_option: $ => choice(
@@ -1912,7 +1913,7 @@ const rules = {
   ),
 
   block_event_expression: $ => choice(
-    prec.left(PREC.or, seq($.block_event_expression, 'or', $.block_event_expression)),
+    prec.left(seq($.block_event_expression, 'or', $.block_event_expression)),
     seq('begin', $.hierarchical_btf_identifier),
     seq('end', $.hierarchical_btf_identifier)
   ),
@@ -1920,26 +1921,21 @@ const rules = {
   hierarchical_btf_identifier: $ => choice(
     $._hierarchical_tf_identifier,
     $._hierarchical_block_identifier,
-    // prec.left(PREC.PARENT, seq(
-    //   choice(seq($.hierarchical_identifier, '.'), $.class_scope),
-    //   $.method_identifier
-    // ))
     seq(
-      optional(choice(seq($.hierarchical_identifier, '.'), $.class_scope)),
+      optchoice(seq($.hierarchical_identifier, '.'), $.class_scope),
       $.method_identifier
     )
   ),
 
   cover_point: $ => seq(
-    optional(seq(optional($.data_type_or_implicit), $.cover_point_identifier, ':')),
+    optseq(optional($.data_type_or_implicit), field('name', $.cover_point_identifier), ':'),
     'coverpoint', $.expression,
-    // optional(prec.right(PREC.iff, seq('iff', '(', $.expression, ')'))),
-    optional(seq('iff', '(', $.expression, ')')),
+    optseq('iff', '(', $.expression, ')'),
     $.bins_or_empty
   ),
 
   bins_or_empty: $ => choice(
-    seq('{', repeat($.attribute_instance), repeat(seq($.bins_or_options, ';')), '}'),
+    seq('{', repeat($.attribute_instance), repseq($.bins_or_options, ';'), '}'),
     ';'
   ),
 
@@ -4425,7 +4421,7 @@ const rules = {
   covergroup_identifier: $ => $._identifier,
 
   // // covergroup_variable_identifier = variable_identifier
-  cover_point_identifier: $ => alias($._identifier, $.cover_point_identifier),
+  cover_point_identifier: $ => $._identifier,
   cross_identifier: $ => alias($._identifier, $.cross_identifier),
   dynamic_array_variable_identifier: $ => $.variable_identifier,
   enum_identifier: $ => alias($._identifier, $.enum_identifier),
