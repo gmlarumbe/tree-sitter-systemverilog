@@ -1798,7 +1798,7 @@ const rules = {
     'untyped'
   ),
 
-  sequence_expr: $ => choice(
+  sequence_expr: $ => prec('sequence_expr', choice(
     repseq1($.cycle_delay_range, $.sequence_expr),
     seq($.sequence_expr, repseq1($.cycle_delay_range, $.sequence_expr)),
     seq($.expression_or_dist, optional($._boolean_abbrev)),
@@ -1811,7 +1811,7 @@ const rules = {
     prec.right(PREC.SEQ_THROUGHOUT, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
     prec.left(PREC.SEQ_WITHIN, seq($.sequence_expr, 'within', $.sequence_expr)),
     seq($.clocking_event, $.sequence_expr)
-  ),
+  )),
 
   cycle_delay_range: $ => choice(
     seq('##',
@@ -2392,7 +2392,7 @@ const rules = {
   _generate_item: $ => choice(
     $._module_or_generate_item,
     $._interface_or_generate_item,
-    alias($.checker_or_generate_item, $.checker_item)
+    // alias($.checker_or_generate_item, $.checker_item)
   ),
 
 
@@ -2535,25 +2535,19 @@ const rules = {
 
   list_of_variable_assignments: $ => sepBy1(',', $.variable_assignment),
 
-  net_alias: $ => seq(
+  net_alias: $ => prec.right(PREC.ASSIGN, seq(
     'alias', $.net_lvalue, '=', sepBy1('=', $.net_lvalue), ';'
-  ),
+  )),
 
-  // INFO: Drom's one
-  // net_assignment: $ => prec.left(PREC.ASSIGN,
-  //   seq($.net_lvalue, '=', $.expression)
-  // ),
-  // INFO: Mine without prec.left
   net_assignment: $ => seq($.net_lvalue, '=', $.expression),
+
 
 // ** A.6.2 Procedural blocks and assignments
   initial_construct: $ => seq('initial', $.statement_or_null),
 
   always_construct: $ => seq($.always_keyword, $.statement),
 
-  always_keyword: $ => choice(
-    'always', 'always_comb', 'always_latch', 'always_ff'
-  ),
+  always_keyword: $ => choice('always', 'always_comb', 'always_latch', 'always_ff'),
 
   final_construct: $ => seq('final', $.function_statement),
 
@@ -2561,37 +2555,19 @@ const rules = {
     seq($.variable_lvalue, '=', $.delay_or_event_control, $.expression),
     seq($.nonrange_variable_lvalue, '=', $.dynamic_array_new),
     seq(
-      optchoice(
-        seq($.implicit_class_handle, '.'),
-        $.class_scope,
-        $.package_scope
-      ),
-      $._hierarchical_variable_identifier,
-      optional($.select),
-      '=',
-      $.class_new
+      optchoice(seq($.implicit_class_handle, '.'), $.class_scope, $.package_scope),
+      $._hierarchical_variable_identifier, optional($.select), '=', $.class_new
     ),
     $.operator_assignment,
     $.inc_or_dec_expression,
   ),
 
-  // INFO: Drom's one
-  // operator_assignment: $ => prec.left(PREC.ASSIGN,
-  //   seq($.variable_lvalue, $.assignment_operator, $.expression)
-  // ),
-  // INFO: Mine without prec.left
   operator_assignment: $ => seq($.variable_lvalue, $.assignment_operator, $.expression),
 
   assignment_operator: $ => choice(
     '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='
   ),
 
-  // nonblocking_assignment: $ => prec.left(PREC.ASSIGN, seq(
-  //   $.variable_lvalue,
-  //   '<=',
-  //   optional($.delay_or_event_control),
-  //   $.expression
-  // )),
   nonblocking_assignment: $ => seq(
     $.variable_lvalue,
     '<=',
@@ -2608,14 +2584,8 @@ const rules = {
     seq('release', $.net_lvalue)
   ),
 
-  // INFO: drom's one
-  // variable_assignment: $ => prec.left(PREC.ASSIGN, seq(
-  //   $.variable_lvalue,
-  //   '=',
-  //   $.expression
-  // )),
-  // INFO: Mine
   variable_assignment: $ => seq($.variable_lvalue, '=', $.expression),
+
 
 // ** A.6.3 Parallel and sequential blocks
   action_block: $ => prec('action_block', choice(
@@ -2624,20 +2594,21 @@ const rules = {
   )),
 
   seq_block: $ => seq(
-    'begin', optional(seq(':', $._block_identifier)),
+    'begin', optseq(':', $._block_identifier),
     repeat($.block_item_declaration),
     repeat($.statement_or_null),
-    'end', optional(seq(':', $._block_identifier))
+    enclosing('end', $._block_identifier)
   ),
 
   par_block: $ => seq(
-    'fork', optional(seq(':', $._block_identifier)),
+    'fork', optseq(':', $._block_identifier),
     repeat($.block_item_declaration),
     repeat($.statement_or_null),
-    $.join_keyword, optional(seq(':', $._block_identifier))
+    enclosing($.join_keyword, $._block_identifier)
   ),
 
   join_keyword: $ => choice('join', 'join_any', 'join_none'),
+
 
 // ** A.6.4 Statements
   statement_or_null: $ => prec('statement_or_null', choice(
@@ -2645,12 +2616,11 @@ const rules = {
     seq(repeat($.attribute_instance), ';')
   )),
 
-  statement: $ => prec('statement', choice(
-    seq(
-      optional(seq(field('block_name', $._block_identifier), ':')),
-      repeat($.attribute_instance),
-      $.statement_item
-    ))),
+  statement: $ => seq(
+    optseq(field('block_name', $._block_identifier), ':'),
+    repeat($.attribute_instance),
+    $.statement_item
+  ),
 
   statement_item: $ => prec('statement_item', choice(
     seq($.blocking_assignment, ';'),
@@ -2664,7 +2634,6 @@ const rules = {
     $.loop_statement,
     $.jump_statement,
     $.par_block,
-    $.seq_block,
     $.procedural_timing_control_statement,
     $.seq_block,
     $.wait_statement,
@@ -2673,9 +2642,7 @@ const rules = {
     $.randsequence_statement,
     $.randcase_statement,
     $.expect_property_statement,
-
-    // $.text_macro_usage, // INFO: Out of LRM
-    $._directives, // INFO: This one is not in the LRM but adds good support for lots of stuff
+    $._directives, // Out of LRM
   )),
 
   function_statement: $ => $.statement,
@@ -2684,8 +2651,6 @@ const rules = {
     $.function_statement,
     seq(repeat($.attribute_instance), ';')
   ),
-
-  variable_identifier_list: $ => sepBy1(',', $.variable_identifier),
 
 
 // ** A.6.5 Timing control statements
@@ -2708,43 +2673,19 @@ const rules = {
     )
   ),
 
-  // TODO: Seems very different from the one by drom, probably
-  // because of 2023 standard
   event_control: $ => choice(
     $.clocking_event,
     seq('@', '*'),
     seq('@', '(', '*', ")")
   ),
-  // event_control: $ => choice(
-  //   seq('@', $._hierarchical_event_identifier),
-  //   seq('@', '(', $.event_expression, ')'),
-  //   '@*',
-  //   seq('@', '(', '*', ')'),
-  //   seq('@', $.ps_or_hierarchical_sequence_identifier)
-  // ),
 
-  // INFO: Changed quite a lot from what Drom did
-  event_expression: $ => prec.left('event_expression', choice(
-    seq(optional($.edge_identifier), $.expression, optional(seq('iff', $.expression))),
-    // seq($.sequence_instance, optional(seq('iff', $.expression))),
-    seq($.event_expression, 'or', $.event_expression),
-    seq($.event_expression, ',', $.event_expression),
+  event_expression: $ => prec('event_expression', choice(
+    prec.dynamic(1, seq(optional($.edge_identifier), $.expression, optseq('iff', $.expression))),
+    seq($.sequence_instance, optseq('iff', $.expression)),
+    prec.left(seq($.event_expression, 'or', $.event_expression)),
+    prec.left('event_expression', seq($.event_expression, ',', $.event_expression)),
     seq('(', $.event_expression, ')')
   )),
-
-  // // event_expression_2: $ => choice( // reordered : help parser
-  // //   seq($.edge_identifier, $.expression), // reordered : help parser
-  // //   seq(
-  // //     optional($.edge_identifier),
-  // //     $.expression,
-  // //     optseq('iff', $.expression)
-  // //   ),
-  // //   // seq(
-  // //   //   $.sequence_instance,
-  // //   //   optseq('iff', $.expression)
-  // //   // ),
-  // //   seq('(', $.event_expression, ')')
-  // // ),
 
   _procedural_timing_control: $ => choice(
     $.delay_control,
@@ -3078,11 +3019,16 @@ const rules = {
   ),
 
   // INFO: Changed substantially from Drom's implementation, adapted more to 1800-2023
-  clocking_event: $ => prec('clocking_event', seq('@', choice(
-    $.ps_identifier,
-    $.hierarchical_identifier,
-    seq('(', $.event_expression, ')')
-  ))),
+  clocking_event: $ => prec('clocking_event',
+    seq(
+      '@',
+      choice(
+        $.ps_identifier,
+        $.hierarchical_identifier,
+        seq('(', $.event_expression, ')')
+      )
+    )
+  ),
 
   clocking_item: $ => choice(
     seq('default', $.default_skew, ';'),
@@ -3805,6 +3751,8 @@ const rules = {
     optional(seq('(', optional(choice($.variable_identifier_list, 'null')), ')')),
     optional(seq('with', optional(seq('(', optional($.identifier_list), ')')), $.constraint_block))
   ),
+
+  variable_identifier_list: $ => sepBy1(',', $.variable_identifier),
 
   identifier_list: $ => sepBy1(',', $._identifier),
 
@@ -4933,16 +4881,16 @@ module.exports = grammar({
     ['_package_or_generate_item_declaration', 'statement_item'],
 
 
-    // Common item for module/package without context -> Consider it a package_item
+    // Common item for module/package without context -> Consider it a module item
     //
     // _package_or_generate_item_declaration  •  ';'  …
     // 1:  (_module_or_generate_item_declaration  _package_or_generate_item_declaration)  •  ';'  …  (precedence: '_module_or_generate_item_declaration')
     // 2:  (_package_item  _package_or_generate_item_declaration)  •  ';'  …                          (precedence: '_package_item')
-    ['_package_item', '_module_or_generate_item_declaration'],
+    ['_module_or_generate_item_declaration', '_package_item'],
     // timeunits_declaration  •  ';'  …
     // 1:  (_non_port_module_item  timeunits_declaration)  •  ';'  …  (precedence: '_non_port_module_item')
     // 2:  (_package_item  timeunits_declaration)  •  ';'  …          (precedence: '_package_item')
-    ['_package_item', '_non_port_module_item'],
+    ['_non_port_module_item', '_package_item'],
 
 
     // First appearing timeunits being part of the declaration have higher precedence than the item.
@@ -5168,8 +5116,6 @@ module.exports = grammar({
     ['_module_common_item', 'checker_or_generate_item'],
 
 
-
-
     // module, interface and program instantiations have the exact same syntax:
     //
     //   module_instantiation  •  ';'  …
@@ -5182,6 +5128,41 @@ module.exports = grammar({
     // 2:  'bind'  bind_target_scope  (interface_instantiation  module_instantiation)  •  ';'  …  (precedence: 'interface_instantiation')
     // 3:  'bind'  bind_target_scope  (program_instantiation  module_instantiation)  •  ';'  …    (precedence: 'program_instantiation')
     ['_bind_instantiation', 'interface_instantiation', 'program_instantiation'],
+
+
+    // The first else on an immediate assertion inside an if-else block corresponds to the action block of the assertion
+    //
+    //   'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  statement  •  'else'  …
+    //   1:  'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  (action_block  statement  •  'else'  statement_or_null)  (precedence: 'action_block')
+    //   2:  'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  (statement_or_null  statement)  •  'else'  …             (precedence: 'statement_or_null')
+    ['action_block', 'statement_or_null'],
+
+
+    // @ plus parenthesis means an event (e.g @(posedge clk))
+    //
+    // module_nonansi_header  'initial'  '@'  '('  '('  expression  •  ')'  …
+    // 1:  module_nonansi_header  'initial'  '@'  '('  '('  (event_expression  expression)  •  ')'  …      (precedence: 'event_expression', associativity: Left)
+    // 2:  module_nonansi_header  'initial'  '@'  '('  '('  (mintypmax_expression  expression)  •  ')'  …  (precedence: 'mintypmax_expression')
+    ['event_expression', 'mintypmax_expression'],
+
+
+    // Sequence declarations have arguments in ports
+    //
+    //   'sequence'  sequence_identifier  '('  _identifier  '='  '$'  •  ')'  …
+    //   1:  'sequence'  sequence_identifier  '('  _identifier  '='  (_sequence_actual_arg  '$')  •  ')'  …
+    //   2:  'sequence'  sequence_identifier  '('  _identifier  '='  (primary  '$')  •  ')'  …               (precedence: 'primary')
+    ['_sequence_actual_arg', 'primary'],
+    ['_sequence_actual_arg', 'event_expression'],
+
+
+    // $.checker_instantiation with sequence instance as an ordered arg
+    // Probably doesn't matter much which one to choose, but seems more reasonable to take $.event_expression
+    // since it is a branch of $._sequence_actual_arg
+    //
+    // _identifier  name_of_instance  '('  sequence_instance  •  ')'  …
+    // 1:  _identifier  name_of_instance  '('  (event_expression  sequence_instance)  •  ')'  …  (precedence: 'event_expression')
+    // 2:  _identifier  name_of_instance  '('  (sequence_expr  sequence_instance)  •  ')'  …
+    ['event_expression', 'sequence_expr'],
 
 
 
@@ -5270,12 +5251,6 @@ module.exports = grammar({
     //     1:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (constant_primary  _identifier)  •  '/'  …         (precedence: 'ps_parameter_identifier')
     //     2:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (hierarchical_identifier  _identifier)  •  '/'  …  (precedence: 'hierarchical_identifier')
     // ['ps_parameter_identifier', 'hierarchical_identifier'],
-
-
-    // module_nonansi_header  'initial'  '@'  '('  '('  expression  •  ')'  …
-    // 1:  module_nonansi_header  'initial'  '@'  '('  '('  (event_expression  expression)  •  ')'  …      (precedence: 'event_expression', associativity: Left)
-    // 2:  module_nonansi_header  'initial'  '@'  '('  '('  (mintypmax_expression  expression)  •  ')'  …  (precedence: 'mintypmax_expression')
-    ['event_expression', 'mintypmax_expression'],
 
 
     // First one doesn't really make much sense:
@@ -5380,23 +5355,6 @@ module.exports = grammar({
     // 2:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …      (precedence: 'ps_parameter_identifier')
     // 3:  ''{'  (constant_primary  class_scope  _identifier)  •  ':'  …  (precedence: 'ps_parameter_identifier')
     ['ps_parameter_identifier', 'ps_type_identifier', '_structure_pattern_key'],
-
-
-    // On action block, else must be related to it
-    //
-    //   'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  statement  •  'else'  …
-    //   1:  'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  (action_block  statement  •  'else'  statement_or_null)  (precedence: 'action_block')
-    //   2:  'wait_order'  '('  hierarchical_identifier  ')'  'wait_order'  '('  hierarchical_identifier  ')'  (statement_or_null  statement)  •  'else'  …             (precedence: 'statement_or_null')
-    ['action_block', 'statement_or_null'],
-
-
-    // Conflict exclusive to sequence declarations:
-    //
-    //   'sequence'  sequence_identifier  '('  _identifier  '='  '$'  •  ')'  …
-    //   1:  'sequence'  sequence_identifier  '('  _identifier  '='  (_sequence_actual_arg  '$')  •  ')'  …
-    //   2:  'sequence'  sequence_identifier  '('  _identifier  '='  (primary  '$')  •  ')'  …               (precedence: 'primary')
-    ['_sequence_actual_arg', 'primary'],
-    ['_sequence_actual_arg', 'event_expression'],
 
 
     // 'sequence'  sequence_identifier  ';'  '##'  '['  constant_expression  ':'  '$'  •  ']'  …
@@ -5548,6 +5506,12 @@ module.exports = grammar({
     // 1:  'assign'  (delay3  '#'  delay_value)  •  '{'  …
     // 2:  'assign'  (delay_control  '#'  delay_value)  •  '{'  …
     [$.delay3, $.delay_control],
+
+
+    // Needed to detect extern module/interface/program
+    [$.module_declaration, $._module_header],
+    [$.interface_declaration, $._interface_header],
+    [$.program_declaration, $._program_header],
 
 
     // INFO: To be reviewed
@@ -6070,12 +6034,6 @@ module.exports = grammar({
     [$.bind_target_scope],
     [$.bind_target_scope, $.hierarchical_identifier],
 
-    // INFO: These ones need to be here:
-    // module_declaration conflict, needed to detect extern module overrides
-    [$.module_declaration, $._module_header],
-    [$.interface_declaration, $._interface_header],
-    [$.program_declaration, $._program_header],
-
     // TODO: Adding branches on constant_primary
     [$.constant_primary],
 
@@ -6116,8 +6074,6 @@ module.exports = grammar({
     [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
     [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_sequence_identifier],
 
-    // TODO: After adding checker as a generate item:
-    [$.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.checker_instantiation],
   ],
 
 });
