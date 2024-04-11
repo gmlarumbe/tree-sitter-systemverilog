@@ -2679,6 +2679,15 @@ const rules = {
     seq('@', '(', '*', ")")
   ),
 
+  clocking_event: $ => seq(
+    '@',
+    choice(
+      $.ps_identifier,
+      $.hierarchical_identifier,
+      seq('(', $.event_expression, ')')
+    )
+  ),
+
   event_expression: $ => prec('event_expression', choice(
     prec.dynamic(1, seq(optional($.edge_identifier), $.expression, optseq('iff', $.expression))),
     seq($.sequence_instance, optseq('iff', $.expression)),
@@ -2718,6 +2727,7 @@ const rules = {
     seq('disable', $._hierarchical_block_identifier, ';'),
     seq('disable', 'fork', ';')
   ),
+
 
 // ** A.6.6 Conditional statements
   conditional_statement: $ => prec.right(seq(
@@ -2919,7 +2929,7 @@ const rules = {
   ),
 
   deferred_immediate_assertion_item: $ => seq(
-    optional(seq($._block_identifier, ':')),
+    optseq($._block_identifier, ':'),
     $._deferred_immediate_assertion_statement
   ),
 
@@ -2940,6 +2950,12 @@ const rules = {
     $.simple_immediate_cover_statement
   ),
 
+  _deferred_immediate_assertion_statement: $ => choice(
+    $.deferred_immediate_assert_statement,
+    $.deferred_immediate_assume_statement,
+    $.deferred_immediate_cover_statement
+  ),
+
   simple_immediate_assert_statement: $ => seq(
     'assert', '(', $.expression, ')', $.action_block
   ),
@@ -2952,29 +2968,18 @@ const rules = {
     'cover', '(', $.expression, ')', $.statement_or_null
   ),
 
-  _deferred_immediate_assertion_statement: $ => choice(
-    $.deferred_immediate_assert_statement,
-    $.deferred_immediate_assume_statement,
-    $.deferred_immediate_cover_statement
-  ),
-
   deferred_immediate_assert_statement: $ => seq(
-    'assert',
-    choice('#0', 'final'),
-    '(', $.expression, ')', $.action_block
+    'assert', choice('#0', 'final'), '(', $.expression, ')', $.action_block
   ),
 
   deferred_immediate_assume_statement: $ => seq(
-    'assume',
-    choice('#0', 'final'),
-    '(', $.expression, ')', $.action_block
+    'assume', choice('#0', 'final'), '(', $.expression, ')', $.action_block
   ),
 
   deferred_immediate_cover_statement: $ => seq(
-    'cover',
-    choice('#0', 'final'),
-    '(', $.expression, ')', $.statement_or_null
+    'cover', choice('#0', 'final'), '(', $.expression, ')', $.statement_or_null
   ),
+
 
 // ** A.6.11 Clocking block
   clocking_declaration: $ => choice(
@@ -2990,18 +2995,6 @@ const rules = {
       field('name', optional($.clocking_identifier)),
       $.clocking_event, ';',
       enclosing('endclocking', $.clocking_identifier)
-    )
-  ),
-
-  // INFO: Changed substantially from Drom's implementation, adapted more to 1800-2023
-  clocking_event: $ => prec('clocking_event',
-    seq(
-      '@',
-      choice(
-        $.ps_identifier,
-        $.hierarchical_identifier,
-        seq('(', $.event_expression, ')')
-      )
     )
   ),
 
@@ -3026,35 +3019,25 @@ const rules = {
 
   list_of_clocking_decl_assign: $ => sepBy1(',', $.clocking_decl_assign),
 
-  clocking_decl_assign: $ => seq($._signal_identifier, optional(seq('=', $.expression))),
+  clocking_decl_assign: $ => seq($._signal_identifier, optseq('=', $.expression)),
 
   clocking_skew: $ => choice(
     seq($.edge_identifier, optional($.delay_control)),
     $.delay_control
   ),
 
-  // clocking_drive: $ => prec(PREC.ASSIGN, seq(
-  //   $.clockvar_expression, '<=', optional($.cycle_delay), $.expression
-  // )),
   clocking_drive: $ => seq(
     $.clockvar_expression, '<=', optional($.cycle_delay), $.expression
   ),
 
-  // INFO: Original by drom
-  // cycle_delay: $ => prec.left(seq('##', choice(
-  //   $.integral_number,
-  //   $._identifier,
-  //   seq('(', $.expression, ')')
-  // ))),
-  // End of INFO
-
-  // INFO: By Larumbe
-  cycle_delay: $ => seq('##', choice(
-    $.integral_number,
-    $._identifier,
-    seq('(', $.expression, ')')
-  )),
-  // End of INFO
+  cycle_delay: $ => seq(
+    '##',
+    choice(
+      $.integral_number,
+      $._identifier,
+      seq('(', $.expression, ')')
+    )
+  ),
 
   clockvar: $ => $.hierarchical_identifier,
 
@@ -3062,6 +3045,7 @@ const rules = {
     $.clockvar,
     optional($.select)
   ),
+
 
 // ** A.6.12 Randsequence
   randsequence_statement: $ => seq(
@@ -3071,15 +3055,21 @@ const rules = {
   ),
 
   rs_production: $ => seq(
-    optional($.data_type_or_void), $.rs_production_identifier,
-    optional(seq('(', $.tf_port_list, ')')), ':', sepBy1('|', $.rs_rule), ';'
+    optional($.data_type_or_void),
+    $.rs_production_identifier,
+    optseq('(', $.tf_port_list, ')'),
+    ':',
+    sepBy1('|', $.rs_rule),
+    ';'
   ),
 
-  rs_rule: $ => seq($.rs_production_list, optional(seq(':=', $.rs_weight_specification, optional($.rs_code_block)))),
+  rs_rule: $ => seq(
+    $.rs_production_list, optseq(':=', $.rs_weight_specification, optional($.rs_code_block))
+  ),
 
   rs_production_list: $ => choice(
     repeat1($.rs_prod),
-    seq('rand', 'join', optional(seq('(', $.expression, ')')), $.rs_production_item, repeat1($.rs_production_item))
+    seq('rand', 'join', optseq('(', $.expression, ')'), $.rs_production_item, repeat1($.rs_production_item))
   ),
 
   rs_weight_specification: $ => choice(
@@ -3099,11 +3089,11 @@ const rules = {
   ),
 
   rs_production_item: $ => seq(
-    $.rs_production_identifier, optional(seq('(', optional($.list_of_arguments), ')'))
+    $.rs_production_identifier, optseq('(', optional($.list_of_arguments), ')')
   ),
 
   rs_if_else: $ => prec.right(seq(
-    'if', '(', $.expression, ')', $.rs_production_item, optional(seq('else', $.rs_production_item))
+    'if', '(', $.expression, ')', $.rs_production_item, optseq('else', $.rs_production_item)
   )),
 
   rs_repeat: $ => seq(
@@ -5196,14 +5186,6 @@ module.exports = grammar({
     // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  _identifier)  •  '/'  …  (precedence: 'ps_parameter_identifier')
     // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  _identifier)  •  '/'  …           (precedence: 'primary')
     // ['ps_parameter_identifier', 'primary'],
-
-
-
-
-    // module_nonansi_header  always_keyword  '@'  _identifier  •  ';'  …
-    // 1:  module_nonansi_header  always_keyword  '@'  (ps_identifier  _identifier)  •  ';'  …
-    // 2:  module_nonansi_header  always_keyword  (clocking_event  '@'  _identifier)  •  ';'  …  (precedence: 0, associativity: Left)
-    ['clocking_event', 'ps_identifier'],
 
 
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  class_scope  •  simple_identifier  …
