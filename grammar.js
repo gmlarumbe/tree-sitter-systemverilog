@@ -2069,8 +2069,8 @@ const rules = {
 
 // ** A.2.12 Let declarations
   let_declaration: $ => seq(
-    'let', $.let_identifier,
-    optional(seq('(', optional($.let_port_list), ')')),
+    'let', field('name', $.let_identifier),
+    optseq('(', optional($.let_port_list), ')'),
     '=', $.expression, ';'
   ),
 
@@ -2080,22 +2080,22 @@ const rules = {
 
   let_port_item: $ => seq(
     repeat($.attribute_instance),
-    optional($.let_formal_type1),
-    $.formal_port_identifier,
+    optional($.let_formal_type), // $.let_formal_type contains branch $.data_type_or_implicit which could match empty string
+    field('formal_port', $.formal_port_identifier),
     repeat($._variable_dimension),
-    optional(seq('=', $.expression))
+    optseq('=', $.expression)
   ),
 
-  let_formal_type1: $ => choice(
+  let_formal_type: $ => choice(
     $.data_type_or_implicit,
     'untyped'
   ),
 
-  let_expression: $ => prec.left(seq(
+  let_expression: $ => seq(
     optional($.package_scope),
     $.let_identifier,
-    optional(seq('(', optional($.let_list_of_arguments), ')'))
-  )),
+    optseq('(', optional($.let_list_of_arguments), ')')
+  ),
 
   let_list_of_arguments: $ => alias($.list_of_arguments, $.let_list_of_arguments),
 
