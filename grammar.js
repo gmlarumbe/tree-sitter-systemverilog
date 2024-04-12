@@ -4023,65 +4023,114 @@ const rules = {
     $.hex_number
   ),
 
-  decimal_number: $ => choice(
+  decimal_number: $ => prec('decimal_number', choice(
     $.unsigned_number,
-    token(seq(
-      optional(seq(/[1-9][0-9_]*/, /\s*/)),
-      /'[sS]?[dD]/,
-      /\s*/,
-      /[0-9][0-9_]*/
-    )),
-    token(seq(
-      optional(seq(/[1-9][0-9_]*/, /\s*/)),
-      /'[sS]?[dD]/,
-      /\s*/,
-      /[xXzZ?][_]*/
-    ))
+    seq(
+      field('size', optional($._size)),
+      field('base', $.decimal_base),
+      field('value', choice(
+        $.unsigned_number,
+        seq($.x_digit, token.immediate(/_*/)),
+        seq($.z_digit, token.immediate(/_*/)),
+      ))
+    )
+  )),
+
+  binary_number: $ => seq(
+    field('size', optional($._size)),
+    field('base', $.binary_base),
+    field('value', $.binary_value)
   ),
 
-  binary_number: $ => token(seq(
-    optional(seq(/[1-9][0-9_]*/, /\s*/)),
-    /'[sS]?[bB]/,
-    /\s*/,
-    /[01xXzZ?][01xXzZ?_]*/
-  )),
+  octal_number: $ => seq(
+    field('size', optional($._size)),
+    field('base', $.octal_base),
+    field('value', $.octal_value)
+  ),
 
-  octal_number: $ => token(seq(
-    optional(seq(/[1-9][0-9_]*/, /\s*/)),
-    /'[sS]?[oO]/,
-    /\s*/,
-    /[0-7xXzZ?][0-7xXzZ?_]*/
-  )),
+  hex_number: $ => seq(
+    field('size', optional($._size)),
+    field('base', $.hex_base),
+    field('value', $.hex_value)
+  ),
 
-  hex_number: $ => token(seq(
-    optional(seq(/[1-9][0-9_]*/, /\s*/)),
-    /'[sS]?[hH]/,
-    /\s*/,
-    /[0-9a-fA-FxXzZ?][0-9a-fA-FxXzZ?_]*/
-  )),
+  sign: $ => token(choice('+', '-')), // Unused, leave as a reference
 
-  // // NOTE: Embedded spaces are illegal.
-  // non_zero_unsigned_number: $ => token(/[1-9][0-9_]*/),
+  _size: $ => prec('_size', $.unsigned_number),
 
   real_number: $ => choice(
     $.fixed_point_number,
-    token(/[0-9][0-9_]*(\.[0-9][0-9_]*)?[eE][+-]?[0-9][0-9_]*/)
+    token(seq(
+      /[0-9][0-9_]*/,      // $.unsigned_number
+      /(\.[0-9][0-9_]*)?/, // optseq('.', $.unsigned_number)
+      /[eE]/,              // $.exp
+      /[+-]?/,             // optional($.sign),
+      /[0-9][0-9_]*/       // $.unsigned_number
+    ))
   ),
 
-  fixed_point_number: $ => token(/[0-9][0-9_]*\.[0-9][0-9_]*/),
+  fixed_point_number: $ => token(seq(
+    /[0-9][0-9_]*/, // $.unsigned_number
+    /\./,           // .
+    /[0-9][0-9_]*/  // $.unsigned_number
+  )),
 
-  unsigned_number: $ => token(/[0-9][0-9_]*/),
+  exp: $ => token(/[eE]/), // Unused, leave as a reference
 
-  // // The apostrophe ( ' ) in unbased_unsized_literal shall not be followed by white_space.
-  unbased_unsized_literal: $ => choice('\'0', '\'1', /'[xXzZ]/),
+  unsigned_number: $ => token(seq(
+    /[0-9]/,  // $.decimal_digit,
+    /[0-9_]*/ // repeat(choice(/_/, $.decimal_digit))
+  )),
+
+  binary_value: $ => token(seq(
+    /[xXzZ?0-1]/,   // $.binary_digit,
+    /[xXzZ?0-1_]*/, // repeat(choice(/_/, $.binary_digit))
+  )),
+
+  octal_value: $ => token(seq(
+    /[xXzZ?0-7]/,   // $.octal_digit,
+    /[xXzZ?0-7_]*/, // repeat(choice('_', $.octal_digit))
+  )),
+
+  hex_value: $ => token(seq(
+    /[xXzZ?0-9a-fA-F]/,   // $.hex_digit,
+    /[xXzZ?0-9a-fA-F_]*/, // repeat(choice('_', $.hex_digit))
+  )),
+
+  decimal_base: $ => /\'[sS]?[dD]/,
+
+  binary_base: $ => /\'[sS]?[bB]/,
+
+  octal_base: $ => /\'[sS]?[oO]/,
+
+  hex_base: $ => /\'[sS]?[hH]/,
+
+  decimal_digit: $ => /[0-9]/, // Unused, leave as a reference
+
+  binary_digit: $ => choice($.x_digit, $.z_digit, /[0-1]/), // Unused, leave as a reference
+
+  octal_digit: $ => choice($.x_digit, $.z_digit, /[0-7]/), // Unused, leave as a reference
+
+  hex_digit: $ => choice($.x_digit, $.z_digit, /[0-9a-fA-F]/), // Unused, leave as a reference
+
+  x_digit: $ => /[xX]/,
+
+  z_digit: $ => /[zZ?]/,
+
+  unbased_unsized_literal: $ => choice('\'0', '\'1', /'[xXzZ]/), // A.10.53: The apostrophe in unbased_unsized_literal shall not be followed by white_space
+
+
+// ** A.8.8 Strings
+  // TODO: Move them to this section
+
 
 // * A.9 General
 // ** A.9.1 Attributes
   attribute_instance: $ => seq('(*', sepBy1(',', $.attr_spec), '*)'),
 
-  attr_spec: $ => seq($._attr_name, optional(seq('=', $.constant_expression))),
+  attr_spec: $ => seq($.attr_name, optseq('=', $.constant_expression)),
 
-  _attr_name: $ => $._identifier,
+  attr_name: $ => $._identifier,
 
 // ** A.9.2 Comments
   // comment: $ => one_line_comment | block_comment
@@ -4497,14 +4546,15 @@ const rules = {
     $.time_literal, // time_unit,
     '/',
     $.time_literal, // time_precision
-    '\n' // TODO: Are newlines required?
+    '\n' // TODO: Are newlines required? Check tree-sitter-c grammar.js: token.immediate(/\r?\n/),
+
   ),
 
 // ** 22-8 default_nettype
   default_nettype_compiler_directive: $ => seq(
     directive('default_nettype'),
     $.default_nettype_value,
-    // '\n' ; DANGER:
+    // '\n' ; DANGER: Check tree-sitter-c grammar.js: token.immediate(/\r?\n/),
   ),
 
   default_nettype_value: $ => choice('wire', 'tri', 'tri0', 'tri1', 'wand', 'triand', 'wor', 'trior', 'trireg', 'uwire', 'none'),
@@ -4693,6 +4743,13 @@ module.exports = grammar({
     // $.pragma_keyword,
     // $.incomplete_class_scoped_type,
     // $._constant_assignment_pattern_expression,
+
+    $.attr_name,
+
+    // $.hex_digit,
+    // $.x_digit,
+    // $.z_digit,
+
   ],
 
 // ** Precedences
@@ -5032,6 +5089,13 @@ module.exports = grammar({
     // 2:  '('  (primary  assignment_pattern_expression)  •  ':'  …                                  (precedence: 'primary')
     ['primary', '_constant_assignment_pattern_expression'],
 
+
+    // A number before the base is always the $._size
+    //
+    // '##'  unsigned_number  •  decimal_base  …
+    // 1:  '##'  (_size  unsigned_number)  •  decimal_base  …           (precedence: 0)
+    // 2:  '##'  (decimal_number  unsigned_number)  •  decimal_base  …
+    ['_size', 'decimal_number'],
 
 
 
