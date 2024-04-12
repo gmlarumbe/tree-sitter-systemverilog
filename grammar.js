@@ -3591,52 +3591,26 @@ const rules = {
 // ** A.8.2 Subroutine calls
   constant_function_call: $ => $.function_subroutine_call,
 
-  // tf_call: $ => prec.left(seq(
-  //   $._hierarchical_tf_identifier, // FIXME
-  //   // $.ps_or_hierarchical_tf_identifier,
-  //   repeat($.attribute_instance),
-  //   optional($.list_of_arguments_parent)
-  // )),
   tf_call: $ => prec('tf_call', seq(
     $.ps_or_hierarchical_tf_identifier,
     repeat($.attribute_instance),
-    optional(seq('(', optional($.list_of_arguments), ')'))
+    optseq('(', optional($.list_of_arguments), ')')
   )),
 
-  // system_tf_call: $ => prec.left(seq(
-  //   $.system_tf_identifier,
-  //   optional(choice(
-  //     $.list_of_arguments_parent,
-  //     seq(
-  //       '(',
-  //       choice(
-  //         seq($.data_type, optseq(',', $.expression)),
-  //         prec.left(seq(
-  //           sep1(',', $.expression),
-  //           optseq(',', optional($.clocking_event))
-  //         ))
-  //       ),
-  //       ')'
-  //     )
-  //   ))
-  // )),
   system_tf_call: $ => seq(
     $.system_tf_identifier,
     choice(
-      optional(seq('(', optional($.list_of_arguments), ')')),
-      seq('(',
-          choice(
-            seq($.data_type, optional(seq(',', $.expression))),
-            seq(sepBy1(',', $.expression), optional(seq(',', $.clocking_event))),
-          ),
-          ')')
-    )),
+      optseq('(', optional($.list_of_arguments), ')'),
+      seq('(', $.data_type, optseq(',', $.expression), ')'),
+      seq('(', sepBy1(',', $.expression), optseq(',', $.clocking_event), ')')
+    )
+  ),
 
   subroutine_call: $ => choice(
     $.tf_call,
     $.system_tf_call,
     $.method_call,
-    seq(optional(seq('std', '::')), $.randomize_call),
+    seq(optseq('std', '::'), $.randomize_call),
   ),
 
   function_subroutine_call: $ => $.subroutine_call,
@@ -3645,10 +3619,7 @@ const rules = {
 
   method_call: $ => seq(
     $._method_call_root,
-    choice(
-      '.',
-      '::'  // INFO Out of LRM: Needed to support static method calls
-    ),
+    choice('.', '::'), // :: Out of LRM: Needed to support static method calls
     $.method_call_body
   ),
 
@@ -3656,7 +3627,7 @@ const rules = {
     seq(
       $.method_identifier,
       repeat($.attribute_instance),
-      optional(seq('(', optional($.list_of_arguments), ')'))
+      optseq('(', optional($.list_of_arguments), ')')
     ),
     $._built_in_method_call
   ),
@@ -3669,56 +3640,34 @@ const rules = {
   array_manipulation_call: $ => seq(
     $.array_method_name,
     repeat($.attribute_instance),
-    optional(seq('(', optional($.list_of_arguments), ')')),
-    optional(seq('with', '(', $.expression, ')'))
+    optseq('(', optional($.list_of_arguments), ')'),
+    optseq('with', '(', $.expression, ')')
   ),
-
-  // randomize_call: $ => prec.left(seq(
-  //   'randomize',
-  //   repeat($.attribute_instance),
-  //   optseq(
-  //     '(',
-  //     optional(choice(
-  //       $.variable_identifier_list,
-  //       'null'
-  //     )),
-  //     ')'
-  //   ),
-  //   optseq(
-  //     'with',
-  //     optseq(
-  //       '(',
-  //       optional($.identifier_list),
-  //       ')'
-  //     ),
-  //     $.constraint_block
-  //   )
-  // )),
 
   randomize_call: $ => seq(
     'randomize', repeat($.attribute_instance),
-    optional(seq('(', optional(choice($.variable_identifier_list, 'null')), ')')),
-    optional(seq('with', optional(seq('(', optional($.identifier_list), ')')), $.constraint_block))
+    optseq('(', optchoice($.variable_identifier_list, 'null'), ')'),
+    optseq('with', optseq('(', optional($.identifier_list), ')'), $.constraint_block)
   ),
 
   variable_identifier_list: $ => sepBy1(',', $.variable_identifier),
 
   identifier_list: $ => sepBy1(',', $._identifier),
 
+  // TODO: Modified with respect to LRM:
+  // The $.implicit_class_handle should be matched by $.primary second
+  // condition. However there must be some precedences that prevent this from
+  // being detected. This workaround might complicate a bit more the parser but
+  // seems to work well.
   _method_call_root: $ => prec('_method_call_root', choice(
     prec.dynamic(0, $.primary),
-    // INFO: Modified wrt LRM, the implicit_class_handle should be matched by the $.primary
-    // second condition. However there must be some precedences that prevent this from being
-    // detected. This workaround might complicate a bit more the parser but seems to work well.
-    prec.dynamic(1, seq($.implicit_class_handle, optional($.select))),
-    // End of INFO
-    $.class_type, // INFO: Out of LRM: Added to support calling parameterized static methods
-    $.text_macro_usage,// INFO: Out of LRM, added to fix parsing errors in UVM
+    prec.dynamic(1, seq($.implicit_class_handle, optional($.select))), // optional($.select) out of LRM
+    $.class_type,       // Out of LRM: Added to support calling parameterized static methods
+    $.text_macro_usage, // Out of LRM, Added to fix parsing errors in UVM
   )),
 
-  array_method_name: $ => choice(
-    $.method_identifier, 'unique', 'and', 'or', 'xor'
-  ),
+  array_method_name: $ => choice($.method_identifier, 'unique', 'and', 'or', 'xor'),
+
 
 // ** A.8.3 Expressions
   inc_or_dec_expression: $ => prec.left(PREC.UNARY, choice(
