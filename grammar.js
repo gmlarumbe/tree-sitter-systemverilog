@@ -4164,13 +4164,14 @@ const rules = {
   // http://stackoverflow.com/questions/13014947/regex-to-match-a-c-style-multiline-comment/36328890#36328890
   // from: https://github.com/tree-sitter/tree-sitter-c/blob/master/grammar.js
   comment: $ => token(choice(
-    seq('//', /.*/),
-    seq(
+    seq('//', /.*/), // $._one_line_comment -> seq('//', $.comment_text)
+    seq(             // $._block_comment
       '/*',
       /[^*]*\*+([^/*][^*]*\*+)*/,
       '/'
     )
   )),
+
 
 // ** A.9.3 Identifiers
   // _array_identifier: $ => $._identifier,
