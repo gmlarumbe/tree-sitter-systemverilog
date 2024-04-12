@@ -3888,17 +3888,6 @@ const rules = {
 
   time_unit: $ => choice('s', 'ms', 'us', 'ns', 'ps', 'fs'),
 
-  string_literal: $ => seq(
-    '"',
-    repeat(choice(
-      token.immediate(/[^\\"]+/),
-      // EXTENDS Verilog spec with escape sequences
-      token.immediate(seq('\\', /./)),
-      token.immediate(seq('\\', '\n'))
-    )),
-    '"'
-  ),
-
   implicit_class_handle: $ => prec('implicit_class_handle', choice(
     seq('this', optional(seq('.', 'super'))),
     'super'
@@ -4121,7 +4110,41 @@ const rules = {
 
 
 // ** A.8.8 Strings
-  // TODO: Move them to this section
+  string_literal: $ => choice(
+    $._quoted_string,
+    $._triple_quoted_string
+  ),
+
+  _quoted_string: $ => seq(
+    '"',
+    repeat(choice(
+      $._quoted_string_item,
+      $._string_escape_seq
+    )),
+    '"'
+  ),
+
+  _triple_quoted_string: $ => seq(
+    '"""',
+    repeat(choice(
+      $._triple_quoted_string_item,
+      $._string_escape_seq
+    )),
+    '"""'
+  ),
+
+  _quoted_string_item: $ => token.immediate(prec(1, /[^\\"\n]+/)), // any_ASCII_character except \ or newline or "
+
+  _triple_quoted_string_item: $ => token.immediate(prec(1, /[^\\]+/)), //  any_ASCII_character except \
+
+  _string_escape_seq: $ => token(prec(1, seq(
+    '\\',
+    choice(
+      /[^x0-7]/,           // \any_ASCII_character (exclude 'x' and '0-7' since those would be matched by following cases)
+      /[0-7]{1,3}/,        // \one_to_three_digit_octal_number
+      /x[0-9a-fA-F]{1,2}/, // \x one_to_two_digit_hex_number
+    )
+  ))),
 
 
 // * A.9 General
@@ -4411,6 +4434,7 @@ const rules = {
 
 
 // ** 22-4 `include
+  // TODO: Review: check if can be rewritten with the elements in A.8.8
   double_quoted_string: $ => seq(
     '"', token.immediate(prec(1, /[^\\"\n]+/)), '"'
   ),
