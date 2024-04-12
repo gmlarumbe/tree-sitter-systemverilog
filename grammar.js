@@ -2730,8 +2730,8 @@ const rules = {
   ),
 
   event_trigger: $ => choice(
-    seq('->', $._hierarchical_event_identifier, optional($.nonrange_select1), ';'),
-    seq('->>', optional($.delay_or_event_control), $._hierarchical_event_identifier, optional($.nonrange_select1), ';')
+    seq('->', $._hierarchical_event_identifier, optional($.nonrange_select), ';'),
+    seq('->>', optional($.delay_or_event_control), $._hierarchical_event_identifier, optional($.nonrange_select), ';')
   ),
 
   disable_statement: $ => choice(
@@ -3928,14 +3928,14 @@ const rules = {
     )
   ),
 
-  // nonrange_select1: $ => choice( // reordered -> non empty
+  // nonrange_select: $ => choice( // reordered -> non empty
   //   prec.left(PREC.PARENTHESIS, seq( // 1x
   //     repseq('.', $.member_identifier, optional($.bit_select1)), '.', $.member_identifier,
   //     optional($.bit_select1)
   //   )),
   //   $.bit_select1
   // ),
-  nonrange_select1: $ => choice(  // reordered -> non empty
+  nonrange_select: $ => choice(  // reordered -> non empty
     seq( // 1x
       repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
       optional($.bit_select1)
@@ -3970,78 +3970,30 @@ const rules = {
 
 
 // ** A.8.5 Expression left-side values
-  // INFO: drom's one
-  // net_lvalue: $ => choice(
-  //   seq(
-  //     $.ps_or_hierarchical_net_identifier,
-  //     optional($.constant_select)
-  //   ),
-  //   prec.left(PREC.CONCAT, seq('{', sep1(',', $.net_lvalue), '}')),
-  //   seq(
-  //     optional($._assignment_pattern_expression_type),
-  //     $.assignment_pattern_net_lvalue
-  //   )
-  // ),
-  // INFO: Mine
   net_lvalue: $ => choice(
-    seq(
-      $.ps_or_hierarchical_net_identifier,
-      optional($.constant_select)
-    ),
+    seq($.ps_or_hierarchical_net_identifier, optional($.constant_select)),
     seq('{', sepBy1(',', $.net_lvalue), '}'),
-    // seq(
-    //   optional($._assignment_pattern_expression_type),
-    //   $.assignment_pattern_net_lvalue
-    // )
+    seq(optional($._assignment_pattern_expression_type), $.assignment_pattern_net_lvalue)
   ),
 
-  // TODO: Compare with original and develop
   variable_lvalue: $ => prec('variable_lvalue', choice(
     seq(
-      optional(choice(
-        seq($.implicit_class_handle, '.'),
-        $.package_scope,
-        $.class_qualifier // INFO: Out of LRM, needed for static class access in LHS
-      )),
+      // $.class_qualifier Out of LRM in optchoice: needed for static class access
+      optchoice(seq($.implicit_class_handle, '.'), $.package_scope, $.class_qualifier),
       $._hierarchical_variable_identifier,
       optional($.select)
     ),
-
     seq('{', sepBy1(',', $.variable_lvalue), '}'),
-
-    seq(
-      optional($._assignment_pattern_expression_type),
-      $.assignment_pattern_variable_lvalue
-    ),
-
+    seq(optional($._assignment_pattern_expression_type), $.assignment_pattern_variable_lvalue),
     $.streaming_concatenation
   )),
 
-  // variable_lvalue: $ => choice(
-  //   prec.left(PREC.PARENTHESIS, seq(
-  //     optional(choice(
-  //       seq($.implicit_class_handle, '.'),
-  //       $.package_scope
-  //     )),
-  //     $._hierarchical_variable_identifier,
-  //     optional($.select)
-  //   )),
-  //   prec.left(PREC.CONCAT, seq('{', sep1(',', $.variable_lvalue), '}')),
-  //   prec.left(PREC.ASSIGN, seq(
-  //     optional($._assignment_pattern_expression_type),
-  //     $.assignment_pattern_variable_lvalue
-  //   )),
-  //   $.streaming_concatenation
-  // ),
-
   nonrange_variable_lvalue: $ => seq(
-    optional(choice(
-      seq($.implicit_class_handle, '.'),
-      $.package_scope
-    )),
+    optchoice(seq($.implicit_class_handle, '.'), $.package_scope),
     $._hierarchical_variable_identifier,
-    optional($.nonrange_select1)
+    optional($.nonrange_select)
   ),
+
 
 // ** A.8.6 Operators
   unary_operator: $ => choice('+', '-', '!', '~', '&', '~&', '|', '~|', '^', '~^', '^~'),
@@ -5767,7 +5719,7 @@ module.exports = grammar({
     [$._method_call_root, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.variable_lvalue, $.nonrange_variable_lvalue],
     [$.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.select, $.nonrange_select1],
+    [$.select, $.nonrange_select],
     [$.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
