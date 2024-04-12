@@ -10,7 +10,7 @@
 
 const PREC = {
   // Table 11-2—Operator precedence and associativity
-  PARENT: 37,              // () [] :: .                                          Left
+  PARENTHESIS: 37,         // () [] :: .                                          Left
   UNARY: 36,               // + - ! ~ & ~& | ~| ^ ~^ ^~ ++ -- (unary)
   POWER: 35,               // **                                                  Left
   MULTIPLY: 34,            // * / %                                               Left
@@ -32,7 +32,7 @@ const PREC = {
   CONCAT: 20,              // {} {{}}                                             Concatenation
 
   // Table 16-3—Sequence and property operator precedence and associativity
-  SEQ_PARENT: 19,          // [* ] [= ] [-> ]
+  SEQ_PARENTHESIS: 19,     // [* ] [= ] [-> ]
   SEQ_SHARP2: 18,          // ##                                                  Left
   SEQ_THROUGHOUT: 17,      // throughout                                          Right
   SEQ_WITHIN: 16,          // within                                              Left
@@ -48,6 +48,49 @@ const PREC = {
                            // sync_accept_on, sync_reject_on
 };
 
+const BINARY_OP_TABLE = [
+    ['+', PREC.ADD],
+    ['-', PREC.ADD],
+    ['*', PREC.MULTIPLY],
+    ['/', PREC.MULTIPLY],
+    ['%', PREC.MULTIPLY],
+    ['==', PREC.EQUAL],
+    ['!=', PREC.EQUAL],
+    ['===', PREC.EQUAL],
+    ['!==', PREC.EQUAL],
+    ['==?', PREC.EQUAL],
+    ['!=?', PREC.EQUAL],
+    ['&&', PREC.LOGICAL_AND],
+    ['||', PREC.LOGICAL_OR],
+    ['**', PREC.POWER],
+    ['>', PREC.RELATIONAL],
+    ['<', PREC.RELATIONAL],
+    ['>=', PREC.RELATIONAL],
+    ['<=', PREC.RELATIONAL],
+    ['&', PREC.BITWISE_AND],
+    ['|', PREC.BITWISE_OR],
+    ['^', PREC.EXCLUSIVE_OR],
+    ['^~', PREC.EXCLUSIVE_OR],
+    ['~^', PREC.EXCLUSIVE_OR],
+    ['>>', PREC.SHIFT],
+    ['<<', PREC.SHIFT],
+    ['>>>', PREC.SHIFT],
+    ['<<<', PREC.SHIFT],
+    ['->', PREC.IMPLICATION],
+    ['<->', PREC.IMPLICATION],
+  ]
+
+const BINARY_MOD_PATH_OP_TABLE = [
+    ['==', PREC.EQUAL],
+    ['!=', PREC.EQUAL],
+    ['&&', PREC.LOGICAL_AND],
+    ['||', PREC.LOGICAL_OR],
+    ['&', PREC.BITWISE_AND],
+    ['|', PREC.BITWISE_OR],
+    ['^', PREC.EXCLUSIVE_OR],
+    ['^~', PREC.EXCLUSIVE_OR],
+    ['~^', PREC.EXCLUSIVE_OR],
+]
 
 function sepBy1(sep, rule) {
   return seq(rule, repeat(seq(sep, rule)))
@@ -106,38 +149,7 @@ function list_of_args($, precedence, arg) {
   ))
 }
 
-function binary_expr($, expr) {
-  const table = [
-    ['+', PREC.ADD],
-    ['-', PREC.ADD],
-    ['*', PREC.MULTIPLY],
-    ['/', PREC.MULTIPLY],
-    ['%', PREC.MULTIPLY],
-    ['==', PREC.EQUAL],
-    ['!=', PREC.EQUAL],
-    ['===', PREC.EQUAL],
-    ['!==', PREC.EQUAL],
-    ['==?', PREC.EQUAL],
-    ['!=?', PREC.EQUAL],
-    ['&&', PREC.LOGICAL_AND],
-    ['||', PREC.LOGICAL_OR],
-    ['**', PREC.POWER],
-    ['>', PREC.RELATIONAL],
-    ['<', PREC.RELATIONAL],
-    ['>=', PREC.RELATIONAL],
-    ['<=', PREC.RELATIONAL],
-    ['&', PREC.BITWISE_AND],
-    ['|', PREC.BITWISE_OR],
-    ['^', PREC.EXCLUSIVE_OR],
-    ['^~', PREC.EXCLUSIVE_OR],
-    ['~^', PREC.EXCLUSIVE_OR],
-    ['>>', PREC.SHIFT],
-    ['<<', PREC.SHIFT],
-    ['>>>', PREC.SHIFT],
-    ['<<<', PREC.SHIFT],
-    ['->', PREC.IMPLICATION],
-    ['<->', PREC.IMPLICATION],
-  ];
+function binary_expr($, table, expr) {
   return choice(...table.map(([operator, precedence]) => {
     return prec.left(precedence, seq(
       field('left', expr),
@@ -149,9 +161,9 @@ function binary_expr($, expr) {
   }));
 }
 
-function unary_expr($, arg) {
+function unary_expr($, operator, arg) {
   return prec.left(PREC.UNARY, seq(
-    field('operator', $.unary_operator),
+    field('operator', operator),
     repeat($.attribute_instance),
     field('argument', arg)
   ));
@@ -168,7 +180,7 @@ function conditional_expr($, pred, expr) {
 }
 
 function paren_expr(expr) {
-  return prec.left(PREC.PARENT, seq(
+  return prec.left(PREC.PARENTHESIS, seq(
     '(', expr, ')'
   ));
 }
@@ -2817,7 +2829,7 @@ const rules = {
 
 // *** A.6.7.1 Patterns
   pattern: $ => prec('pattern', choice(
-    seq('(', $.pattern, ')'),
+    paren_expr($.pattern),
     seq('.', $.variable_identifier),
     '.*',
     $.constant_expression,
@@ -2863,7 +2875,7 @@ const rules = {
     $.type_reference
   )),
 
-  _constant_assignment_pattern_expression: $ => $.assignment_pattern_expression,
+  _constant_assignment_pattern_expression: $ => prec('_constant_assignment_pattern_expression', $.assignment_pattern_expression),
 
   assignment_pattern_net_lvalue: $ => seq('\'{', sepBy1(',', $.net_lvalue), '}'),
 
@@ -3687,7 +3699,7 @@ const rules = {
 
   constant_mintypmax_expression: $ => prec('constant_mintypmax_expression', seq(
     $.constant_expression,
-    optional(seq(':', $.constant_expression, ':', $.constant_expression))
+    optseq(':', $.constant_expression, ':', $.constant_expression)
   )),
 
   constant_param_expression: $ => choice(
@@ -3696,11 +3708,11 @@ const rules = {
     '$'
   ),
 
-  param_expression: $ => prec('param_expression', choice(
+  param_expression: $ => choice(
     $.mintypmax_expression,
     $.data_type,
     '$'
-  )),
+  ),
 
   _constant_range_expression: $ => choice(
     $.constant_expression,
@@ -3731,9 +3743,7 @@ const rules = {
   ),
 
   tagged_union_expression: $ => seq(
-    'tagged',
-    $.member_identifier,
-    optional($.primary)
+    'tagged', $.member_identifier, optional($.primary)
   ),
 
   inside_expression: $ => prec.left(PREC.RELATIONAL, seq(
@@ -3742,41 +3752,27 @@ const rules = {
 
   mintypmax_expression: $ => prec('mintypmax_expression', seq(
     $.expression,
-    optional(seq(':', $.expression, ':', $.expression))
+    optseq(':', $.expression, ':', $.expression)
   )),
 
-  // module_path_conditional_expression: $ => seq(
-  //   $.module_path_expression,
-  //   '?',
-  //   repeat($.attribute_instance), $.module_path_expression,
-  //   ':',
-  //   $.module_path_expression
-  // ),
+  module_path_conditional_expression: $ => conditional_expr($, $.module_path_expression, $.module_path_expression),
 
   module_path_expression: $ => choice(
-    // $.module_path_primary
-    // seq($.unary_module_path_operator, repeat($.attribute_instance), $.module_path_primary),
-    // seq(
-    //   $.module_path_expression,
-    //   $.binary_module_path_operator,
-    //   repeat($.attribute_instance),
-    //   $.module_path_expression
-    // ),
-    // $.module_path_conditional_expression
+    $.module_path_primary,
+    $._module_path_unary_expression,
+    $._module_path_binary_expression,
+    $.module_path_conditional_expression
   ),
 
-  // module_path_mintypmax_expression: $ => seq(
-  //   $.module_path_expression,
-  //   optseq(
-  //     ':', $.module_path_expression,
-  //     ':', $.module_path_expression
-  //   )
-  // ),
+  module_path_mintypmax_expression: $ => seq(
+    $.module_path_expression,
+    optseq(':', $.module_path_expression, ':', $.module_path_expression)
+  ),
 
-  _part_select_range: $ => prec('_part_select_range', choice(
+  _part_select_range: $ => choice(
     $.constant_range,
     $.indexed_range
-  )),
+  ),
 
   indexed_range: $ => seq(
     $.expression, choice('+:', '-:'), $.constant_expression
@@ -3784,19 +3780,22 @@ const rules = {
 
   _genvar_expression: $ => $.constant_expression,
 
-  // INFO: The ones below are not part of the LRM but added to
-  // simplify the writing of the grammar
-  _binary_expression: $ => binary_expr($, $.expression),
+  // The ones below are not part of the LRM explicitly (added to simplify reading of the grammar)
+  _unary_expression: $ => unary_expr($, $.unary_operator, $.primary),
 
-  _constant_binary_expression: $ => binary_expr($, $.constant_expression),
+  _binary_expression: $ => binary_expr($, BINARY_OP_TABLE, $.expression),
 
-  _constant_unary_expression: $ => unary_expr($, $.constant_primary),
+  _parenthesized_expression: $ => paren_expr($.operator_assignment),
+
+  _constant_unary_expression: $ => unary_expr($, $.unary_operator, $.constant_primary),
+
+  _constant_binary_expression: $ => binary_expr($, BINARY_OP_TABLE, $.constant_expression),
 
   _constant_conditional_expression: $ => conditional_expr($, $.constant_expression, $.constant_expression),
 
-  _unary_expression: $ => unary_expr($, $.primary),
+  _module_path_unary_expression: $ => unary_expr($, $.unary_module_path_operator, $.module_path_primary),
 
-  _parenthesized_expression: $ => paren_expr($.operator_assignment),
+  _module_path_binary_expression: $ => binary_expr($, BINARY_MOD_PATH_OP_TABLE, $.module_path_primary),
 
 
 // ** A.8.4 Primaries
@@ -3823,14 +3822,14 @@ const rules = {
     'null'
   )),
 
-  // module_path_primary: $ => choice(
-  //   $._number,
-  //   $._identifier,
-  //   $.module_path_concatenation,
-  //   $.module_path_multiple_concatenation,
-  //   $.function_subroutine_call,
-  //   seq('(', $.module_path_mintypmax_expression, ')')
-  // ),
+  module_path_primary: $ => choice(
+    // $._number,
+    // $._identifier,
+    // $.module_path_concatenation,
+    // $.module_path_multiple_concatenation,
+    // $.function_subroutine_call,
+    // seq('(', $.module_path_mintypmax_expression, ')')
+  ),
 
   primary: $ => prec('primary', choice(
     $.primary_literal,
@@ -3930,7 +3929,7 @@ const rules = {
   ),
 
   // nonrange_select1: $ => choice( // reordered -> non empty
-  //   prec.left(PREC.PARENT, seq( // 1x
+  //   prec.left(PREC.PARENTHESIS, seq( // 1x
   //     repseq('.', $.member_identifier, optional($.bit_select1)), '.', $.member_identifier,
   //     optional($.bit_select1)
   //   )),
@@ -4019,7 +4018,7 @@ const rules = {
   )),
 
   // variable_lvalue: $ => choice(
-  //   prec.left(PREC.PARENT, seq(
+  //   prec.left(PREC.PARENTHESIS, seq(
   //     optional(choice(
   //       seq($.implicit_class_handle, '.'),
   //       $.package_scope
@@ -4045,31 +4044,22 @@ const rules = {
   ),
 
 // ** A.8.6 Operators
-  unary_operator: $ => choice(
-    '+', '-', '!', '~', '&', '~&', '|', '~|', '^', '~^', '^~'
+  unary_operator: $ => choice('+', '-', '!', '~', '&', '~&', '|', '~|', '^', '~^', '^~'),
+
+  // Unused (using BINARY_OP_TABLE constant instead). Left as a reference
+  binary_operator: $ => choice(
+    '+', '-', '*', '/', '%', '==', '!=', '===', '!==', '==?', '!=?', '&&', '||',
+    '**', '<', '<=', '>', '>=', '&', '|', '^', '^~', '~^', '>>', '<<', '>>>',
+    '<<<', '->', '<->'
   ),
 
   inc_or_dec_operator: $ => choice('++', '--'),
 
-  // // unary_module_path_operator = '~&' /
-  // //   '~|' /
-  // //   '~^' /
-  // //   '^~' /
-  // //   $('!'![ != ]) /
-  // //   $('~'!'=') /
-  // //   $('&'!'=') /
-  // //   $('|'!'=') /
-  // //   $('^'!'=')
-  // //
-  // // binary_module_path_operator = $('=='!'=') /
-  // //   $('!='!'=') /
-  // //   '&&' /
-  // //   '||' /
-  // //   $('&'!'=') /
-  // //   $('|'!'=') /
-  // //   $('^'!'=') /
-  // //   '^~' /
-  // //   '~^'
+  unary_module_path_operator: $ => choice('!', '~', '&', '~&', '|', '~|', '^', '~^', '^~'),
+
+  // Unused (using BINARY_MOD_PATH_OP_TABLE constant instead). Left as a reference
+  binary_module_path_operator: $ => choice('==', '!=', '&&', '||', '&', '|', '^', '^~', '~^'),
+
 
 // ** A.8.7 Numbers
   _number: $ => choice($.integral_number, $.real_number),
@@ -4281,7 +4271,7 @@ const rules = {
   ),
 
   // ps_or_hierarchical_net_identifier: $ => choice(
-  //   prec.left(PREC.PARENT, seq(optional($.package_scope), $.net_identifier)),
+  //   prec.left(PREC.PARENTHESIS, seq(optional($.package_scope), $.net_identifier)),
   //   $._hierarchical_net_identifier
   // ),
   ps_or_hierarchical_net_identifier: $ => choice(
@@ -4472,7 +4462,7 @@ const rules = {
 
   // text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
   // text_macro_list_of_actual_arguments: $ => $.list_of_arguments, // INFO: Out of LRM, but needed to support empty actual argument between commas in macros
-  text_macro_list_of_actual_arguments: $ => prec.left(PREC.PARENT, choice(  // INFO: Out of LRM, but needed to support empty actual argument between commas in macros, and to support data_types as arguments
+  text_macro_list_of_actual_arguments: $ => prec.left(PREC.PARENTHESIS, choice(  // INFO: Out of LRM, but needed to support empty actual argument between commas in macros, and to support data_types as arguments
     // First case: mixing positional and named arguments
     seq(
       $.text_macro_actual_argument,
@@ -4747,10 +4737,10 @@ module.exports = grammar({
     $.cover_point_identifier,
     $.cross_identifier,
 
-    $._expression_or_cond_pattern,
+    // $._expression_or_cond_pattern,
     // $.pragma_keyword,
     // $.incomplete_class_scoped_type,
-    $._constant_assignment_pattern_expression,
+    // $._constant_assignment_pattern_expression,
   ],
 
 // ** Precedences
@@ -4951,11 +4941,11 @@ module.exports = grammar({
     ['unpacked_dimension', 'constant_bit_select'],
 
 
-    // Since it's a declaration it's not a part select but a packed dimension
+    // Since it's a declaration (of a user defined type) it's not a part select but a packed dimension (check doulos/3.3_array)
     //
-    //   'localparam'  _identifier  '='  _identifier  '['  constant_range  •  ']'  …
-    //   1:  'localparam'  _identifier  '='  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
-    //   2:  'localparam'  _identifier  '='  _identifier  (packed_dimension  '['  constant_range  •  ']')                (precedence: 'packed_dimension')
+    // _identifier  '['  constant_range  •  ']'  …
+    // 1:  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
+    // 2:  _identifier  (packed_dimension  '['  constant_range  •  ']')                (precedence: 'packed_dimension')
     ['packed_dimension', '_constant_part_select_range'],
 
 
@@ -5081,6 +5071,14 @@ module.exports = grammar({
     ['subroutine_call_statement', '_module_common_item'],
 
 
+    // Both seem incorrect syntax but supported due to soft restricting of the broad grammar.
+    // An example of this conflict would be: ('{0, 1, 2} : ) -> But this would need to be on the RHS and without parenthesis?
+    // So just restrict it to be a 'primary' instead of '_constant_assignment_pattern_expression' (relevant to constant_primary)
+    //
+    // '('  assignment_pattern_expression  •  ':'  …
+    // 1:  '('  (_constant_assignment_pattern_expression  assignment_pattern_expression)  •  ':'  …  (precedence: '_constant_assignment_pattern_expression')
+    // 2:  '('  (primary  assignment_pattern_expression)  •  ':'  …                                  (precedence: 'primary')
+    ['primary', '_constant_assignment_pattern_expression'],
 
 
 
@@ -5126,20 +5124,6 @@ module.exports = grammar({
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier  constant_select)
     //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier)
     ['class_qualifier', 'ps_parameter_identifier'],
-
-
-    // TODO: Removed to fix the expressions with primaries inside a bit_select1!!
-    //
-    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '.'  _identifier  •  '/'  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (constant_select  '.'  _identifier)  •  '/'  …  (precedence: 'constant_select')
-    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  (select  '.'  _identifier)  •  '/'  …           (precedence: 'select')
-    // ['constant_select', 'select'],
-
-
-    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  constant_range  •  ']'  …
-    // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
-    // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  '['  (_part_select_range  constant_range)  •  ']'  …
-    ['_constant_part_select_range', '_part_select_range'],
 
 
     // For regular identifiers, assume that they are always hierarchical if they have no package scope or hierarchical path
@@ -5296,6 +5280,7 @@ module.exports = grammar({
     // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     ['hierarchical_identifier', '_directives'],
     ['_method_call_root', '_directives'],
+
 
 
 
@@ -5697,7 +5682,7 @@ module.exports = grammar({
     // 4:  '('  expression  'matches'  ''{'  (constant_primary  _identifier)  •  ':'  …                     (precedence: 'ps_parameter_identifier')
     // 5:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  '}')                   (precedence: 'pattern')
     // 6:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  pattern_repeat2  '}')  (precedence: 'pattern')
-    [$._simple_type, $.pattern, $._structure_pattern_key, $.constant_primary],
+    // [$._simple_type, $.pattern, $._structure_pattern_key, $.constant_primary],
 
     // Type-reference
     [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
