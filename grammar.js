@@ -3536,73 +3536,57 @@ const rules = {
 
 // * A.8 Expressions
 // ** A.8.1 Concatenations
-  // concatenation: $ => seq(
-  //   '{', psep1(PREC.CONCAT, ',', $.expression), '}'
-  // ),
-  concatenation: $ => seq('{', sepBy1(',', $.expression), '}'),
+  concatenation: $ => seq(
+    '{', sepBy1(',', $.expression), '}'
+  ),
 
-  // TODO: What about the PREC.CONCAT?
   constant_concatenation: $ => seq(
     '{', sepBy1(',', $.constant_expression), '}'
   ),
 
-  // constant_multiple_concatenation: $ => prec.left(PREC.CONCAT, seq(
-  //   '{', $.constant_expression, $.constant_concatenation, '}'
-  // )),
   constant_multiple_concatenation: $ => seq(
     '{', $.constant_expression, $.constant_concatenation, '}'
   ),
 
-  // module_path_concatenation: $ => seq(
-  //   '{', psep1(PREC.CONCAT, ',', $.module_path_expression), '}'
-  // ),
+  module_path_concatenation: $ => seq(
+    '{', sepBy1(',', $.module_path_expression), '}'
+  ),
 
-  // module_path_multiple_concatenation: $ => prec.left(PREC.CONCAT, seq(
-  //   '{', $.constant_expression, $.module_path_concatenation, '}'
-  // )),
+  module_path_multiple_concatenation: $ => seq(
+    '{', $.constant_expression, $.module_path_concatenation, '}'
+  ),
 
-  // multiple_concatenation: $ => prec.left(PREC.CONCAT, seq(
-  //   '{', $.expression, $.concatenation, '}'
-  // )),
   multiple_concatenation: $ => seq(
     '{', $.expression, $.concatenation, '}'
   ),
 
-  // streaming_concatenation: $ => prec.left(PREC.CONCAT, seq(
-  //   '{', $.stream_operator, optional($.slice_size), $.stream_concatenation, '}'
-  // )),
   streaming_concatenation: $ => seq(
     '{', $.stream_operator, optional($.slice_size), $.stream_concatenation, '}'
   ),
-  // streaming_concatenation: $ => seq(
-  //   '{', $.stream_operator, prec.dynamic(1, optional($.slice_size)), $.stream_concatenation, '}'
-  // ),
 
   stream_operator: $ => choice('>>', '<<'),
 
   slice_size: $ => choice($._simple_type, $.constant_expression),
-  // slice_size: $ => prec.left(choice($._simple_type, $.constant_expression)),
-  // slice_size: $ => $._simple_type,
 
-  // stream_concatenation: $ => prec.left(PREC.CONCAT, seq(
-  //   '{', sepBy1(',', $.stream_expression), '}'
-  // )),
   stream_concatenation: $ => seq(
     '{', sepBy1(',', $.stream_expression), '}'
   ),
 
-  stream_expression: $ => seq($.expression, optional(seq('with', '[', $.array_range_expression, ']'))),
+  stream_expression: $ => seq(
+    $.expression, optseq('with', '[', $.array_range_expression, ']')
+  ),
 
   array_range_expression: $ => seq(
     $.expression,
-    optional(choice(
+    optchoice(
       seq( ':', $.expression),
       seq('+:', $.expression),
       seq('-:', $.expression)
-    ))
+    )
   ),
 
   empty_unpacked_array_concatenation: $ => prec('empty_unpacked_array_concatenation', seq('{', '}')),
+
 
 // ** A.8.2 Subroutine calls
   constant_function_call: $ => $.function_subroutine_call,
@@ -3820,17 +3804,17 @@ const rules = {
   //   $.module_path_expression
   // ),
 
-  // module_path_expression: $ => choice(
-  //   $.module_path_primary
-  //   // seq($.unary_module_path_operator, repeat($.attribute_instance), $.module_path_primary),
-  //   // seq(
-  //   //   $.module_path_expression,
-  //   //   $.binary_module_path_operator,
-  //   //   repeat($.attribute_instance),
-  //   //   $.module_path_expression
-  //   // ),
-  //   // $.module_path_conditional_expression
-  // ),
+  module_path_expression: $ => choice(
+    // $.module_path_primary
+    // seq($.unary_module_path_operator, repeat($.attribute_instance), $.module_path_primary),
+    // seq(
+    //   $.module_path_expression,
+    //   $.binary_module_path_operator,
+    //   repeat($.attribute_instance),
+    //   $.module_path_expression
+    // ),
+    // $.module_path_conditional_expression
+  ),
 
   // module_path_mintypmax_expression: $ => seq(
   //   $.module_path_expression,
