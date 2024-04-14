@@ -3622,7 +3622,6 @@ const rules = {
   subroutine_call: $ => choice(
     $.tf_call,
     $.system_tf_call,
-    // prec.dynamic(-1, $.method_call), // This made smoe change but not sure it's the way to do it
     $.method_call,
     seq(optseq('std', '::'), $.randomize_call),
   ),
@@ -3674,8 +3673,8 @@ const rules = {
   // being detected. This workaround might complicate a bit more the parser but
   // seems to work well.
   _method_call_root: $ => prec('_method_call_root', choice(
-    prec.dynamic(0, $.primary),
-    prec.dynamic(1, seq($.implicit_class_handle, optional($.select))), // optional($.select) out of LRM
+    prec.dynamic(-2, $.primary), // Compensate for prec.dynamic in $.select
+    prec.dynamic(0, seq($.implicit_class_handle, optional($.select))), // optional($.select) out of LRM
     $.class_type,       // Out of LRM: Added to support calling parameterized static methods
     $.text_macro_usage, // Out of LRM, Added to fix parsing errors in UVM
   )),
@@ -3836,14 +3835,6 @@ const rules = {
   primary: $ => prec('primary', choice(
     $.primary_literal,
     choice(
-      // This option worked well to set higher precedence on hierarchical_identifier than on select.
-      // However, it failed when there were non-constant expressions as indexes (bit_select) that belong
-      // to $.select but not to $.hierarchical_identifier.
-      // prec.left('hierarchical_identifier', seq( // INFO: This is the one in the LRM
-      //   optchoice($.class_qualifier, $.package_scope),
-      //   $.hierarchical_identifier,
-      //   optional($.select)
-      // )),
       seq(
         optchoice($.class_qualifier, $.package_scope),
         $.hierarchical_identifier,
@@ -3859,7 +3850,7 @@ const rules = {
     seq($.concatenation, optseq('[', $.range_expression, ']')),
     seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
     $.function_subroutine_call,
-    // $.let_expression,  // No need to add since it's syntax is the same as a tf_call/subroutine_call (true ambiguity that adds conflicts)
+    // $.let_expression,  // No need to add since its syntax is the same as a tf_call/subroutine_call (true ambiguity that adds conflicts)
     seq('(', $.mintypmax_expression, ')'),
     $.cast,
     $.assignment_pattern_expression,
@@ -3909,19 +3900,20 @@ const rules = {
   ),
 
   // Modified to avoid matching empty string
+  // Dynamic precedences are set so that indexes are set to belong to $.hierarchical_identifier rather than to $.select.
+  // This is because first branch (prec -2) overlaps a lot with $.hierarchical_identifier, (having constant_bit_select instead of select)
   select: $ => choice(
-    seq(
-      // First line overlaps a lot with $.hierarchical_identifier, but that one uses constant_bit_select
-      // TODO: This one does not support $.text_macro_usage as $.hierarchical_identifier does
+    prec.dynamic(-2, seq(
+      // This branch does not support $.text_macro_usage as $.hierarchical_identifier does
       repeat(seq('.', $.member_identifier, optional($.bit_select))), '.', $.member_identifier,
       optional($.bit_select),
       optseq('[', $._part_select_range, ']')
-    ),
-    seq(
+    )),
+    prec.dynamic(-1, seq(
       $.bit_select,
       optseq('[', $._part_select_range, ']')
-    ),
-    seq('[', $._part_select_range, ']')
+    )),
+    prec.dynamic(0, seq('[', $._part_select_range, ']'))
   ),
 
   // Modified to avoid matching empty string
@@ -5711,11 +5703,6 @@ module.exports = grammar({
     [$.type_identifier_or_class_type, $.class_type],
 
 
-    // Casting
-    // [$._simple_type, $.constant_primary],
-    // [$._simple_type, $._structure_pattern_key, $.constant_primary],
-
-
     // Type-reference
     [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
     [$.data_type, $.constant_primary],
@@ -5842,9 +5829,6 @@ module.exports = grammar({
     [$._interface_or_generate_item, $._package_or_generate_item_declaration],
     [$._description, $._non_port_module_item, $._package_or_generate_item_declaration, $.statement_item],
 
-    // After adding text_macro_usage to _method_call_root
-    // [$._directives, $._method_call_root],
-
 
     // Fix error with method call with bit_select
     [$.class_qualifier, $.select],
@@ -5868,7 +5852,6 @@ module.exports = grammar({
     // Text macros on hierarchical identifiers
     // INFO: Seems that after this, hierarchical_identifier has a higher dynamic precedence over _method_call_root
     [$._method_call_root, $.hierarchical_identifier],
-    // [$._directives, $._method_call_root, $.hierarchical_identifier],
 
 
     // Coverage: TODO
@@ -5880,12 +5863,9 @@ module.exports = grammar({
 
 
     // TODO: sequences/properties/assertions
-    // [$.concurrent_assertion_item, $.deferred_immediate_assertion_item, $.generate_block_identifier],
     [$.expression_or_dist, $.mintypmax_expression],
     [$.property_expr, $.sequence_expr],
     [$.cover_sequence_statement, $.sequence_expr],
-    // [$.property_spec, $.property_expr],
-    // [$.property_expr, $._sequence_actual_arg],
     [$.expression_or_dist, $.event_expression, $.mintypmax_expression],
 
 
@@ -5923,23 +5903,13 @@ module.exports = grammar({
     [$.blocking_assignment, $._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.blocking_assignment, $.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.blocking_assignment, $.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.constant_primary, $.hierarchical_identifier],
-    [$.data_type, $.constant_primary, $.hierarchical_identifier],
     [$.blocking_assignment, $.variable_lvalue],
     [$.blocking_assignment, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
     // TODO: After reviewing/inlining many identifiers
-    [$.interface_port_declaration, $.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.data_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-
-    [$.interface_port_declaration, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.interface_port_declaration, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.interface_port_declaration, $.constant_select, $.hierarchical_identifier],
-
     [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.class_qualifier],
-    [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.constant_primary, $.class_qualifier],
     [$.clocking_event, $.hierarchical_identifier],
     [$.property_instance, $.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.property_instance, $.sequence_instance, $.tf_call, $.hierarchical_identifier],
@@ -5956,9 +5926,6 @@ module.exports = grammar({
     [$._simple_type, $._structure_pattern_key],
 
 
-    [$.sequence_expr, $.event_expression],
-    [$.block_event_expression, $.hierarchical_identifier],
-
     [$.property_expr],
     [$.expression_or_dist, $.expression],
 
@@ -5966,9 +5933,7 @@ module.exports = grammar({
 
     // INFO: After removing constant_primary from casting_type to fix issue with concatenation on RHS
     [$.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.interface_port_declaration, $.class_type, $.tf_call, $.hierarchical_identifier],
     [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.class_qualifier],
-    [$.interface_port_declaration, $.hierarchical_identifier],
     [$._simple_type, $.constant_primary],
 
 
