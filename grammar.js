@@ -4646,7 +4646,7 @@ module.exports = grammar({
 
     $.attr_name,
 
-    // INFO: Identifiers
+    // Identifiers
     $.array_identifier,
     $.block_identifier,
     $.bin_identifier,
@@ -4670,11 +4670,10 @@ module.exports = grammar({
     $.generate_block_identifier,
     $.genvar_identifier,
 
-    // TODO: Hierarchical stuff
     $.hierarchical_array_identifier,
     $.hierarchical_block_identifier,
     $.hierarchical_event_identifier,
-    // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
+    // $.hierarchical_identifier, // Don't inline
     $.hierarchical_net_identifier,
     $.hierarchical_parameter_identifier,
     $.hierarchical_property_identifier,
@@ -4682,7 +4681,6 @@ module.exports = grammar({
     $.hierarchical_task_identifier,
     $.hierarchical_tf_identifier,
     $.hierarchical_variable_identifier,
-    // End of TODO
 
     $.index_variable_identifier,
     $.interface_identifier,
@@ -4699,13 +4697,12 @@ module.exports = grammar({
     $.nettype_identifier,
     $.output_port_identifier,
     $.package_identifier,
-    // $.package_scope, // DANGER: Don't inline this one
+    // $.package_scope, // Don't inline
     $.parameter_identifier,
     $.port_identifier,
     $.program_identifier,
     $.property_identifier,
 
-    // TODO: ps stuff: review
     $.ps_class_identifier,
     $.ps_covergroup_identifier,
     $.ps_checker_identifier,
@@ -4715,9 +4712,8 @@ module.exports = grammar({
     $.ps_or_hierarchical_property_identifier,
     $.ps_or_hierarchical_sequence_identifier,
     $.ps_or_hierarchical_tf_identifier,
-    $.ps_parameter_identifier, // TODO: Many conflicts and precedences
+    $.ps_parameter_identifier,
     $.ps_type_identifier,
-    // End of TODO
 
     $.rs_production_identifier,
     $.sequence_identifier,
@@ -4732,11 +4728,11 @@ module.exports = grammar({
     $.variable_identifier,
 
     // Identifiers out of A.9
-    $.hierarchical_btf_identifier, // DANGER: In section A.2.11 not in Identifiers one
+    $.hierarchical_btf_identifier,
     $.let_identifier,
     $.input_identifier,
     $.output_identifier,
-    // $.edge_identifier, // DANGER: Don't inline this one
+    // $.edge_identifier, // Don't inline
   ],
 
 // ** Precedences
@@ -5093,17 +5089,17 @@ module.exports = grammar({
     ['block_event_expression', 'hierarchical_identifier'],
 
 
+    // $.property_spec first seq element is $.optional($.clocking_event), and last .$.property_expr
+    //
+    // 'expect'  '('  clocking_event  property_expr  •  ')'  …
+    // 1:  'expect'  '('  (property_expr  clocking_event  property_expr)  •  ')'  …  (precedence: 'property_expr')
+    // 2:  'expect'  '('  (property_spec  clocking_event  property_expr)  •  ')'  …  (precedence: 'property_spec')
+    ['property_spec', 'property_expr'],
+
 
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
-
-    // 'assign'  _identifier  •  '.'  …
-    // 1:  'assign'  (hierarchical_identifier  _identifier)  •  '.'  …       (precedence: 'hierarchical_identifier')
-    // 2:  'assign'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
-    // 3:  'assign'  (net_lvalue  _identifier  •  constant_select)
-    // ['hierarchical_identifier', 'net_lvalue'],
-    ['net_lvalue'],
 
 
     // TODO: Review this one after deinlining hierarchical_identifier
@@ -5124,41 +5120,11 @@ module.exports = grammar({
     // ['hierarchical_identifier', 'constant_select'],
 
 
-    // TODO: Removed to fix the expressions with primaries inside a bit_select!!
-    //
-    // INFO: constant_primary has precedence since it refers to hierarchical_identifier instead of to select, which in theory should simplify things quite a lot
-    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  primary_literal  •  '/'  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  primary_literal)  •  '/'  …
-    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  primary_literal)  •  '/'  …
-    // ['constant_primary', 'primary'],
-    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  _identifier  •  '/'  …
-    // 1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  _identifier)  •  '/'  …  (precedence: 'ps_parameter_identifier')
-    // 2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (primary  _identifier)  •  '/'  …           (precedence: 'primary')
-    // ['ps_parameter_identifier', 'primary'],
-
-
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  class_scope  •  simple_identifier  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (class_qualifier  class_scope)  •  simple_identifier  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier  constant_select)
     //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier)
     ['class_qualifier', 'ps_parameter_identifier'],
-
-
-    // For regular identifiers, assume that they are always hierarchical if they have no package scope or hierarchical path
-    //
-    //   module_nonansi_header  'initial'  '@'  _identifier  •  ';'  …
-    //     1:  module_nonansi_header  'initial'  '@'  (hierarchical_identifier  _identifier)  •  ';'  …  (precedence: 'hierarchical_identifier', associativity: Right)
-    //     2:  module_nonansi_header  'initial'  '@'  (ps_identifier  _identifier)  •  ';'  …            (precedence: 'ps_identifier')
-    // ['hierarchical_identifier', 'ps_identifier'],
-
-
-    // TODO: Not sure about this one either.
-    // Set higher precedence on constant_primary than on another hierarchical_identifier for dimension/select expressions of hierarchical identifiers
-    //
-    //   module_nonansi_header  'initial'  hierarchical_identifier  '['  _identifier  •  '/'  …
-    //     1:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (constant_primary  _identifier)  •  '/'  …         (precedence: 'ps_parameter_identifier')
-    //     2:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (hierarchical_identifier  _identifier)  •  '/'  …  (precedence: 'hierarchical_identifier')
-    // ['ps_parameter_identifier', 'hierarchical_identifier'],
 
 
     // First one doesn't really make much sense:
@@ -5168,8 +5134,6 @@ module.exports = grammar({
     //   2:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier  select)  (precedence: 'variable_lvalue')
     //   3:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier)           (precedence: 'variable_lvalue')
     ['variable_lvalue', 'class_qualifier'],
-
-
 
 
     // Identify as a constant_mintypmax_expression -> constant_expression on the RHS instead of a data_type (since it's a declaration)
@@ -5304,6 +5268,12 @@ module.exports = grammar({
 
     // ['method_call', 'tf_call'],
 
+    // INFO: These ones seemd to fix at first, but not in the end, the issue with sequences/properties in sv-tests!!
+    // ['property_spec', 'property_expr'],
+    // ['_sequence_actual_arg', 'property_expr'],
+    // End of INFO
+
+
 
 
     ///////////////////////////////////////////////////
@@ -5370,16 +5340,7 @@ module.exports = grammar({
     ['property_instance'],
     ['sequence_expr'],
     ['sequence_instance'],
-
-
-    // INFO: These ones fixed the isue with sequences/properties in sv-tests!!
-    ['property_spec', 'property_expr'],
-    ['_sequence_actual_arg', 'property_expr'],
-    // ['mintypmax_expression', 'expression_or_dist'],
-    // End of INFO
-
-    // ['_simple_type', 'constant_primary'],
-    // ['constant_primary', '_simple_type'],
+    ['net_lvalue'],
 
 
     ///////////////////////////////////////////////////
@@ -5583,6 +5544,22 @@ module.exports = grammar({
     // 2:  'assign'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
     // 3:  'assign'  (net_lvalue  _identifier  •  constant_select)           (precedence: 'net_lvalue')
     [$.net_lvalue, $.hierarchical_identifier],
+
+
+    // There are cases where it's not possible to know if it's constat or not without more tokens
+    //
+    // '('  '$'  •  ':'  …
+    // 1:  '('  (constant_primary  '$')  •  ':'  …  (precedence: 'constant_primary')
+    // 2:  '('  (primary  '$')  •  ':'  …           (precedence: 'primary')
+    [$.constant_primary, $.primary],
+
+
+    // Checker ordered port instantiation, with args being $._property_actual_arg (not sure which one so set conflict)
+    //
+    // _identifier  name_of_instance  '('  sequence_expr  •  ')'  …
+    // 1:  _identifier  name_of_instance  '('  (_sequence_actual_arg  sequence_expr)  •  ')'  …  (precedence: '_sequence_actual_arg')
+    // 2:  _identifier  name_of_instance  '('  (property_expr  sequence_expr)  •  ')'  …         (precedence: 'property_expr')
+    [$.property_expr, $._sequence_actual_arg],
 
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -5817,8 +5794,6 @@ module.exports = grammar({
 
     [$.select, $.nonrange_select],
 
-
-    [$.constant_primary, $.primary],
 
     // INFO: Added to fix issue with expressions inside bit_select
     [$.tf_call, $.constant_primary, $.hierarchical_identifier],
