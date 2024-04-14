@@ -217,9 +217,9 @@ const rules = {
 
 // * A.1 Source text
 // ** A.1.1 Library source text
-  library_text: $ => $.library_description, // Modified to avoid matching empty string
+  _library_text: $ => $._library_description, // Modified to avoid matching empty string
 
-  library_description: $ => prec('library_description', choice(
+  _library_description: $ => prec('_library_description', choice(
     $.library_declaration,
     $.include_statement,
     $.config_declaration,
@@ -247,7 +247,7 @@ const rules = {
     $.program_declaration,
     $.package_declaration,
     seq(repeat($.attribute_instance), choice($._package_item, $.bind_directive)),
-    $.library_text, // Includes $.config_declaration as one of its branches
+    $._library_text, // Includes $.config_declaration as one of its branches
     $.snippets, // Out of LRM (inlined)
   )),
 
@@ -643,52 +643,45 @@ const rules = {
 
 // ** A.1.5 Configuration source text
   config_declaration: $ => seq(
-    'config', $.config_identifier, ';',
-    // repseq($.local_parameter_declaration, ';'),
-    // $.design_statement,
-    // repeat($.config_rule_statement),
-    // 'endconfig', optseq(':', $.config_identifier)
+    'config', field('name', $.config_identifier), ';',
+    repseq($.local_parameter_declaration, ';'),
+    $.design_statement,
+    repeat($.config_rule_statement),
+    enclosing('endconfig', $.config_identifier)
   ),
 
-  // design_statement: $ => seq(
-  //   'design',
-  //   repseq(
-  //     optseq($.library_identifier, '.'),
-  //     $.cell_identifier
-  //   ),
-  //   ';'
-  // ),
+  design_statement: $ => seq(
+    'design', repseq(optseq($.library_identifier, '.'), $.cell_identifier), ';'
+  ),
 
-  // config_rule_statement: $ => choice(
-  //   seq($.default_clause, $.liblist_clause, ';'),
-  //   seq($.inst_clause, $.liblist_clause, ';'),
-  //   seq($.inst_clause, $.use_clause, ';'),
-  //   seq($.cell_clause, $.liblist_clause, ';'),
-  //   seq($.cell_clause, $.use_clause, ';')
-  // ),
+  config_rule_statement: $ => seq(
+    choice(
+      seq(choice($.default_clause, $.inst_clause, $.cell_clause), $.liblist_clause),
+      seq(choice($.inst_clause, $.cell_clause), $.use_clause),
+    ),
+    ';'
+  ),
 
-  // default_clause: $ => 'default',
+  default_clause: $ => 'default',
 
-  // inst_clause: $ => seq('instance', $.inst_name),
+  inst_clause: $ => seq('instance', $.inst_name),
 
-  // inst_name: $ => seq($.topmodule_identifier, repseq('.', $.instance_identifier)),
+  inst_name: $ => seq($.topmodule_identifier, repseq('.', $.instance_identifier)),
 
-  // cell_clause: $ => seq('cell', optseq($.library_identifier, '.'), $.cell_identifier),
+  cell_clause: $ => seq('cell', optseq($.library_identifier, '.'), $.cell_identifier),
 
-  // liblist_clause: $ => seq('liblist', repeat($.library_identifier)),
+  liblist_clause: $ => seq('liblist', repeat($.library_identifier)),
 
-  // use_clause: $ => seq(
-  //   'use',
-  //   choice(
-  //     sep1(',', $.named_parameter_assignment),
-  //     seq(
-  //       optseq($.library_identifier, '.'),
-  //       $.cell_identifier,
-  //       optional(sep1(',', $.named_parameter_assignment))
-  //     )
-  //   ),
-  //   optseq(':', 'config')
-  // ),
+  use_clause: $ => seq(
+    'use',
+    choice(
+      // The LRM does not include the #() in the $.named_parameter_assignment branches, but that seems
+      // necessary to parse the examples of chapter 33.4.2 successfully
+      seq(optseq($.library_identifier, '.'), $.cell_identifier, optseq('#', '(', sepBy1(',', $.named_parameter_assignment), ')')),
+      optseq('#', '(', sepBy1(',', $.named_parameter_assignment), ')')
+    ),
+    optseq(':', 'config')
+  ),
 
 
 // ** A.1.6 Interface items
@@ -4687,7 +4680,7 @@ module.exports = grammar({
     ['_description', 'data_declaration'],
     ['_package_or_generate_item_declaration', '_non_port_module_item'],
     ['_package_or_generate_item_declaration', 'statement_item'],
-    ['_package_or_generate_item_declaration', 'library_description'],
+    ['_package_or_generate_item_declaration', '_library_description'],
 
 
     // Common item for module/package without context -> Consider it a module item
