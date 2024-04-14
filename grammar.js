@@ -2837,7 +2837,7 @@ const rules = {
 
 
 // *** A.6.7.1 Patterns
-  pattern: $ => prec('pattern', choice(
+  pattern: $ => prec(PREC.MATCHES, choice(
     paren_expr($.pattern),
     seq('.', $.variable_identifier),
     '.*',
@@ -3706,10 +3706,10 @@ const rules = {
     $.text_macro_usage, // Out of LRM
   ),
 
-  constant_mintypmax_expression: $ => prec('constant_mintypmax_expression', seq(
+  constant_mintypmax_expression: $ => seq(
     $.constant_expression,
     optseq(':', $.constant_expression, ':', $.constant_expression)
-  )),
+  ),
 
   constant_param_expression: $ => choice(
     prec.dynamic(1, $.constant_mintypmax_expression),
@@ -4972,14 +4972,6 @@ module.exports = grammar({
     ['event_expression', 'sequence_expr'],
 
 
-    // Guess that 'matches' should be followed by a pattern (according to $.cond_pattern)
-    //
-    //   module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  constant_expression  •  ')'  …
-    //   1:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (constant_mintypmax_expression  constant_expression)  •  ')'  …
-    //   2:  module_nonansi_header  always_keyword  'if'  '('  expression  'matches'  '('  (pattern  constant_expression)  •  ')'  …
-    ['pattern', 'constant_mintypmax_expression'],
-
-
     // struct/array initializations:
     //   Consider higher priority a structure pattern even though it could be an assignment to an array,
     //   but the parser cannot know that...
@@ -5531,31 +5523,12 @@ module.exports = grammar({
 
 
 
+// ** Conflicts to be reviewed
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
-
-
-    // No way to fix this conflict in the precedences array since the constant_expression has numeric precedence,
-    // and the pattern one has a string precedence. It should occur rarely in the language.
-    //
-    // module_nonansi_header  'var'  _identifier  '='  expression  'matches'  constant_expression  •  '?'  …
-    // 1:  module_nonansi_header  'var'  _identifier  '='  expression  'matches'  (constant_expression  constant_expression  •  '?'  constant_expression  ':'  constant_expression)                              (precedence: 23, associativity: Right)
-    // 2:  module_nonansi_header  'var'  _identifier  '='  expression  'matches'  (constant_expression  constant_expression  •  '?'  module_declaration_repeat3  constant_expression  ':'  constant_expression)  (precedence: 23, associativity: Right)
-    // 3:  module_nonansi_header  'var'  _identifier  '='  expression  'matches'  (pattern  constant_expression)  •  '?'  …                                                                                      (precedence: 'pattern')
-    [$.pattern, $.constant_expression],
-
-
-    // Don't really understand this one well but it's a consequence of having PREC.CONDITIONAL on both
-    // $.cond_predicate and $.conditional_expression, and seems needed to make nested conditional expressions work well
-    //
-    //   module_nonansi_header  'var'  _identifier  '='  cond_predicate  '?'  expression  ':'  expression  •  '?'  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  (conditional_expression  cond_predicate  '?'  expression  ':'  expression)  •  '?'  …  (precedence: 23, associativity: Right)
-    //   2:  module_nonansi_header  'var'  _identifier  '='  cond_predicate  '?'  expression  ':'  (cond_predicate  expression)  •  '?'  …          (precedence: 23)
-    // [$.cond_predicate, $.conditional_expression],
-
 
     //  Declaration of net/type in the unit scope, true conflict
     //
@@ -5692,7 +5665,6 @@ module.exports = grammar({
 
     // Tagged union
     [$.tagged_union_expression],
-    [$.pattern, $.tagged_union_expression],
 
     // Class_type as data_type
     [$.net_declaration, $.data_type, $.class_type],
@@ -5817,7 +5789,6 @@ module.exports = grammar({
     [$.class_qualifier, $.select],
     [$.select, $.hierarchical_identifier],
     [$.constant_select, $.hierarchical_identifier],
-    // [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$._method_call_root, $.primary],
     [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue],
     [$._method_call_root, $.primary, $.class_qualifier],
