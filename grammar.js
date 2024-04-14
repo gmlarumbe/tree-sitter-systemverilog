@@ -3801,35 +3801,36 @@ const rules = {
 
 
 // ** A.8.4 Primaries
-  // TODO: Probably the ones with prec.dynamic below can be grouped with some aliases/inlining or whatever
-  // option, since they match the same path as the ps_parameter_identifier, but in different contexts (and
-  // tree-sitter is not aware of them )
+  // There are some branches that match the same items due to inlining:
+  // E.g: $.ps_parameter_identifier, $.genvar_identifier, $.formal_port_identifier, and $.enum_identifier
+  // could match the same $._identifier
   constant_primary: $ => prec('constant_primary', choice(
     $.primary_literal,
     seq($.ps_parameter_identifier, optional($.constant_select)),
-    // // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')),
-    // prec.dynamic(-1, $.genvar_identifier), // TODO: No need to add, matched by the ps_parameter [constant_select] above
-    // prec.dynamic(-1, seq($.formal_port_identifier, optional($.constant_select))), // TODO: No need to add, same syntax as the ps_parameter_identifier constant_select above
-    // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier), // TODO: No need to add, also matched by the ps_parameter_identifier branch above
+    // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')), // TODO:
+    $.genvar_identifier,
+    seq($.formal_port_identifier, optional($.constant_select)),
+    seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier),
+    $.empty_unpacked_array_concatenation,
     seq($.constant_concatenation, optseq('[', $._constant_range_expression, ']')),
     seq($.constant_multiple_concatenation, optseq('[', $._constant_range_expression, ']')),
     seq($.constant_function_call, optseq('[', $._constant_range_expression, ']')),
-    // $._constant_let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
+    // $._constant_let_expression, // No need to add since it's syntax is the same as a tf_call/constant_function_call (true ambiguity that adds conflicts)
     seq('(', $.constant_mintypmax_expression, ')'),
     $.constant_cast,
     $._constant_assignment_pattern_expression,
     $.type_reference,
-    '$', // DANGER: Out of LRM explicitly, but required for 7.10.4 (bullet point 47): The $ primary shall be legal only in a select for a queue variable.
+    '$', // Out of LRM, required for 7.10.4 (bullet point 47): The $ primary shall be legal only in a select for a queue variable.
     'null'
   )),
 
   module_path_primary: $ => choice(
-    // $._number,
-    // $._identifier,
-    // $.module_path_concatenation,
-    // $.module_path_multiple_concatenation,
-    // $.function_subroutine_call,
-    // seq('(', $.module_path_mintypmax_expression, ')')
+    $._number,
+    $._identifier,
+    $.module_path_concatenation,
+    $.module_path_multiple_concatenation,
+    $.function_subroutine_call,
+    seq('(', $.module_path_mintypmax_expression, ')')
   ),
 
   primary: $ => prec('primary', choice(
@@ -3843,23 +3844,22 @@ const rules = {
       //   $.hierarchical_identifier,
       //   optional($.select)
       // )),
-      seq( // INFO: This is the one in the LRM
+      seq(
         optchoice($.class_qualifier, $.package_scope),
         $.hierarchical_identifier,
         optional($.select)
       ),
-      // INFO: The one below should be included in the one above, however it doesn't work well
+      // INFO: The one below is a subgroup of the one above, however it doesn't work well
       // possibly because of some bad specified precedence/conflict. For the time being, adding
-      // the option below fixes things and seems to work well (at the expense of some more complexity
-      // in the parser)
-      seq($.implicit_class_handle, optional($.select)), // INFO: Out of LRM, but used as a workaround
-      // seq(choice($.class_qualifier, $.package_scope), optional($.select)), // Tried this instead of the one above, but broke things and didn't add anything new
+      // the option below fixes things and seems to work well (at the expense of maybe
+      // some more complexity in the parser)
+      seq($.implicit_class_handle, optional($.select)), // Out of LRM, but used as a workaround
     ),
     $.empty_unpacked_array_concatenation,
     seq($.concatenation, optseq('[', $.range_expression, ']')),
     seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
     $.function_subroutine_call,
-    // $.let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
+    // $.let_expression,  // No need to add since it's syntax is the same as a tf_call/subroutine_call (true ambiguity that adds conflicts)
     seq('(', $.mintypmax_expression, ')'),
     $.cast,
     $.assignment_pattern_expression,
@@ -3868,9 +3868,9 @@ const rules = {
     'this',
     '$',
     'null',
-    '$root', // DANGER: Out of LRM but needed for sv-tests/chapter-20/20.14--coverage
-    '\'{}',  // DANGER: Out of LRM but fixes errors in some UVM files
-    $.type_reference, // DANGER: Out of LRM explicitly, but should be for type comparison (6.23)
+    '$root',          // Out of LRM, needed for sv-tests/chapter-20/20.14--coverage
+    '\'{}',           // Out of LRM, fixes errors in some UVM files
+    $.type_reference, // Out of LRM, should be for type comparison (6.23)
   )),
 
   // Modified to avoid matching empty string
@@ -3891,9 +3891,9 @@ const rules = {
     $.string_literal,
   ),
 
-  time_literal: $ => choice(
-    seq($.unsigned_number, $.time_unit),
-    seq($.fixed_point_number, $.time_unit)
+  time_literal: $ => seq(
+    choice($.unsigned_number, $.fixed_point_number),
+    $.time_unit
   ),
 
   time_unit: $ => choice('s', 'ms', 'us', 'ns', 'ps', 'fs'),
@@ -3904,36 +3904,33 @@ const rules = {
   )),
 
   // Modified to avoid matching empty string
-  bit_select1: $ => repeat1(
+  bit_select: $ => repeat1(
     seq('[', $.expression, ']')
   ),
 
-  select: $ => choice( // reordered -> non empty
-    seq( // 1xx
-      // INFO: First line overlaps a lot with $.hierarchical_identifier, but that one uses constant_bit_select
-      // TODO: This one does not support text_macro_usage yet
-    repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
-      optional($.bit_select1),
-      optional(seq('[', $._part_select_range, ']'))
+  // Modified to avoid matching empty string
+  select: $ => choice(
+    seq(
+      // First line overlaps a lot with $.hierarchical_identifier, but that one uses constant_bit_select
+      // TODO: This one does not support $.text_macro_usage as $.hierarchical_identifier does
+      repeat(seq('.', $.member_identifier, optional($.bit_select))), '.', $.member_identifier,
+      optional($.bit_select),
+      optseq('[', $._part_select_range, ']')
     ),
-    seq( // 01x
-      //
-      $.bit_select1,
-      optional(seq('[', $._part_select_range, ']'))
+    seq(
+      $.bit_select,
+      optseq('[', $._part_select_range, ']')
     ),
-    seq( // 001
-      //
-      //
-      seq('[', $._part_select_range, ']')
-    )
+    seq('[', $._part_select_range, ']')
   ),
 
-  nonrange_select: $ => choice(  // reordered -> non empty
-    seq( // 1x
-      repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
-      optional($.bit_select1)
+  // Modified to avoid matching empty string
+  nonrange_select: $ => choice(
+    seq(
+      repeat(seq('.', $.member_identifier, optional($.bit_select))), '.', $.member_identifier,
+      optional($.bit_select)
     ),
-    $.bit_select1
+    $.bit_select
   ),
 
   // Modified to avoid matching empty string
@@ -3942,24 +3939,24 @@ const rules = {
   ))),
 
   // Modified to avoid matching empty string
-  constant_select: $ => prec('constant_select', choice( // reordered -> non empty
+  constant_select: $ => prec('constant_select', choice(
     seq(
       repeat(prec('constant_select', seq('.', $.member_identifier, optional($.constant_bit_select)))), '.', $.member_identifier,
       optional($.constant_bit_select),
-      optional(seq('[', $._constant_part_select_range, ']'))
+      optseq('[', $._constant_part_select_range, ']')
     ),
     seq(
       $.constant_bit_select,
-      optional(seq('[', $._constant_part_select_range, ']'))
+      optseq('[', $._constant_part_select_range, ']')
     ),
     seq('[', $._constant_part_select_range, ']'),
   )),
 
+  cast: $ => prec('cast', seq($.casting_type, '\'', '(', $.expression, ')')),
+
   constant_cast: $ => seq($.casting_type, '\'', '(', $.constant_expression, ')'),
 
   _constant_let_expression: $ => $.let_expression,
-
-  cast: $ => prec('cast', seq($.casting_type, '\'', '(', $.expression, ')')),
 
 
 // ** A.8.5 Expression left-side values
@@ -5118,16 +5115,16 @@ module.exports = grammar({
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '.'  •  simple_identifier  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  '['  _part_select_range  ']')
-    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  bit_select1  '['  _part_select_range  ']')
-    //   4:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  bit_select1)
+    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  bit_select  '['  _part_select_range  ']')
+    //   4:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  bit_select)
     //   5:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier)
-    //   6:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier  bit_select1)
+    //   6:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier  bit_select)
     //   7:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier)
     // ['hierarchical_identifier', 'select'], // INFO: I think this one is redundant or not needed anymore
     // ['hierarchical_identifier', 'constant_select'],
 
 
-    // TODO: Removed to fix the expressions with primaries inside a bit_select1!!
+    // TODO: Removed to fix the expressions with primaries inside a bit_select!!
     //
     // INFO: constant_primary has precedence since it refers to hierarchical_identifier instead of to select, which in theory should simplify things quite a lot
     // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  primary_literal  •  '/'  …
@@ -5472,9 +5469,9 @@ module.exports = grammar({
     // Setting left associativity (prec.left) prevents having more than 1 bit_select dimension:
     //
     // module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  bit_select1_repeat1  •  '['  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1  bit_select1_repeat1)  •  '['  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select  bit_select1_repeat1)  •  '['  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1_repeat1  bit_select1_repeat1  •  bit_select1_repeat1)
-    [$.bit_select1],
+    [$.bit_select],
     //   '['  _identifier  constant_bit_select1_repeat1  •  '['  …
     //   1:  '['  _identifier  (constant_bit_select  constant_bit_select1_repeat1)  •  '['  …
     //   2:  '['  _identifier  (constant_bit_select1_repeat1  constant_bit_select1_repeat1  •  constant_bit_select1_repeat1)
@@ -5823,7 +5820,7 @@ module.exports = grammar({
 
     [$.constant_primary, $.primary],
 
-    // INFO: Added to fix issue with expressions inside bit_select1
+    // INFO: Added to fix issue with expressions inside bit_select
     [$.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.tf_call, $.constant_primary],
     [$.data_type, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
@@ -6001,8 +5998,6 @@ module.exports = grammar({
 
 
     // TODO: After uncommenting the other branch in `ps_parameter_identifier'
-
-
     [$.interface_port_declaration, $.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
     [$.data_type, $._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
     [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
@@ -6017,8 +6012,6 @@ module.exports = grammar({
     [$.constant_select],
     [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_bit_select],
 
-    // After adding back the constant primary in casting_type
-    // [$.interface_port_declaration, $._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_select, $.hierarchical_identifier],
   ],
 
 });
