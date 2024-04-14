@@ -5,11 +5,15 @@ module Top(/*...*/);
   Acc U1(/*...*/);
   Acc U2(/*...*/);
   /*...*/
+endmodule
+
 module Acc(/*...*/);
   /*...*/
   Adder A1(/*...*/);
   Adder A2(/*...*/);
 /*...*/
+endmodule
+
 config MyConfig;              // Simple config
   design MyDesign.Top;
   default liblist MyDesign;

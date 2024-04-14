@@ -6,7 +6,7 @@ module n;
   /*...*/
   always /*...*/
     if ( Rose( posedge clock, j) ) // event argument
-      /*...*/ 
+      /*...*/ ;
   /*...*/
 endmodule
 

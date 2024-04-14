@@ -82,31 +82,17 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    doulos/110.2_user_defined_primitive.sv
                    doulos/110.3_user_defined_primitive.sv
                    doulos/110.4_user_defined_primitive.sv
-                   # Checkers
-                   # doulos/124.1_checker.sv
-                   # doulos/125.1_checker_instantiation.sv
-                   # doulos/127.1_default_disable_iff.sv
+                   doulos/55.1_instantiation.sv
                    # Specify
                    doulos/150.1_timing_checks.sv
                    doulos/77.1_pathpulse$.sv
                    doulos/91.1_specify.sv
                    doulos/91.2_specify.sv
                    doulos/92.1_specparam.sv
-                   # Config
-                   doulos/19.1_config.sv
-                   # Builtin primitives
-                   doulos/27.1_defparam.sv
-                   doulos/55.1_instantiation.sv
-                   doulos/55.4_instantiation.sv
-                   doulos/96.1_strength.sv
-                   doulos/28.1_delay.sv
-                   doulos/68.1_module.sv
                    # Let
-                   doulos/61.2_let.sv # Complex let construct, macro-like
-                   # Library
-                   doulos/62.1_library.sv
+                   doulos/61.2_let.sv # Complex let construct, macro-like (come back if integrating $.let_expression with dynamic precedence)
                    # Attribute
-                   doulos/8.3_attribute.sv # TODO: This one should actually work but it doesn't for some reason
+                   doulos/8.3_attribute.sv # TODO: This one should actually work but it doesn't for some reason (doesn't detect it as a tf_call)
                   )
 
 # Filter tests, if there was an argument provided

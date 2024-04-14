@@ -582,7 +582,7 @@ const rules = {
     repeat($.attribute_instance),
     choice(
       $.parameter_override,
-      // $.gate_instantiation, // TODO: Removed temporarily to simplify parsing
+      $.gate_instantiation,
       // $.udp_instantiation,  // TODO: Removed temporarily to simplify parsing
       $.module_instantiation,
       $._module_common_item
@@ -1319,7 +1319,7 @@ const rules = {
     '#',
     choice(
       $.delay_value,
-      seq('(', $.mintypmax_expression, optional($.mintypmax_expression), ')')
+      seq('(', $.mintypmax_expression, optseq(',', $.mintypmax_expression), ')')
     )
   ),
 
@@ -1327,7 +1327,7 @@ const rules = {
     '#',
     choice(
       $.delay_value,
-      seq('(', $.mintypmax_expression, optseq($.mintypmax_expression, optional($.mintypmax_expression)), ')')
+      seq('(', $.mintypmax_expression, optseq(',', $.mintypmax_expression, optseq(',', $.mintypmax_expression)), ')')
     )
   ),
 
@@ -2119,134 +2119,131 @@ const rules = {
 
 // * A.3 Primitive instances
 // ** A.3.1 Primitive instantiation and instances
+  gate_instantiation: $ => seq(
+    choice(
+      seq($.cmos_switchtype, optional($.delay3), sepBy1(',', $.cmos_switch_instance)),
+      seq($.mos_switchtype, optional($.delay3), sepBy1(',', $.mos_switch_instance)),
+      seq($.enable_gatetype, optional($.drive_strength), optional($.delay3), sepBy1(',', $.enable_gate_instance)),
+      seq($.n_input_gatetype, optional($.drive_strength), optional($.delay2), sepBy1(',', $.n_input_gate_instance)),
+      seq($.n_output_gatetype, optional($.drive_strength), optional($.delay2), sepBy1(',', $.n_output_gate_instance)),
+      seq($.pass_en_switchtype, optional($.delay2), sepBy1(',', $.pass_enable_switch_instance)),
+      seq($.pass_switchtype, sepBy1(',', $.pass_switch_instance)),
+      seq('pulldown', optional($.pulldown_strength), sepBy1(',', $.pull_gate_instance)),
+      seq('pullup', optional($.pullup_strength), sepBy1(',', $.pull_gate_instance))
+    ),
+    ';'
+  ),
 
-  // gate_instantiation: $ => seq(
-  //   choice(
-  //     seq(
-  //       $.cmos_switchtype,
-  //       // optional($.delay3),
-  //       sep1(',', $.cmos_switch_instance)
-  //     ),
-  //     seq(
-  //       $.enable_gatetype,
-  //       // optional($.drive_strength), optional($.delay3),
-  //       sep1(',', $.enable_gate_instance)
-  //     ),
-  //     seq(
-  //       $.mos_switchtype,
-  //       // optional($.delay3),
-  //       sep1(',', $.mos_switch_instance)
-  //     ),
-  //     seq(
-  //       $.n_input_gatetype,
-  //       optional($.drive_strength), optional($.delay2),
-  //       sep1(',', $.n_input_gate_instance)
-  //     ),
-  //     seq(
-  //       $.n_output_gatetype,
-  //       optional($.drive_strength), optional($.delay2),
-  //       sep1(',', $.n_output_gate_instance)
-  //     ),
-  //     seq(
-  //       $.pass_en_switchtype,
-  //       optional($.delay2),
-  //       sep1(',', $.pass_enable_switch_instance)
-  //     ),
-  //     seq(
-  //       $.pass_switchtype,
-  //       sep1(',', $.pass_switch_instance)
-  //     ),
-  //     seq(
-  //       'pulldown',
-  //       optional($.pulldown_strength),
-  //       sep1(',', $.pull_gate_instance)
-  //     ),
-  //     seq(
-  //       'pullup',
-  //       optional($.pullup_strength),
-  //       sep1(',', $.pull_gate_instance)
-  //     )
-  //   ),
-  //   ';'
-  // ),
+  cmos_switch_instance: $ => seq(
+    optional($.name_of_instance), '(',
+    $.output_terminal, ',',
+    $.input_terminal, ',',
+    $.ncontrol_terminal, ',',
+    $.pcontrol_terminal,
+    ')'
+  ),
 
-  // cmos_switch_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(',
-  //   $.output_terminal, ',',
-  //   $.input_terminal, ',',
-  //   $.ncontrol_terminal, ',',
-  //   $.pcontrol_terminal,
-  //   ')'
-  // ),
+  enable_gate_instance: $ => seq(
+    optional($.name_of_instance),
+    '(',
+    $.output_terminal, ',',
+    $.input_terminal, ',',
+    $.enable_terminal,
+    ')'
+  ),
 
-  // enable_gate_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(', $.output_terminal, ',', $.input_terminal, ',', $.enable_terminal, ')'
-  // ),
+  mos_switch_instance: $ => seq(
+    optional($.name_of_instance),
+    '(',
+    $.output_terminal, ',',
+    $.input_terminal, ',',
+    $.enable_terminal,
+    ')'
+  ),
 
-  // mos_switch_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(', $.output_terminal, ',', $.input_terminal, ',', $.enable_terminal, ')'
-  // ),
+  n_input_gate_instance: $ => seq(
+    optional($.name_of_instance),
+    '(',
+    $.output_terminal, ',',
+    sepBy1(',', $.input_terminal),
+    ')'
+  ),
 
-  // n_input_gate_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(', $.output_terminal, ',', sep1(',', $.input_terminal), ')'
-  // ),
+  n_output_gate_instance: $ => seq(
+    optional($.name_of_instance),
+    '(',
+    sepBy1(',', $.output_terminal), ',',
+    $.input_terminal,
+    ')'
+  ),
 
-  // n_output_gate_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(', sep1(',', $.output_terminal), ',', $.input_terminal, ')'
-  // ),
+  pass_switch_instance: $ => seq(
+    optional($.name_of_instance),
+    '(',
+    $.inout_terminal, ',',
+    $.inout_terminal,
+    ')'
+  ),
 
-  // pass_switch_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(', $.inout_terminal, ',', $.inout_terminal, ')'
-  // ),
+  pass_enable_switch_instance: $ => seq(
+    optional($.name_of_instance),
+    '(',
+    $.inout_terminal, ',',
+    $.inout_terminal, ',',
+    $.enable_terminal,
+    ')'
+  ),
 
-  // pass_enable_switch_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(', $.inout_terminal, ',', $.inout_terminal, ',', $.enable_terminal, ')'
-  // ),
-
-  // pull_gate_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(', $.output_terminal, ')'
-  // ),
+  pull_gate_instance: $ => seq(
+    optional($.name_of_instance),
+    '(',
+    $.output_terminal,
+    ')'
+  ),
 
 // ** A.3.2 Primitive strengths
+  pulldown_strength: $ => choice(
+    seq('(', $.strength0, ',', $.strength1, ')'),
+    seq('(', $.strength1, ',', $.strength0, ')'),
+    seq('(', $.strength0, ')')
+  ),
 
-  // pulldown_strength: $ => choice(
-  //   seq('(', $.strength0, ',', $.strength1, ')'),
-  //   seq('(', $.strength1, ',', $.strength0, ')'),
-  //   seq('(', $.strength0, ')')
-  // ),
+  pullup_strength: $ =>choice(
+    seq(',', $.strength0, ',', $.strength1, ')'),
+    seq(',', $.strength1, ',', $.strength0, ')'),
+    seq(',', $.strength1, ')')
+  ),
 
-  // pullup_strength: $ =>choice(
-  //   seq(',', $.strength0, ',', $.strength1, ')'),
-  //   seq(',', $.strength1, ',', $.strength0, ')'),
-  //   seq(',', $.strength1, ')')
-  // ),
 
 // ** A.3.3 Primitive terminals
+  enable_terminal: $ => $.expression,
 
-  // enable_terminal: $ => $.expression,
-  // inout_terminal: $ => $.net_lvalue,
-  // input_terminal: $ => $.expression,
-  // ncontrol_terminal: $ => $.expression,
-  // output_terminal: $ => $.net_lvalue,
-  // pcontrol_terminal: $ => $.expression,
+  inout_terminal: $ => $.net_lvalue,
+
+  input_terminal: $ => $.expression,
+
+  ncontrol_terminal: $ => $.expression,
+
+  output_terminal: $ => $.net_lvalue,
+
+  pcontrol_terminal: $ => $.expression,
+
 
 // ** A.3.4 Primitive gate and switch types
+  cmos_switchtype: $ => choice('cmos', 'rcmos'),
 
-  // cmos_switchtype: $ => choice('cmos', 'rcmos'),
-  // enable_gatetype: $ => choice('bufif0', 'bufif1', 'notif0', 'notif1'),
-  // mos_switchtype: $ => choice('nmos', 'pmos', 'rnmos', 'rpmos'),
-  // n_input_gatetype: $ => choice('and', 'nand', 'or', 'nor', 'xor', 'xnor'),
-  // n_output_gatetype: $ => choice('buf', 'not'),
-  // pass_en_switchtype: $ => choice('tranif0', 'tranif1', 'rtranif1', 'rtranif0'),
-  // pass_switchtype: $ => choice('tran', 'rtran'),
+  enable_gatetype: $ => choice('bufif0', 'bufif1', 'notif0', 'notif1'),
+
+  mos_switchtype: $ => choice('nmos', 'pmos', 'rnmos', 'rpmos'),
+
+  n_input_gatetype: $ => choice('and', 'nand', 'or', 'nor', 'xor', 'xnor'),
+
+  n_output_gatetype: $ => choice('buf', 'not'),
+
+  pass_en_switchtype: $ => choice('tranif0', 'tranif1', 'rtranif1', 'rtranif0'),
+
+  pass_switchtype: $ => choice('tran', 'rtran'),
+
 
 // * A.4 Instantiations
 // ** A.4.1 Instantiation
@@ -5093,6 +5090,22 @@ module.exports = grammar({
     ['variable_lvalue', 'tf_call'],
 
 
+    // INFO: Removed from conflicts when implementing primitives.
+    // The only conflict that keeps here is the ['net_lvalue', 'variable_lvalue'] to differentiate between
+    // nets and values in declarations.
+    //
+    //   1:  n_output_gatetype  '('  output_terminal  ','  (net_lvalue  hierarchical_identifier  •  constant_select)  (precedence: 'net_lvalue')
+    //   2:  n_output_gatetype  '('  output_terminal  ','  (primary  hierarchical_identifier  •  select)              (precedence: 'primary')
+    //   3:  n_output_gatetype  '('  output_terminal  ','  (primary  hierarchical_identifier)  •  '.'  …              (precedence: 'primary')
+    //   4:  n_output_gatetype  '('  output_terminal  ','  (tf_call  hierarchical_identifier)  •  '.'  …              (precedence: 'tf_call')
+    //   5:  n_output_gatetype  '('  output_terminal  ','  (variable_lvalue  hierarchical_identifier  •  select)      (precedence: 'variable_lvalue')
+    ['net_lvalue', 'tf_call'],
+    ['net_lvalue', 'primary'],
+    ['net_lvalue', 'constant_primary'],
+    ['net_lvalue', 'hierarchical_identifier'],
+    // ['net_lvalue', 'variable_lvalue'], // INFO: Do include on purpose
+
+
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5403,15 +5416,6 @@ module.exports = grammar({
     [$.pragma_keyword, $._identifier],
 
 
-    // Allow proper detection of select/constant_select with assign and net_lvalue/variable_lvalue
-    //
-    // 'assign'  _identifier  •  '.'  …
-    // 1:  'assign'  (hierarchical_identifier  _identifier)  •  '.'  …       (precedence: 'hierarchical_identifier')
-    // 2:  'assign'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
-    // 3:  'assign'  (net_lvalue  _identifier  •  constant_select)           (precedence: 'net_lvalue')
-    [$.net_lvalue, $.hierarchical_identifier],
-
-
     // There are cases where it's not possible to know if it's constat or not without more tokens
     //
     // '('  '$'  •  ':'  …
@@ -5588,7 +5592,6 @@ module.exports = grammar({
     // delay3
     [$.randomize_call],
     [$.system_tf_call],
-    [$.expression, $.mintypmax_expression],
     [$.tf_call],
     [$.array_manipulation_call],
     [$.method_call_body],
@@ -5629,7 +5632,6 @@ module.exports = grammar({
     [$.data_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.data_type, $.class_type, $.tf_call, $.constant_primary],
     [$._assignment_pattern_expression_type, $.hierarchical_identifier],
-    [$._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
 
     // Modports
     // INFO: Not sure about this...
@@ -5768,7 +5770,6 @@ module.exports = grammar({
     [$._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
     [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$._assignment_pattern_expression_type, $.net_lvalue, $.hierarchical_identifier],
     [$.interface_port_declaration, $._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
     [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_select, $.hierarchical_identifier],
     [$.data_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
@@ -5776,6 +5777,10 @@ module.exports = grammar({
     [$.constant_select],
     [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_bit_select],
 
+
+    // TODO: Adding primitives -> Fixed partially with named precedences
+    // The only one left is the $.net_lvalue / $.variable_lvalue that exists above on purpose
+    [$.tf_call, $.primary, $.net_lvalue, $.variable_lvalue],
   ],
 
 });
