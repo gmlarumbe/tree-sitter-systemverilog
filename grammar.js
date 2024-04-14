@@ -217,36 +217,37 @@ const rules = {
 
 // * A.1 Source text
 // ** A.1.1 Library source text
+  library_text: $ => $.library_description, // Modified to avoid matching empty string
 
-  // library_text: $ => repeat($.library_description),
+  library_description: $ => prec('library_description', choice(
+    $.library_declaration,
+    $.include_statement,
+    $.config_declaration,
+    ';'
+  )),
 
-  // library_description: $ => choice(
-  //   $.library_declaration,
-  //   $.include_statement,
-  //   // $.config_declaration,
-  //   ';'
-  // ),
+  library_declaration: $ => seq(
+    'library',
+    $.library_identifier,
+    sepBy1(',', $.file_path_spec),
+    optseq('-incdir', sepBy1(',', $.file_path_spec)),
+    ';'
+  ),
 
-  // library_declaration: $ => seq(
-  //   'library',
-  //   $.library_identifier,
-  //   sep1(',', $.file_path_spec),
-  //   optseq('-incdir', sep1(',', $.file_path_spec)),
-  //   ';'
-  // ),
+  include_statement: $ => seq('include', $.file_path_spec, ';'),
 
-  // include_statement: $ => seq('include', $.file_path_spec, ';'),
+  file_path_spec: $ => /[^;\n]+/,
 
 
 // ** A.1.2 SystemVerilog source text
   _description: $ => prec('_description', choice(
     $.module_declaration,
-    // $.udp_declaration, // TODO: Simplify debugging
+    // $.udp_declaration, // TODO:
     $.interface_declaration,
     $.program_declaration,
     $.package_declaration,
     seq(repeat($.attribute_instance), choice($._package_item, $.bind_directive)),
-    // $.config_declaration, // TODO: Simplify debugging
+    $.library_text, // Includes $.config_declaration as one of its branches
     $.snippets, // Out of LRM (inlined)
   )),
 
@@ -641,13 +642,13 @@ const rules = {
 
 
 // ** A.1.5 Configuration source text
-  // config_declaration: $ => seq(
-  //   'config', $.config_identifier, ';',
-  //   repseq($.local_parameter_declaration, ';'),
-  //   $.design_statement,
-  //   repeat($.config_rule_statement),
-  //   'endconfig', optseq(':', $.config_identifier)
-  // ),
+  config_declaration: $ => seq(
+    'config', $.config_identifier, ';',
+    // repseq($.local_parameter_declaration, ';'),
+    // $.design_statement,
+    // repeat($.config_rule_statement),
+    // 'endconfig', optseq(':', $.config_identifier)
+  ),
 
   // design_statement: $ => seq(
   //   'design',
@@ -710,14 +711,14 @@ const rules = {
     $._non_port_interface_item
   ),
 
-  _non_port_interface_item: $ => choice(
+  _non_port_interface_item: $ => prec('_non_port_interface_item', choice(
     $.generate_region,
     $._interface_or_generate_item,
     $.program_declaration,
     $.modport_declaration,
     $.interface_declaration,
     $.timeunits_declaration // A.10.3
-  ),
+  )),
 
 
 // ** A.1.7 Program items
@@ -726,7 +727,7 @@ const rules = {
     $._non_port_program_item
   ),
 
-  _non_port_program_item: $ => choice(
+  _non_port_program_item: $ => prec('_non_port_program_item', choice(
     seq(repeat($.attribute_instance), choice(
       $.continuous_assign,
       $._module_or_generate_item_declaration,
@@ -736,7 +737,7 @@ const rules = {
     )),
     $.timeunits_declaration, // A.10.3
     $._program_generate_item
-  ),
+  )),
 
   _program_generate_item: $ => choice(
     $.loop_generate_construct,
@@ -2364,12 +2365,12 @@ const rules = {
     $.generate_block
   ),
 
-  genvar_initialization: $ => seq(
+  genvar_initialization: $ => prec('genvar_initialization', seq(
     optional('genvar'),
     $.genvar_identifier,
     '=',
     $.constant_expression
-  ),
+  )),
 
   genvar_iteration: $ => choice(
     seq($.genvar_identifier, $.assignment_operator, $._genvar_expression),
@@ -3621,9 +3622,9 @@ const rules = {
   system_tf_call: $ => seq(
     $.system_tf_identifier,
     choice(
-      optseq('(', optional($.list_of_arguments), ')'),
+      prec.dynamic(1, optseq('(', optional($.list_of_arguments), ')')),
       seq('(', $.data_type, optseq(',', $.expression), ')'),
-      seq('(', sepBy1(',', $.expression), optseq(',', $.clocking_event), ')')
+      prec.dynamic(0, seq('(', sepBy1(',', $.expression), optseq(',', $.clocking_event), ')'))
     )
   ),
 
@@ -4686,6 +4687,7 @@ module.exports = grammar({
     ['_description', 'data_declaration'],
     ['_package_or_generate_item_declaration', '_non_port_module_item'],
     ['_package_or_generate_item_declaration', 'statement_item'],
+    ['_package_or_generate_item_declaration', 'library_description'],
 
 
     // Common item for module/package without context -> Consider it a module item
@@ -5045,64 +5047,32 @@ module.exports = grammar({
     ['constant_primary', '_simple_type'],
 
 
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // INFO: To be reviewed
-    ////////////////////////////////////////////////////////////////////////////////
-
-
-    // TODO: Review this one after deinlining hierarchical_identifier
-    // Set higher precedence to hierarchical_identifier than to select/constant_select since
-    // the latter is optional (according to LRM can match the empty string).
-    // INFO: However, take into account that there should be a conflict below for the case
-    // when there is actually a select besides the hierarchical_identifier
+    // $.timeunits_declaration belongs to the declaration rule, better than to a separate $._non_port_interface_item
+    // The same applies to programs
     //
-    // module_nonansi_header  'var'  _identifier  '='  _identifier  '.'  •  simple_identifier  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …
-    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  '['  _part_select_range  ']')
-    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  bit_select  '['  _part_select_range  ']')
-    //   4:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier  bit_select)
-    //   5:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select  '.'  •  _identifier)
-    //   6:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier  bit_select)
-    //   7:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier)
-    // ['hierarchical_identifier', 'select'], // INFO: I think this one is redundant or not needed anymore
-    // ['hierarchical_identifier', 'constant_select'],
+    // interface_nonansi_header  timeunits_declaration  •  ';'  …
+    // 1:  (interface_declaration  interface_nonansi_header  timeunits_declaration  •  interface_declaration_repeat1  'endinterface'  ':'  interface_identifier)  (precedence: 'interface_declaration')
+    // 2:  (interface_declaration  interface_nonansi_header  timeunits_declaration  •  interface_declaration_repeat1  'endinterface')                             (precedence: 'interface_declaration')
+    // 3:  interface_nonansi_header  (_non_port_interface_item  timeunits_declaration)  •  ';'  …                                                                 (precedence: '_non_port_interface_item')
+    ['interface_declaration', '_non_port_interface_item'],
+    ['program_declaration', '_non_port_program_item'],
 
 
-    // module_nonansi_header  'var'  _identifier  '='  _identifier  '['  class_scope  •  simple_identifier  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (class_qualifier  class_scope)  •  simple_identifier  …
-    //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier  constant_select)
-    //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier)
-    // ['class_qualifier', 'ps_parameter_identifier'],
+    // That constuct in a genvar corresponds to the initialization
+    //
+    // 'for'  '('  _identifier  •  '='  …
+    // 1:  'for'  '('  (genvar_initialization  _identifier  •  '='  constant_expression)  (precedence: 'genvar_initialization')
+    // 2:  'for'  '('  (hierarchical_identifier  _identifier)  •  '='  …                  (precedence: 'hierarchical_identifier')
+    ['genvar_initialization', 'hierarchical_identifier'],
 
 
-    // First one doesn't really make much sense:
+    // This is illegal synax, so choose any
     //
     //   module_nonansi_header  'var'  _identifier  '='  implicit_class_handle  '.'  •  '$root'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  (class_qualifier  implicit_class_handle  '.')  •  '$root'  …                        (precedence: 'class_qualifier')
     //   2:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier  select)  (precedence: 'variable_lvalue')
     //   3:  module_nonansi_header  'var'  _identifier  '='  (variable_lvalue  implicit_class_handle  '.'  •  hierarchical_identifier)           (precedence: 'variable_lvalue')
     ['variable_lvalue', 'class_qualifier'],
-
-
-    // TODO: Review this one, had it in the past
-    // Identify as a constant_mintypmax_expression -> constant_expression on the RHS instead of a data_type (since it's a declaration)
-    //
-    //   'localparam'  _identifier  '='  _identifier  •  ';'  …
-    //   1:  'localparam'  _identifier  '='  (constant_primary  _identifier)  •  ';'  …  (precedence: 'ps_parameter_identifier')
-    //   2:  'localparam'  _identifier  '='  (data_type  _identifier)  •  ';'  …         (precedence: 'data_type')
-    // ['ps_parameter_identifier', 'data_type'],
-
-
-    // INFO: This one is not useful anymore, since there is a conflic with data_type and class_type in conflicts
-    // Revisit!
-    //
-    // tf_port_item seems more generic, so resolve it to this node for this particular case
-    //
-    //   'function'  function_identifier  '('  _identifier  •  ')'  …
-    //   1:  'function'  function_identifier  '('  (data_type  _identifier)  •  ')'  …      (precedence: 'data_type')
-    //   2:  'function'  function_identifier  '('  (tf_port_item  _identifier)  •  ')'  …n
-    // ['tf_port_item', 'data_type'],
 
 
     // Even though the class_scope is implicitly a data_type, it should not be needed to set it as a node
@@ -5114,16 +5084,12 @@ module.exports = grammar({
     ['class_qualifier', 'data_type'],
 
 
-    // If there is only one identifier, without package scope, consider it a hierarchical identifier with one level of nesting
+    // If there is only one identifier, without package scope/parenthesis, consider it a hierarchical identifier with one level of nesting
     //
     // _identifier  •  ';'  …
     // 1:  (hierarchical_identifier  _identifier)  •  ';'  …  (precedence: 'hierarchical_identifier')
     // 2:  (tf_call  _identifier)  •  ';'  …                  (precedence: 'tf_call')
     ['hierarchical_identifier', 'tf_call'],
-
-
-    // If there are no parenthesis prioritize the hierarchical identifier
-    //
     //   'var'  _identifier  '='  hierarchical_identifier  •  ';'  …
     //   1:  'var'  _identifier  '='  (primary  hierarchical_identifier)  •  ';'  …  (precedence: 'primary')
     //   2:  'var'  _identifier  '='  (tf_call  hierarchical_identifier)  •  ';'  …  (precedence: 'tf_call')
@@ -5134,42 +5100,9 @@ module.exports = grammar({
     ['variable_lvalue', 'tf_call'],
 
 
-    // Do not allow calling functions inside brackets (maybe only system functions like $sizeof)
-    // INFO: This one generalizes one that appeared above!
-    //
-    //   module_nonansi_header  'initial'  hierarchical_identifier  '['  _identifier  •  '/'  …
-    //   1:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (constant_primary  _identifier)  •  '/'  …         (precedence: 'ps_parameter_identifier')
-    //   2:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (hierarchical_identifier  _identifier)  •  '/'  …  (precedence: 'hierarchical_identifier')
-    //   3:  module_nonansi_header  'initial'  hierarchical_identifier  '['  (tf_call  _identifier)  •  '/'  …                  (precedence: 'tf_call')
-    // ['ps_parameter_identifier', 'hierarchical_identifier', 'tf_call'],
-
-    //   module_nonansi_header  'initial'  _identifier  '.'  •  simple_identifier  …
-    //   1:  module_nonansi_header  'initial'  (hierarchical_identifier_repeat1  _identifier  '.')  •  simple_identifier  …                            (precedence: 'hierarchical_identifier')
-    //   2:  module_nonansi_header  'initial'  _identifier  (list_of_arguments  '.'  •  _identifier  '('  ')'  list_of_arguments_repeat3)              (precedence: 'list_of_arguments')
-    //   3:  module_nonansi_header  'initial'  _identifier  (list_of_arguments  '.'  •  _identifier  '('  ')')                                         (precedence: 'list_of_arguments')
-    //   4:  module_nonansi_header  'initial'  _identifier  (list_of_arguments  '.'  •  _identifier  '('  expression  ')'  list_of_arguments_repeat3)  (precedence: 'list_of_arguments')
-    //   5:  module_nonansi_header  'initial'  _identifier  (list_of_arguments  '.'  •  _identifier  '('  expression  ')')                             (precedence: 'list_of_arguments')
-    // ['hierarchical_identifier', 'list_of_arguments'],
-
-
-
-
-
-
-
-    // In this case, set this order to simplify precedences that yield the same result
-    //   ''{'  _identifier  •  ':'  …
-    //   1:  ''{'  (_simple_type  _identifier)  •  ':'  …
-    //   2:  ''{'  (_simple_type  _identifier)  •  ':'  …            (precedence: 'ps_parameter_identifier')
-    //   3:  ''{'  (_structure_pattern_key  _identifier)  •  ':'  …  (precedence: '_structure_pattern_key')
-    //   4:  ''{'  (constant_primary  _identifier)  •  ':'  …        (precedence: 'ps_parameter_identifier')
-    //
-    // ''{'  class_scope  _identifier  •  ':'  …
-    // 1:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …
-    // 2:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …      (precedence: 'ps_parameter_identifier')
-    // 3:  ''{'  (constant_primary  class_scope  _identifier)  •  ':'  …  (precedence: 'ps_parameter_identifier')
-    // ['ps_parameter_identifier', 'ps_type_identifier', '_structure_pattern_key'],
-
+    ////////////////////////////////////////////////////////////////////////////////
+    // INFO: To be reviewed
+    ////////////////////////////////////////////////////////////////////////////////
 
     // 'sequence'  sequence_identifier  ';'  '##'  '['  constant_expression  ':'  '$'  •  ']'  …
     // 1:  'sequence'  sequence_identifier  ';'  '##'  '['  (cycle_delay_const_range_expression  constant_expression  ':'  '$')  •  ']'  …  (precedence: 'cycle_delay_const_range_expression')
@@ -5183,8 +5116,6 @@ module.exports = grammar({
     // 2:  (hierarchical_identifier  '$root'  •  '.'  hierarchical_identifier_repeat1  _identifier)  (precedence: 'hierarchical_identifier')
     // 3:  (primary  '$root')  •  '.'  …                                                             (precedence: 'primary')
     ['hierarchical_identifier', 'primary'],
-
-
 
 
     // text_macro_usage  •  'resetall_compiler_directive_token1'  …
@@ -5206,23 +5137,12 @@ module.exports = grammar({
     ['constraint_set', 'empty_unpacked_array_concatenation'],
 
 
-    // INFO: After adding text_macro support for hierarchical identifiers
+    // After adding text_macro support for hierarchical identifiers
+    //
     // text_macro_usage  •  '['  …
     // 1:  (_directives  text_macro_usage)  •  '['  …                                         (precedence: '_directives')
     // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     ['hierarchical_identifier', '_directives'],
-    // ['_method_call_root', '_directives'],
-
-
-    // ['property_expr', 'sequence_expr'],
-
-    // ['method_call', 'tf_call'],
-
-    // INFO: These ones seemd to fix at first, but not in the end, the issue with sequences/properties in sv-tests!!
-    // ['property_spec', 'property_expr'],
-    // ['_sequence_actual_arg', 'property_expr'],
-    // End of INFO
-
 
 
 
@@ -5294,6 +5214,7 @@ module.exports = grammar({
     ['blocking_assignment'],
     ['ps_parameter_identifier'],
     ['ps_type_identifier'],
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5522,37 +5443,8 @@ module.exports = grammar({
     [$.dpi_function_import_property, $.dpi_task_import_property],
 
 
-
-// ** Conflicts to be reviewed
-    ////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////
-    // INFO: To be reviewed
-    ////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////
-
-    //  Declaration of net/type in the unit scope, true conflict
-    //
-    //   _identifier  •  simple_identifier  …
-    //   1:  (data_type  _identifier)  •  simple_identifier  …
-    //   2:  (net_declaration  _identifier  •  list_of_net_decl_assignments  ';')
-    // [$.net_declaration, $.data_type],
-
-
-    // Parser needs more information to know which of these possibiliies is the correct one:
-    //   1) Variable (or user defined) type declaration
-    //   2, 3) Module instantiation
-    //   4) User defined nettype assignments (less likely) but still possible
-    // INFO: This one is settled with dynamic precedences for data_type vs net_declaration
-    //
-    //   module_nonansi_header  _identifier  •  simple_identifier  …
-    //     1:  module_nonansi_header  (data_type  _identifier)  •  simple_identifier  …                                                 (precedence: 'data_type')
-    //     2:  module_nonansi_header  (module_instantiation  _identifier  •  hierarchical_instance  ';')                                (precedence: 'module_instantiation')
-    //     3:  module_nonansi_header  (module_instantiation  _identifier  •  hierarchical_instance  module_instantiation_repeat1  ';')  (precedence: 'module_instantiation')
-    //     4:  module_nonansi_header  (net_declaration  _identifier  •  list_of_net_decl_assignments  ';')                              (precedence: 'net_declaration')
-    // [$.net_declaration, $.data_type, $.module_instantiation],
-
-
-    // This is not that obvious, and seems better to create a conflict since bit_select and brackets are involved
+    // Packed array of user defined type <-> Hierarchical identifier with constant select
+    //   mytype_t [0:15] (my_var)        <->       my_hier_var[10]
     //
     //   'function'  function_identifier  ';'  _identifier  •  '['  …
     //   1:  'function'  function_identifier  ';'  (data_type  _identifier  •  data_type_repeat1)                                (precedence: 'data_type')
@@ -5561,7 +5453,8 @@ module.exports = grammar({
     [$.data_type, $.hierarchical_identifier],
 
 
-    // 2nd option is for the case when there is a clocking event, so it needs to check further.
+    // Conflict between 1st/3rd branch of $.system_tf_call choice.
+    // Since there is no $.clocking_event it should be the 1st one, but it's much simpler to resolve it with dynamic precedences
     //
     //   module_nonansi_header  'initial'  system_tf_identifier  '('  expression  •  ')'  …
     //   1:  module_nonansi_header  'initial'  (system_tf_call  system_tf_identifier  '('  expression  •  ')')
@@ -5569,25 +5462,40 @@ module.exports = grammar({
     [$.system_tf_call, $.list_of_arguments],
 
 
-    // This one is required and adds up to another one existing before without the tf_call
+    // Even though the example seems very specific, there are many constructs that happen in lvalue and primary (both lvalue and rvalue)
+    // It is needed more context info to know what the construct is
+    // Trying to fix this conflict statically makes many tests fail
     //
-    //   _identifier  '#'  '('  package_scope  _identifier  •  ')'  …
-    //   1:  _identifier  '#'  '('  (data_type  package_scope  _identifier)  •  ')'  …                (precedence: 'data_type')
-    //   2:  _identifier  '#'  '('  (tf_call  package_scope  _identifier)  •  ')'  …                  (precedence: 'tf_call')
-    //   3:  _identifier  '#'  '('  package_scope  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
-    // ['data_type', 'hierarchical_identifier', 'tf_call'],
-    // [$.data_type, $.tf_call, $.hierarchical_identifier],
+    // '{'  streaming_concatenation  •  ','  …
+    // 1:  '{'  (primary  streaming_concatenation)  •  ','  …          (precedence: 'primary')
+    // 2:  '{'  (variable_lvalue  streaming_concatenation)  •  ','  …  (precedence: 'variable_lvalue')
+    [$.primary, $.variable_lvalue],
 
 
-    // Assumes that since this comes from statement_item, it could be in many places and therefore
-    // it's a better idea to set a conflict (it could be inside a forever block inside a class for a method_call_root)
+    // No chance of ignoring this conflict
     //
-    //   module_nonansi_header  'initial'  implicit_class_handle  •  '.'  …
-    //   1:  module_nonansi_header  'initial'  (_method_call_root  implicit_class_handle)  •  '.'  …                                         (precedence: '_method_call_root')
-    //   2:  module_nonansi_header  'initial'  (class_qualifier  implicit_class_handle  •  '.')                                              (precedence: 'class_qualifier')
-    //   3:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  hierarchical_variable_identifier  select)  (precedence: 'variable_lvalue')
-    //   4:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  hierarchical_variable_identifier)           (precedence: 'variable_lvalue')
-    // [$._method_call_root, $.class_qualifier, $.variable_lvalue],
+    // _module_header  '('  _description_repeat1  _identifier  •  ')'  …
+    // 1:  _module_header  '('  _description_repeat1  (ansi_port_declaration  _identifier)  •  ')'  …  (precedence: 'ansi_port_declaration')
+    // 2:  _module_header  '('  _description_repeat1  (ansi_port_declaration  _identifier)  •  ')'  …  (precedence: 'ansi_port_declaration')
+    [$.ansi_port_declaration],
+
+
+    // Seems there could be something wrong in the precedences of $.property_expr since there is a mix of named/numeric precedences.
+    // Adding the conflict fixes parsing errors in doulos/133.4_property
+    //
+    // 'expect'  '('  clocking_event  property_expr  •  'iff'  …
+    // 1:  'expect'  '('  (property_expr  clocking_event  property_expr)  •  'iff'  …              (precedence: 'property_expr')
+    // 2:  'expect'  '('  clocking_event  (property_expr  property_expr  •  'iff'  property_expr)  (precedence: 11, associativity: Right)
+    [$.property_expr],
+
+
+
+// ** Conflicts to be reviewed
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
+    // INFO: To be reviewed
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
 
 
     // Same as before, this case could be all the options inside the initial, need more lookahead
@@ -5601,11 +5509,8 @@ module.exports = grammar({
 
 
     // All of these also seemed needed after implementing method calls, external methods and static methods
-    // [$.tf_call, $.hierarchical_identifier],
-    [$.primary, $.variable_lvalue],
     [$.tf_call, $.primary],
     [$.method_call_body, $.array_method_name],
-
 
 
     // TODO: Typedef conflicts
@@ -5676,9 +5581,6 @@ module.exports = grammar({
     [$.class_type, $.module_instantiation],
     [$.data_type, $.class_type, $.tf_port_item],
 
-    [$.ansi_port_declaration],
-
-
     // Sequences
     [$.sequence_expr],
     [$._assignment_pattern_expression_type, $.constant_primary],
@@ -5700,29 +5602,19 @@ module.exports = grammar({
 
     // Constant function call (13.4.3)
     [$.constant_function_call, $.primary],
-
     [$._simple_type, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-
     [$._simple_type, $.tf_call, $.constant_primary, $.hierarchical_identifier], // TODO: Checking last conflict in precedences
-
     [$._simple_type, $.tf_call, $.constant_primary],
-
     [$.concatenation, $.stream_expression],
-
     [$._simple_type, $.pattern, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary],
 
 
     [$.constant_expression, $.expression],
 
-    // Interface (TODO: don't understand these two below)
-    [$.interface_declaration, $._non_port_interface_item],
-    [$.timeunits_declaration],
 
-    // Program (TODO: don't understand these two below)
-    [$.program_declaration, $._non_port_program_item],
+    [$.timeunits_declaration],
 
 
     // Inout/ref/interface ports
@@ -5772,12 +5664,6 @@ module.exports = grammar({
     // 3:  (case_keyword  'case')  •  '('  …
     // 4:  (case_statement  'case'  •  '('  case_expression  ')'  'inside'  case_statement_repeat3  'endcase')
     [$.case_generate_construct, $.case_statement, $.case_keyword],
-
-    // Loop generate (true conflict)
-    // 'for'  '('  _identifier  •  '='  …
-    // 1:  'for'  '('  (genvar_initialization  _identifier  •  '='  constant_expression)
-    // 2:  'for'  '('  (hierarchical_identifier  _identifier)  •  '='  …                  (precedence: 'hierarchical_identifier')
-    [$.genvar_initialization, $.hierarchical_identifier],
 
 
     // After adding support for directives in packages,
@@ -5874,7 +5760,6 @@ module.exports = grammar({
     [$._simple_type, $._structure_pattern_key],
 
 
-    [$.property_expr],
     [$.expression_or_dist, $.expression],
 
 
