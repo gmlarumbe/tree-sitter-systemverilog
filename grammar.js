@@ -2032,7 +2032,7 @@ const rules = {
     optseq('iff', '(', $.expression, ')')
   ),
 
-  select_expression: $ => choice(
+  select_expression: $ => prec('select_expression', choice(
     $.select_condition,
     prec.left(PREC.UNARY, seq('!', $.select_condition)),
     prec.left(PREC.LOGICAL_AND, seq($.select_expression, '&&', $.select_expression)),
@@ -2041,7 +2041,7 @@ const rules = {
     seq($.select_expression, 'with', '(', $._with_covergroup_expression, ')', optseq('matches', $._integer_covergroup_expression)),
     $.cross_identifier,
     seq($._cross_set_expression, optseq('matches', $._integer_covergroup_expression))
-  ),
+  )),
 
   select_condition: $ => seq(
     'binsof', '(', $.bins_expression, ')',
@@ -3673,8 +3673,8 @@ const rules = {
   // being detected. This workaround might complicate a bit more the parser but
   // seems to work well.
   _method_call_root: $ => prec('_method_call_root', choice(
-    prec.dynamic(-2, $.primary), // Compensate for prec.dynamic in $.select
-    prec.dynamic(0, seq($.implicit_class_handle, optional($.select))), // optional($.select) out of LRM
+    $.primary,
+    prec.dynamic(2, seq($.implicit_class_handle, optional($.select))), // optional($.select) out of LRM
     $.class_type,       // Out of LRM: Added to support calling parameterized static methods
     $.text_macro_usage, // Out of LRM, Added to fix parsing errors in UVM
   )),
@@ -3944,7 +3944,7 @@ const rules = {
     seq('[', $._constant_part_select_range, ']'),
   )),
 
-  cast: $ => prec('cast', seq($.casting_type, '\'', '(', $.expression, ')')),
+  cast: $ => seq($.casting_type, '\'', '(', $.expression, ')'),
 
   constant_cast: $ => seq($.casting_type, '\'', '(', $.constant_expression, ')'),
 
@@ -4335,29 +4335,6 @@ const rules = {
   ),
 
 // * 22. Compiler directives
-  // `__FILE__ [22.13]
-  // `__LINE__ [22.13]
-  // `begin_keywords [22.14]
-  // `celldefine [22.10]
-  // `default_nettype [22.8]
-  // `define [22.5.1]
-  // `else [22.6]
-  // `elsif [22.6]
-  // `end_keywords [22.14]
-  // `endcelldefine [22.10]
-  // `endif [22.6]
-  // `ifdef [22.6]
-  // `ifndef [22.6]
-  // `include [22.4]
-  // `line [22.12]
-  // `nounconnected_drive [22.9]
-  // `pragma [22.11]
-  // `resetall [22.3]
-  // `timescale [22.7]
-  // `unconnected_drive [22.9]
-  // `undef [22.5.2]
-  // `undefineall [22.5.3]
-
   _directives: $ => prec('_directives', choice(
     $.resetall_compiler_directive,
     $.include_compiler_directive,
@@ -4378,26 +4355,24 @@ const rules = {
     $.endkeywords_directive
   )),
 
+
 // ** 22-3 `resetall
   resetall_compiler_directive: $ => directive('resetall'),
 
 
 // ** 22-4 `include
-  // TODO: Review: check if can be rewritten with the elements in A.8.8
-  double_quoted_string: $ => seq(
-    '"', token.immediate(prec(1, /[^\\"\n]+/)), '"'
-  ),
-
-  include_compiler_directive_standard: $ => seq(
-    '<', token.immediate(prec(1, /[^\\>\n]+/)), '>'
-  ),
+  system_lib_string: $ => token(seq(
+    '<',
+    repeat(choice(/[^>\n]/, '\\>')),
+    '>',
+  )),
 
   include_compiler_directive: $ => seq(
     directive('include'),
     choice(
-      $.double_quoted_string,
-      $.include_compiler_directive_standard,
-      $.text_macro_usage,// INFO: Out of LRM (test sv-tests/chapter-22/22.5.1--include-define-expansion)
+      $._quoted_string,
+      $.system_lib_string,
+      $.text_macro_usage,// Out of LRM (test sv-tests/chapter-22/22.5.1--include-define-expansion)
     )
   ),
 
@@ -4411,7 +4386,7 @@ const rules = {
     directive('define'),
     $.text_macro_name,
     optional($.macro_text),
-    '\n'
+    token.immediate(/\r?\n/),
   ),
 
   text_macro_name: $ => seq(
@@ -4431,34 +4406,12 @@ const rules = {
   text_macro_usage: $ => prec.right('text_macro_usage', seq(
     '`',
     $.text_macro_identifier,
-    optional(seq('(', optional($.text_macro_list_of_actual_arguments), ')'))
+    optseq('(', optional($.text_macro_list_of_actual_arguments), ')')
   )),
 
-  // text_macro_list_of_actual_arguments: $ => sepBy1(',', $.text_macro_actual_argument),
-  // text_macro_list_of_actual_arguments: $ => $.list_of_arguments, // INFO: Out of LRM, but needed to support empty actual argument between commas in macros
-  text_macro_list_of_actual_arguments: $ => prec.left(PREC.PARENTHESIS, choice(  // INFO: Out of LRM, but needed to support empty actual argument between commas in macros, and to support data_types as arguments
-    // First case: mixing positional and named arguments
-    seq(
-      $.text_macro_actual_argument,
-      repeat(seq(',', optional($.text_macro_actual_argument))),
-      repeat(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
-    ),
-    seq(
-      optional($.text_macro_actual_argument),
-      repeat1(seq(',', optional($.text_macro_actual_argument))),
-      repeat(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
-    ),
-    seq(
-      optional($.text_macro_actual_argument),
-      repeat(seq(',', optional($.text_macro_actual_argument))),
-      repeat1(seq(',', '.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
-    ),
-    // Second case: using only named arguments
-    sepBy1(',', seq('.', $._identifier, '(', optional($.text_macro_actual_argument), ')'))
-  )),
+  text_macro_list_of_actual_arguments: $ => list_of_args($, 'list_of_arguments', $.text_macro_actual_argument),
 
-  // text_macro_actual_argument: $ => $.expression,
-  text_macro_actual_argument: $ => $.param_expression, // INFO: Out of LRM, but needed to support parameterized data types as macro args (used in the UVM)
+  text_macro_actual_argument: $ => $.param_expression, // Out of LRM, needed to support parameterized data types as macro args (common in the UVM)
 
   undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
 
@@ -4572,7 +4525,8 @@ const rules = {
   line_compiler_directive: $ => seq(
     directive('line'),
     $.unsigned_number,
-    $.double_quoted_string,
+    $._quoted_string, // TODO:
+    // $.double_quoted_string,
     token(/[0-2]/),
     // $.unsigned_number,
     '\n'
@@ -5089,6 +5043,27 @@ module.exports = grammar({
     ['property_spec', 'property_expr'],
 
 
+    // In a covergroup the most likely option is the $.cross_identifier of $.select_expression
+    //
+    // 'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  _identifier  •  ')'  …
+    // 1:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (constant_primary  _identifier)  •  ')'  …         (precedence: 'constant_primary')
+    // 2:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
+    // 3:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (select_expression  _identifier)  •  ')'  …        (precedence: 'select_expression')
+    // 4:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (tf_call  _identifier)  •  ')'  …                  (precedence: 'tf_call')
+    ['select_expression', 'constant_primary'],
+    ['select_expression', 'hierarchical_identifier'],
+    ['select_expression', 'tf_call'],
+
+
+    // $._simple_type is used for static casting, choose $.constant_primary to reduce the number of conflicts
+    //
+    // ''{'  class_scope  _identifier  •  ':'  …
+    // 1:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …      (precedence: '_simple_type')
+    // 2:  ''{'  (constant_primary  class_scope  _identifier)  •  ':'  …  (precedence: 'constant_primary')
+    ['constant_primary', '_simple_type'],
+
+
+
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5116,7 +5091,7 @@ module.exports = grammar({
     //   1:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (class_qualifier  class_scope)  •  simple_identifier  …
     //   2:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier  constant_select)
     //   3:  module_nonansi_header  'var'  _identifier  '='  _identifier  '['  (constant_primary  class_scope  •  _identifier)
-    ['class_qualifier', 'ps_parameter_identifier'],
+    // ['class_qualifier', 'ps_parameter_identifier'],
 
 
     // First one doesn't really make much sense:
@@ -5128,12 +5103,13 @@ module.exports = grammar({
     ['variable_lvalue', 'class_qualifier'],
 
 
+    // TODO: Review this one, had it in the past
     // Identify as a constant_mintypmax_expression -> constant_expression on the RHS instead of a data_type (since it's a declaration)
     //
     //   'localparam'  _identifier  '='  _identifier  •  ';'  …
     //   1:  'localparam'  _identifier  '='  (constant_primary  _identifier)  •  ';'  …  (precedence: 'ps_parameter_identifier')
     //   2:  'localparam'  _identifier  '='  (data_type  _identifier)  •  ';'  …         (precedence: 'data_type')
-    ['ps_parameter_identifier', 'data_type'],
+    // ['ps_parameter_identifier', 'data_type'],
 
 
     // INFO: This one is not useful anymore, since there is a conflic with data_type and class_type in conflicts
@@ -5158,9 +5134,9 @@ module.exports = grammar({
 
     // If there is only one identifier, without package scope, consider it a hierarchical identifier with one level of nesting
     //
-    //   module_nonansi_header  'initial'  _identifier  •  '('  …
-    //   1:  module_nonansi_header  'initial'  (hierarchical_identifier  _identifier)  •  '('  …  (precedence: 'hierarchical_identifier')
-    //   2:  module_nonansi_header  'initial'  (tf_call  _identifier  •  list_of_arguments)       (precedence: 'tf_call')
+    // _identifier  •  ';'  …
+    // 1:  (hierarchical_identifier  _identifier)  •  ';'  …  (precedence: 'hierarchical_identifier')
+    // 2:  (tf_call  _identifier)  •  ';'  …                  (precedence: 'tf_call')
     ['hierarchical_identifier', 'tf_call'],
 
 
@@ -5333,7 +5309,9 @@ module.exports = grammar({
     ['sequence_expr'],
     ['sequence_instance'],
     ['net_lvalue'],
-
+    ['blocking_assignment'],
+    ['ps_parameter_identifier'],
+    ['ps_type_identifier'],
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5554,6 +5532,15 @@ module.exports = grammar({
     [$.property_expr, $._sequence_actual_arg],
 
 
+    // DPI C name of task/function
+    //
+    // 'import'  dpi_spec_string  'context'  •  c_identifier  …
+    // 1:  'import'  dpi_spec_string  (dpi_function_import_property  'context')  •  c_identifier  …
+    // 2:  'import'  dpi_spec_string  (dpi_task_import_property  'context')  •  c_identifier  …
+    [$.dpi_function_import_property, $.dpi_task_import_property],
+
+
+
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
@@ -5751,11 +5738,17 @@ module.exports = grammar({
 
     // Constant function call (13.4.3)
     [$.constant_function_call, $.primary],
+
     [$._simple_type, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$._simple_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+
+    [$._simple_type, $.tf_call, $.constant_primary, $.hierarchical_identifier], // TODO: Checking last conflict in precedences
+
     [$._simple_type, $.tf_call, $.constant_primary],
+
     [$.concatenation, $.stream_expression],
+
     [$._simple_type, $.pattern, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary],
 
@@ -5842,12 +5835,6 @@ module.exports = grammar({
     // Constraints
     [$.class_method, $.constraint_prototype_qualifier],
 
-    // DPI
-    // 'import'  dpi_spec_string  'context'  •  c_identifier  …
-    // 1:  'import'  dpi_spec_string  (dpi_function_import_property  'context')  •  c_identifier  …
-    // 2:  'import'  dpi_spec_string  (dpi_task_import_property  'context')  •  c_identifier  …
-    [$.dpi_function_import_property, $.dpi_task_import_property],
-
 
     // Text macros on hierarchical identifiers
     // INFO: Seems that after this, hierarchical_identifier has a higher dynamic precedence over _method_call_root
@@ -5886,7 +5873,7 @@ module.exports = grammar({
     [$._assignment_pattern_expression_type, $.class_qualifier],
 
     // TODO: Fixing constant_primary on casting_type
-    [$.select_expression, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    // [$.select_expression, $.tf_call, $.constant_primary, $.hierarchical_identifier], // TODO: Checking last conflict
 
 
     // TODO: After adding checkers
@@ -5930,11 +5917,9 @@ module.exports = grammar({
     [$.expression_or_dist, $.expression],
 
 
-
     // INFO: After removing constant_primary from casting_type to fix issue with concatenation on RHS
     [$.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.class_qualifier],
-    [$._simple_type, $.constant_primary],
 
 
     // TODO: After uncommenting the other branch in `ps_parameter_identifier'
