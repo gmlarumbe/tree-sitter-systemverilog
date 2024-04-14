@@ -49,48 +49,56 @@ const PREC = {
 };
 
 const BINARY_OP_TABLE = [
-    ['+', PREC.ADD],
-    ['-', PREC.ADD],
-    ['*', PREC.MULTIPLY],
-    ['/', PREC.MULTIPLY],
-    ['%', PREC.MULTIPLY],
-    ['==', PREC.EQUAL],
-    ['!=', PREC.EQUAL],
-    ['===', PREC.EQUAL],
-    ['!==', PREC.EQUAL],
-    ['==?', PREC.EQUAL],
-    ['!=?', PREC.EQUAL],
-    ['&&', PREC.LOGICAL_AND],
-    ['||', PREC.LOGICAL_OR],
-    ['**', PREC.POWER],
-    ['>', PREC.RELATIONAL],
-    ['<', PREC.RELATIONAL],
-    ['>=', PREC.RELATIONAL],
-    ['<=', PREC.RELATIONAL],
-    ['&', PREC.BITWISE_AND],
-    ['|', PREC.BITWISE_OR],
-    ['^', PREC.EXCLUSIVE_OR],
-    ['^~', PREC.EXCLUSIVE_OR],
-    ['~^', PREC.EXCLUSIVE_OR],
-    ['>>', PREC.SHIFT],
-    ['<<', PREC.SHIFT],
-    ['>>>', PREC.SHIFT],
-    ['<<<', PREC.SHIFT],
-    ['->', PREC.IMPLICATION],
-    ['<->', PREC.IMPLICATION],
-  ]
+  ['+', PREC.ADD],
+  ['-', PREC.ADD],
+  ['*', PREC.MULTIPLY],
+  ['/', PREC.MULTIPLY],
+  ['%', PREC.MULTIPLY],
+  ['==', PREC.EQUAL],
+  ['!=', PREC.EQUAL],
+  ['===', PREC.EQUAL],
+  ['!==', PREC.EQUAL],
+  ['==?', PREC.EQUAL],
+  ['!=?', PREC.EQUAL],
+  ['&&', PREC.LOGICAL_AND],
+  ['||', PREC.LOGICAL_OR],
+  ['**', PREC.POWER],
+  ['>', PREC.RELATIONAL],
+  ['<', PREC.RELATIONAL],
+  ['>=', PREC.RELATIONAL],
+  ['<=', PREC.RELATIONAL],
+  ['&', PREC.BITWISE_AND],
+  ['|', PREC.BITWISE_OR],
+  ['^', PREC.EXCLUSIVE_OR],
+  ['^~', PREC.EXCLUSIVE_OR],
+  ['~^', PREC.EXCLUSIVE_OR],
+  ['>>', PREC.SHIFT],
+  ['<<', PREC.SHIFT],
+  ['>>>', PREC.SHIFT],
+  ['<<<', PREC.SHIFT],
+  ['->', PREC.IMPLICATION],
+  ['<->', PREC.IMPLICATION],
+]
 
 const BINARY_MOD_PATH_OP_TABLE = [
-    ['==', PREC.EQUAL],
-    ['!=', PREC.EQUAL],
-    ['&&', PREC.LOGICAL_AND],
-    ['||', PREC.LOGICAL_OR],
-    ['&', PREC.BITWISE_AND],
-    ['|', PREC.BITWISE_OR],
-    ['^', PREC.EXCLUSIVE_OR],
-    ['^~', PREC.EXCLUSIVE_OR],
-    ['~^', PREC.EXCLUSIVE_OR],
+  ['==', PREC.EQUAL],
+  ['!=', PREC.EQUAL],
+  ['&&', PREC.LOGICAL_AND],
+  ['||', PREC.LOGICAL_OR],
+  ['&', PREC.BITWISE_AND],
+  ['|', PREC.BITWISE_OR],
+  ['^', PREC.EXCLUSIVE_OR],
+  ['^~', PREC.EXCLUSIVE_OR],
+  ['~^', PREC.EXCLUSIVE_OR],
 ]
+
+const BINARY_MACRO_OP_TABLE = [
+  ['&&', PREC.LOGICAL_AND],
+  ['||', PREC.LOGICAL_OR],
+  ['->', PREC.IMPLICATION],
+  ['<->', PREC.IMPLICATION],
+]
+
 
 function sepBy1(sep, rule) {
   return seq(rule, repeat(seq(sep, rule)))
@@ -4104,11 +4112,11 @@ const rules = {
 
 // ** A.8.8 Strings
   string_literal: $ => choice(
-    $._quoted_string,
-    $._triple_quoted_string
+    $.quoted_string,
+    $.triple_quoted_string
   ),
 
-  _quoted_string: $ => seq(
+  quoted_string: $ => seq(
     '"',
     repeat(choice(
       $._quoted_string_item,
@@ -4117,7 +4125,7 @@ const rules = {
     '"'
   ),
 
-  _triple_quoted_string: $ => seq(
+  triple_quoted_string: $ => seq(
     '"""',
     repeat(choice(
       $._triple_quoted_string_item,
@@ -4330,7 +4338,7 @@ const rules = {
 // ** 20.2 Simulation control system tasks
   simulation_control_task: $ => seq(
     choice('$stop', '$finish', '$exit'),
-    optional(seq('(', optional($.list_of_arguments), ')')),
+    optseq('(', optional($.list_of_arguments), ')'),
     ';'
   ),
 
@@ -4370,7 +4378,7 @@ const rules = {
   include_compiler_directive: $ => seq(
     directive('include'),
     choice(
-      $._quoted_string,
+      $.quoted_string,
       $.system_lib_string,
       $.text_macro_usage,// Out of LRM (test sv-tests/chapter-22/22.5.1--include-define-expansion)
     )
@@ -4391,80 +4399,61 @@ const rules = {
 
   text_macro_name: $ => seq(
     $.text_macro_identifier,
-    optional(seq('(', $.text_macro_list_of_formal_arguments, ')'))
+    optseq('(', $.list_of_formal_arguments, ')')
   ),
 
-  text_macro_list_of_formal_arguments: $ => sepBy1(',', $.text_macro_formal_argument),
+  list_of_formal_arguments: $ => sepBy1(',', $.formal_argument),
 
-  text_macro_formal_argument: $ => seq(
+  formal_argument: $ => seq(
     $.simple_identifier,
-    optional(seq('=', $.default_text))
+    optseq('=', $.default_text)
   ),
 
   text_macro_identifier: $ => $._identifier,
 
-  text_macro_usage: $ => prec.right('text_macro_usage', seq(
+  text_macro_usage: $ => prec.right(seq(
     '`',
     $.text_macro_identifier,
-    optseq('(', optional($.text_macro_list_of_actual_arguments), ')')
+    optseq('(', optional($.list_of_actual_arguments), ')')
   )),
 
-  text_macro_list_of_actual_arguments: $ => list_of_args($, 'list_of_arguments', $.text_macro_actual_argument),
+  list_of_actual_arguments: $ => list_of_args($, 'list_of_arguments', $.actual_argument),
 
-  text_macro_actual_argument: $ => $.param_expression, // Out of LRM, needed to support parameterized data types as macro args (common in the UVM)
+  actual_argument: $ => $.param_expression, // Out of LRM, needed to support parameterized data types as macro args (common in the UVM)
 
   undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
 
   undefineall_compiler_directive: $ => directive('undefineall'),
 
 
-  // DANGER: Remove this?
-  // TODO missing arguments, empty list of arguments
-
-  // To use a macro defined with arguments, the name of the text macro shall be
-  // followed by a list of actual arguments in parentheses, separated by
-  // commas. Actual arguments and defaults shall not contain comma or right
-  // parenthesis characters outside matched pairs of left and right parentheses
-  // (), square brackets [], braces {}, double quotes "", or an escaped
-  // identifier.
-  // End of DANGER
-
-  // _actual_argument: $ => choice(
-  //   // $.expression, // TODO: Comment to avoid parsing syntax of macros as it might make things more complicated for the time being
-  //   // $.data_type // INFO: Many UVM macros require a class type as an argument
-  //   // $.macro_text // TODO: Gave many conflicts and errors, but should be the correct one,  or at least an option (with less precedence)?
-  // ),
-
-
 // ** 22.6 `ifdef, `else, `elsif, `endif, `ifndef
-  // conditional_compilation_directive ::=
-  //   ifdef_or_ifndef ifdef_condition block_of_text
-  //   { `elsif ifdef_condition block_of_text }
-  //   [ `else block_of_text ]
-  //   `endif
-
-  conditional_compilation_directive: $ => choice( // Rearranged, don't parse preprocessed code
-    seq($.ifdef_or_ifndef, $.ifdef_condition),
+  // Modified with respect to LRM: do not parse preprocessed code
+  conditional_compilation_directive: $ => choice(
+    seq($._ifdef_or_ifndef, $.ifdef_condition),
     seq(directive('elsif'), $.ifdef_condition),
     directive('else'),
     directive('endif')
   ),
 
-  ifdef_or_ifndef: $ => choice(directive('ifdef'), directive('ifndef')),
+  _ifdef_or_ifndef: $ => choice(
+    directive('ifdef'),
+    directive('ifndef')
+  ),
 
   ifdef_condition: $ => choice(
     $.text_macro_identifier,
     seq('(', $.ifdef_macro_expression, ')')
   ),
 
-  ifdef_macro_expression: $ => prec.left(choice(
+  ifdef_macro_expression: $ => choice(
     $.text_macro_identifier,
-    seq($.ifdef_macro_expression, $.binary_logical_operator, $.ifdef_macro_expression),
-    seq('!', $.ifdef_macro_expression),
-    seq('(', $.ifdef_macro_expression, ')')
-  )),
+    binary_expr($, BINARY_MACRO_OP_TABLE, $.ifdef_macro_expression),
+    unary_expr($, '!', $.ifdef_macro_expression),
+    paren_expr($.ifdef_macro_expression),
+  ),
 
-  binary_logical_operator: $ => choice('&&', '||', '->', '<->'),
+  binary_logical_operator: $ => choice('&&', '||', '->', '<->'), // Unused
+
 
 // ** 22-7 timescale
   timescale_compiler_directive: $ => seq(
@@ -4472,28 +4461,30 @@ const rules = {
     $.time_literal, // time_unit,
     '/',
     $.time_literal, // time_precision
-    '\n' // TODO: Are newlines required? Check tree-sitter-c grammar.js: token.immediate(/\r?\n/),
-
+    token.immediate(/\r?\n/),
   ),
 
 // ** 22-8 default_nettype
   default_nettype_compiler_directive: $ => seq(
     directive('default_nettype'),
     $.default_nettype_value,
-    // '\n' ; DANGER: Check tree-sitter-c grammar.js: token.immediate(/\r?\n/),
+    token.immediate(/\r?\n/),
   ),
 
   default_nettype_value: $ => choice('wire', 'tri', 'tri0', 'tri1', 'wand', 'triand', 'wor', 'trior', 'trireg', 'uwire', 'none'),
+
 
 // ** 22-9
   unconnected_drive_compiler_directive: $ => seq(
     directive('unconnected_drive'),
     choice('pull0', 'pull1'),
-    '\n'
+    token.immediate(/\r?\n/),
   ),
+
 
 // ** 22.10 `celldefine and `endcelldefine
   celldefine_compiler_directive: $ => directive('celldefine'),
+
   endcelldefine_compiler_directive: $ => directive('endcelldefine'),
 
 
@@ -4521,15 +4512,14 @@ const rules = {
 
   pragma_keyword: $ => $.simple_identifier,
 
+
 // ** 22-12 `line
   line_compiler_directive: $ => seq(
     directive('line'),
     $.unsigned_number,
-    $._quoted_string, // TODO:
-    // $.double_quoted_string,
-    token(/[0-2]/),
-    // $.unsigned_number,
-    '\n'
+    alias($.quoted_string, $.filename),
+    alias(token(/[0-2]/), $.level),
+    token.immediate(/\r?\n/),
   ),
 
 // ** 22.13 `__FILE__ and `__LINE__
@@ -4538,10 +4528,13 @@ const rules = {
     directive('__LINE__'),
   ),
 
+
 // ** 22.14 `begin_keywords, `end_keywords
   keywords_directive: $ => seq(
     directive('begin_keywords'),
-    '\"', $.version_specifier, '\"'
+    '\"',
+    $.version_specifier,
+    '\"',
   ),
 
   version_specifier: $ => choice(
@@ -4572,25 +4565,21 @@ module.exports = grammar({
 // ** Supertypes
   supertypes: $ => [
     $._property_actual_arg,
-
+    // TODO: Any use?
   ],
 
 // ** Inline
   inline: $ => [
-    // Reviewed
     $.snippets,
 
     $.var_data_type,
     $.any_parameter_declaration,
     $.elaboration_severity_system_task,
+    $.attr_name,
 
     $._binary_expression,
     $._constant_binary_expression,
-    // TODO: Inlined to avoid conflicts but there is a problem with the precedence of
-    // pattern (PREC.MATCHES) and subexpressions, I think these should be numeric instead of named?
     $._constant_conditional_expression,
-
-    $.attr_name,
 
     // Identifiers
     $.array_identifier,
@@ -4679,6 +4668,7 @@ module.exports = grammar({
     $.input_identifier,
     $.output_identifier,
     // $.edge_identifier, // Don't inline
+    $.text_macro_identifier,
   ],
 
 // ** Precedences
