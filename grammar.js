@@ -927,10 +927,10 @@ const rules = {
     seq('{', repeat($.constraint_expression), '}')
   )),
 
-  expression_or_dist: $ => seq(
+  expression_or_dist: $ => prec('expression_or_dist', seq(
     $.expression,
     optional(prec.left(PREC.RELATIONAL, seq('dist', '{', $.dist_list, '}')))
-  ),
+  )),
 
   dist_list: $ => sepBy1(',', $.dist_item),
 
@@ -1144,9 +1144,13 @@ const rules = {
 
 // ** A.2.2 Declaration data types
 // *** A.2.2.1 Net and variable types
+  // $.constant_mintypmax_expression and $.type_reference replace the $.constant_primary
+  // branch, as these are the only possible options of $.constant_primary in a static cast.
+  // A.10.45: It shall be legal to use a type_reference constant_primary as the casting_type in a static cast.
   casting_type: $ => choice(
     $._simple_type,
-    $.constant_primary,
+    seq('(', $.constant_mintypmax_expression, ')'), // $.constant_primary branch
+    $.type_reference,                               // $.constant_primary branch
     $._signing,
     'string',
     'const'
@@ -1245,12 +1249,12 @@ const rules = {
 
   _signing: $ => choice('signed', 'unsigned'),
 
-  _simple_type: $ => choice(
+  _simple_type: $ => prec('_simple_type', choice(
     $._integer_type,
     $.non_integer_type,
     $.ps_type_identifier,
     $.ps_parameter_identifier
-  ),
+  )),
 
   struct_union: $ => choice(
     'struct',
@@ -1383,7 +1387,7 @@ const rules = {
 
 
 // ** A.2.4 Declaration assignments
-  defparam_assignment: $ => seq($._hierarchical_parameter_identifier, '=', $.constant_mintypmax_expression),
+  defparam_assignment: $ => seq($.hierarchical_parameter_identifier, '=', $.constant_mintypmax_expression),
 
   net_decl_assignment: $ => seq($.net_identifier, repeat($.unpacked_dimension), optseq('=', $.expression)),
 
@@ -1503,20 +1507,17 @@ const rules = {
     optseq('(', optional($.tf_port_list), ')')
   ),
 
-  // TODO: Replace $.simple_identifier to $.c_identifier:
-  // For some reason it does not work with $.c_identifier.
-  // Might it have to do with tree-sitter $.word ?
   dpi_import_export: $ => choice(
     seq(
       'import', $.dpi_spec_string,
       choice(
-        seq(optional($.dpi_function_import_property), optseq(field('c_name', $.simple_identifier), '='), $.dpi_function_proto),
-        seq(optional($.dpi_task_import_property), optseq(field('c_name', $.simple_identifier), '='), $.dpi_task_proto)
+        seq(optional($.dpi_function_import_property), optseq(field('c_name', $.c_identifier), '='), $.dpi_function_proto),
+        seq(optional($.dpi_task_import_property), optseq(field('c_name', $.c_identifier), '='), $.dpi_task_proto)
       ),
       ';'
     ),
     seq(
-      'export', $.dpi_spec_string, optseq(field('c_name', $.simple_identifier), '='),
+      'export', $.dpi_spec_string, optseq(field('c_name', $.c_identifier), '='),
       choice(
         seq('function', field('name', $.function_identifier)),
         seq('task', field('name', $.task_identifier))
@@ -1660,7 +1661,7 @@ const rules = {
 
 // ** A.2.10 Assertion declarations
   concurrent_assertion_item: $ => prec('concurrent_assertion_item', choice(
-    seq(optseq($._block_identifier, ':'), $._concurrent_assertion_statement),
+    seq(optseq($.block_identifier, ':'), $._concurrent_assertion_statement),
     // $.checker_instantiation
     //
     // INFO: Out of LRM: This is a workaround to support checker_instantiations
@@ -1707,10 +1708,10 @@ const rules = {
     'restrict', 'property', '(', $.property_spec, ')', ';'
   ),
 
-  property_instance: $ => seq(
+  property_instance: $ => prec('property_instance', seq(
     $.ps_or_hierarchical_property_identifier,
     optseq('(', optional($.property_list_of_arguments), ')')
-  ),
+  )),
 
   property_list_of_arguments: $ => list_of_args($, 'property_list_of_arguments', $._property_actual_arg),
 
@@ -1751,13 +1752,13 @@ const rules = {
     'property'
   ),
 
-  property_spec: $ => seq(
+  property_spec: $ => prec('property_spec', seq(
     optional($.clocking_event),
     optseq('disable', 'iff', '(', $.expression_or_dist, ')'),
     $.property_expr
-  ),
+  )),
 
-  property_expr: $ => choice(
+  property_expr: $ => prec('property_expr', choice(
     $.sequence_expr,
     seq(choice('strong', 'weak'), '(', $.sequence_expr, ')'),
     paren_expr($.property_expr),
@@ -1775,7 +1776,7 @@ const rules = {
     prec(PREC.PROP_ALWAYS, seq(choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'), '(', $.expression_or_dist, ')', $.property_expr)),
     $.property_instance,
     seq($.clocking_event, $.property_expr)
-  ),
+  )),
 
   property_case_item: $ => choice(
     seq(sepBy1(',', $.expression_or_dist), ':', $.property_expr, ';'),
@@ -1843,10 +1844,10 @@ const rules = {
     $.subroutine_call
   ),
 
-  sequence_instance: $ => seq(
+  sequence_instance: $ => prec('sequence_instance', seq(
     $.ps_or_hierarchical_sequence_identifier,
     optseq('(', optional($.sequence_list_of_arguments), ')')
-  ),
+  )),
 
   sequence_list_of_arguments: $ => list_of_args($, 'sequence_list_of_arguments', $._sequence_actual_arg),
 
@@ -1924,15 +1925,15 @@ const rules = {
     seq('@@', '(', $.block_event_expression, ')')
   ),
 
-  block_event_expression: $ => choice(
+  block_event_expression: $ => prec('block_event_expression', choice(
     prec.left(seq($.block_event_expression, 'or', $.block_event_expression)),
     seq('begin', $.hierarchical_btf_identifier),
     seq('end', $.hierarchical_btf_identifier)
-  ),
+  )),
 
   hierarchical_btf_identifier: $ => choice(
-    $._hierarchical_tf_identifier,
-    $._hierarchical_block_identifier,
+    $.hierarchical_tf_identifier,
+    $.hierarchical_block_identifier,
     seq(
       optchoice(seq($.hierarchical_identifier, '.'), $.class_scope),
       $.method_identifier
@@ -1956,7 +1957,7 @@ const rules = {
     $.coverage_option,
     // Branches 2-5
     seq(
-      optional('wildcard'), $.bins_keyword, field('name', $._bin_identifier),
+      optional('wildcard'), $.bins_keyword, field('name', $.bin_identifier),
       choice(
         // Branches 2-4
         seq(optseq('[', optional($._covergroup_expression), ']'), '=',
@@ -1971,7 +1972,7 @@ const rules = {
       optseq('iff', '(', $.expression, ')')
     ),
     // Branches 6-7
-    seq($.bins_keyword, field('name', $._bin_identifier),
+    seq($.bins_keyword, field('name', $.bin_identifier),
       choice(
         seq(optseq('[', optional($._covergroup_expression), ']'), '=', 'default'),
         seq('=', 'default', 'sequence')
@@ -2027,7 +2028,7 @@ const rules = {
   ),
 
   bins_selection: $ => seq(
-    $.bins_keyword, $._bin_identifier, '=', $.select_expression,
+    $.bins_keyword, $.bin_identifier, '=', $.select_expression,
     optseq('iff', '(', $.expression, ')')
   ),
 
@@ -2049,7 +2050,7 @@ const rules = {
 
   bins_expression: $ => choice(
     $.variable_identifier,
-    seq($.cover_point_identifier, optseq('.', $._bin_identifier))
+    seq($.cover_point_identifier, optseq('.', $.bin_identifier))
   ),
 
   covergroup_range_list: $ => sepBy1(',', $.covergroup_value_range),
@@ -2392,12 +2393,12 @@ const rules = {
   generate_block: $ => choice(
     $._generate_item,
     seq(
-      optseq($.generate_block_identifier, ':'),
+      optseq(field('name', $.generate_block_identifier), ':'),
       'begin',
-      optseq(':', $.generate_block_identifier),
+      optseq(':', field('name', $.generate_block_identifier)),
       repeat($._generate_item),
       'end',
-      optseq(':', $.generate_block_identifier)
+      optseq(':', field('name', $.generate_block_identifier))
     )
   ),
 
@@ -2411,27 +2412,27 @@ const rules = {
 // * A.5 UDP declaration and instantiation
 // ** A.5.1 UDP declaration
   // udp_nonansi_declaration: $ => seq(
-  //   repeat($.attribute_instance), 'primitive', $._udp_identifier, '(', $.udp_port_list, ')', ';'
+  //   repeat($.attribute_instance), 'primitive', $.udp_identifier, '(', $.udp_port_list, ')', ';'
   // ),
 
   // udp_ansi_declaration: $ => seq(
-  //   repeat($.attribute_instance), 'primitive', $._udp_identifier, '(', $.udp_declaration_port_list, ')', ';'
+  //   repeat($.attribute_instance), 'primitive', $.udp_identifier, '(', $.udp_declaration_port_list, ')', ';'
   // ),
 
   // udp_declaration: $ => choice(
   //   seq(
   //     $.udp_nonansi_declaration, $.udp_port_declaration, repeat($.udp_port_declaration),
   //     $._udp_body,
-  //     'endprimitive', optseq(':', $._udp_identifier)
+  //     'endprimitive', optseq(':', $.udp_identifier)
   //   ),
-  //   seq($.udp_ansi_declaration, $._udp_body, 'endprimitive', optseq(':', $._udp_identifier)),
+  //   seq($.udp_ansi_declaration, $._udp_body, 'endprimitive', optseq(':', $.udp_identifier)),
   //   seq('extern', $.udp_nonansi_declaration),
   //   seq('extern', $.udp_ansi_declaration),
   //   seq(
-  //     repeat($.attribute_instance), 'primitive', $._udp_identifier, '(', '.*', ')', ';',
+  //     repeat($.attribute_instance), 'primitive', $.udp_identifier, '(', '.*', ')', ';',
   //     repeat($.udp_port_declaration),
   //     $._udp_body,
-  //     'endprimitive', optseq(':', $._udp_identifier)
+  //     'endprimitive', optseq(':', $.udp_identifier)
   //   )
   // ),
 
@@ -2520,7 +2521,7 @@ const rules = {
 
 // ** A.5.4 UDP instantiation
   // udp_instantiation: $ => seq(
-  //   $._udp_identifier,
+  //   $.udp_identifier,
   //   optional($.drive_strength),
   //   optional($.delay2),
   //   sep1(',', $.udp_instance),
@@ -2568,7 +2569,7 @@ const rules = {
     seq($.nonrange_variable_lvalue, '=', $.dynamic_array_new),
     seq(
       optchoice(seq($.implicit_class_handle, '.'), $.class_scope, $.package_scope),
-      $._hierarchical_variable_identifier, optional($.select), '=', $.class_new
+      $.hierarchical_variable_identifier, optional($.select), '=', $.class_new
     ),
     $.operator_assignment,
     $.inc_or_dec_expression,
@@ -2606,17 +2607,17 @@ const rules = {
   )),
 
   seq_block: $ => seq(
-    'begin', optseq(':', $._block_identifier),
+    'begin', optseq(':', $.block_identifier),
     repeat($.block_item_declaration),
     repeat($.statement_or_null),
-    enclosing('end', $._block_identifier)
+    enclosing('end', $.block_identifier)
   ),
 
   par_block: $ => seq(
-    'fork', optseq(':', $._block_identifier),
+    'fork', optseq(':', $.block_identifier),
     repeat($.block_item_declaration),
     repeat($.statement_or_null),
-    enclosing($.join_keyword, $._block_identifier)
+    enclosing($.join_keyword, $.block_identifier)
   ),
 
   join_keyword: $ => choice('join', 'join_any', 'join_none'),
@@ -2629,7 +2630,7 @@ const rules = {
   )),
 
   statement: $ => seq(
-    optseq(field('block_name', $._block_identifier), ':'),
+    optseq(field('block_name', $.block_identifier), ':'),
     repeat($.attribute_instance),
     $.statement_item
   ),
@@ -2730,13 +2731,13 @@ const rules = {
   ),
 
   event_trigger: $ => choice(
-    seq('->', $._hierarchical_event_identifier, optional($.nonrange_select), ';'),
-    seq('->>', optional($.delay_or_event_control), $._hierarchical_event_identifier, optional($.nonrange_select), ';')
+    seq('->', $.hierarchical_event_identifier, optional($.nonrange_select), ';'),
+    seq('->>', optional($.delay_or_event_control), $.hierarchical_event_identifier, optional($.nonrange_select), ';')
   ),
 
   disable_statement: $ => choice(
-    seq('disable', $._hierarchical_task_identifier, ';'),
-    seq('disable', $._hierarchical_block_identifier, ';'),
+    seq('disable', $.hierarchical_task_identifier, ';'),
+    seq('disable', $.hierarchical_block_identifier, ';'),
     seq('disable', 'fork', ';')
   ),
 
@@ -2941,7 +2942,7 @@ const rules = {
   ),
 
   deferred_immediate_assertion_item: $ => seq(
-    optseq($._block_identifier, ':'),
+    optseq($.block_identifier, ':'),
     $._deferred_immediate_assertion_statement
   ),
 
@@ -3031,7 +3032,7 @@ const rules = {
 
   list_of_clocking_decl_assign: $ => sepBy1(',', $.clocking_decl_assign),
 
-  clocking_decl_assign: $ => seq($._signal_identifier, optseq('=', $.expression)),
+  clocking_decl_assign: $ => seq($.signal_identifier, optseq('=', $.expression)),
 
   clocking_skew: $ => choice(
     seq($.edge_identifier, optional($.delay_control)),
@@ -3621,6 +3622,7 @@ const rules = {
   subroutine_call: $ => choice(
     $.tf_call,
     $.system_tf_call,
+    // prec.dynamic(-1, $.method_call), // This made smoe change but not sure it's the way to do it
     $.method_call,
     seq(optseq('std', '::'), $.randomize_call),
   ),
@@ -3629,17 +3631,17 @@ const rules = {
 
   list_of_arguments: $ => list_of_args($, 'list_of_arguments', $.expression),
 
-  method_call: $ => seq(
+  method_call: $ => prec('method_call', seq(
     $._method_call_root,
     choice('.', '::'), // :: Out of LRM: Needed to support static method calls
     $.method_call_body
-  ),
+  )),
 
   method_call_body: $ => choice(
     seq(
-      $.method_identifier,
+      field('name', $.method_identifier),
       repeat($.attribute_instance),
-      optseq('(', optional($.list_of_arguments), ')')
+      field('arguments', optseq('(', optional($.list_of_arguments), ')'))
     ),
     $._built_in_method_call
   ),
@@ -3809,15 +3811,14 @@ const rules = {
     // prec.dynamic(-1, $.genvar_identifier), // TODO: No need to add, matched by the ps_parameter [constant_select] above
     // prec.dynamic(-1, seq($.formal_port_identifier, optional($.constant_select))), // TODO: No need to add, same syntax as the ps_parameter_identifier constant_select above
     // seq(optional(choice($.package_scope, $.class_scope)), $.enum_identifier), // TODO: No need to add, also matched by the ps_parameter_identifier branch above
-    seq($.constant_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
-    seq($.constant_multiple_concatenation, optional(seq('[', $._constant_range_expression, ']'))),
-    seq($.constant_function_call, optional(seq('[', $._constant_range_expression, ']'))),
+    seq($.constant_concatenation, optseq('[', $._constant_range_expression, ']')),
+    seq($.constant_multiple_concatenation, optseq('[', $._constant_range_expression, ']')),
+    seq($.constant_function_call, optseq('[', $._constant_range_expression, ']')),
     // $._constant_let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
     seq('(', $.constant_mintypmax_expression, ')'),
     $.constant_cast,
     $._constant_assignment_pattern_expression,
     $.type_reference,
-
     '$', // DANGER: Out of LRM explicitly, but required for 7.10.4 (bullet point 47): The $ primary shall be legal only in a select for a queue variable.
     'null'
   )),
@@ -3834,8 +3835,16 @@ const rules = {
   primary: $ => prec('primary', choice(
     $.primary_literal,
     choice(
+      // This option worked well to set higher precedence on hierarchical_identifier than on select.
+      // However, it failed when there were non-constant expressions as indexes (bit_select) that belong
+      // to $.select but not to $.hierarchical_identifier.
+      // prec.left('hierarchical_identifier', seq( // INFO: This is the one in the LRM
+      //   optchoice($.class_qualifier, $.package_scope),
+      //   $.hierarchical_identifier,
+      //   optional($.select)
+      // )),
       seq( // INFO: This is the one in the LRM
-        optional(choice($.class_qualifier, $.package_scope)),
+        optchoice($.class_qualifier, $.package_scope),
         $.hierarchical_identifier,
         optional($.select)
       ),
@@ -3847,8 +3856,8 @@ const rules = {
       // seq(choice($.class_qualifier, $.package_scope), optional($.select)), // Tried this instead of the one above, but broke things and didn't add anything new
     ),
     $.empty_unpacked_array_concatenation,
-    seq($.concatenation, optional(seq('[', $.range_expression, ']'))),
-    seq($.multiple_concatenation, optional(seq('[', $.range_expression, ']'))),
+    seq($.concatenation, optseq('[', $.range_expression, ']')),
+    seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
     $.function_subroutine_call,
     // $.let_expression, // TODO: No need to add since it's syntax is the same as a tf_call (true ambiguity)
     seq('(', $.mintypmax_expression, ')'),
@@ -3864,9 +3873,10 @@ const rules = {
     $.type_reference, // DANGER: Out of LRM explicitly, but should be for type comparison (6.23)
   )),
 
-  class_qualifier: $ => prec('class_qualifier', choice( // Reordered to avoid matching empty string
+  // Modified to avoid matching empty string
+  class_qualifier: $ => prec('class_qualifier', choice(
     seq('local', '::'),
-    seq(optional(seq('local', '::')), choice(seq($.implicit_class_handle, '.'), $.class_scope))
+    seq(optseq('local', '::'), choice(seq($.implicit_class_handle, '.'), $.class_scope))
   )),
 
   range_expression: $ => choice(
@@ -3893,15 +3903,16 @@ const rules = {
     'super'
   )),
 
-  bit_select1: $ => repeat1( // reordered -> non empty
+  // Modified to avoid matching empty string
+  bit_select1: $ => repeat1(
     seq('[', $.expression, ']')
   ),
 
-  // TODO: Review
   select: $ => choice( // reordered -> non empty
     seq( // 1xx
       // INFO: First line overlaps a lot with $.hierarchical_identifier, but that one uses constant_bit_select
-      repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
+      // TODO: This one does not support text_macro_usage yet
+    repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
       optional($.bit_select1),
       optional(seq('[', $._part_select_range, ']'))
     ),
@@ -3917,13 +3928,6 @@ const rules = {
     )
   ),
 
-  // nonrange_select: $ => choice( // reordered -> non empty
-  //   prec.left(PREC.PARENTHESIS, seq( // 1x
-  //     repseq('.', $.member_identifier, optional($.bit_select1)), '.', $.member_identifier,
-  //     optional($.bit_select1)
-  //   )),
-  //   $.bit_select1
-  // ),
   nonrange_select: $ => choice(  // reordered -> non empty
     seq( // 1x
       repeat(seq('.', $.member_identifier, optional($.bit_select1))), '.', $.member_identifier,
@@ -3959,17 +3963,17 @@ const rules = {
 
 
 // ** A.8.5 Expression left-side values
-  net_lvalue: $ => choice(
+  net_lvalue: $ => prec('net_lvalue', choice(
     seq($.ps_or_hierarchical_net_identifier, optional($.constant_select)),
     seq('{', sepBy1(',', $.net_lvalue), '}'),
     seq(optional($._assignment_pattern_expression_type), $.assignment_pattern_net_lvalue)
-  ),
+  )),
 
   variable_lvalue: $ => prec('variable_lvalue', choice(
     seq(
       // $.class_qualifier Out of LRM in optchoice: needed for static class access
       optchoice(seq($.implicit_class_handle, '.'), $.package_scope, $.class_qualifier),
-      $._hierarchical_variable_identifier,
+      $.hierarchical_variable_identifier,
       optional($.select)
     ),
     seq('{', sepBy1(',', $.variable_lvalue), '}'),
@@ -3979,7 +3983,7 @@ const rules = {
 
   nonrange_variable_lvalue: $ => seq(
     optchoice(seq($.implicit_class_handle, '.'), $.package_scope),
-    $._hierarchical_variable_identifier,
+    $.hierarchical_variable_identifier,
     optional($.nonrange_select)
   ),
 
@@ -4155,6 +4159,7 @@ const rules = {
 
   attr_name: $ => $._identifier,
 
+
 // ** A.9.2 Comments
   // comment: $ => one_line_comment | block_comment
   // one_line_comment: $ => // comment_text \n
@@ -4174,79 +4179,66 @@ const rules = {
 
 
 // ** A.9.3 Identifiers
-  // _array_identifier: $ => $._identifier,
-  _block_identifier: $ => $._identifier,
-  _bin_identifier: $ => $._identifier,
-  // INFO: Set properly: Tried with both options but didn't work to recognize DPI properly
-  c_identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
-  // c_identifier: $ => token(/[a-zA-Z_][a-zA-Z0-9_]*/),
-  // End of INFO
-  // cell_identifier: $ => alias($._identifier, $.cell_identifier),
+  array_identifier: $ => $._identifier, // Seems unused
+  block_identifier: $ => $._identifier,
+  bin_identifier: $ => $._identifier,
+  c_identifier: $ => token(prec(-1, /[a-zA-Z_][a-zA-Z0-9_]*/)),
+  cell_identifier: $ => $._identifier,
   checker_identifier: $ => $._identifier,
   class_identifier: $ => $._identifier,
   class_variable_identifier: $ => $.variable_identifier,
   clocking_identifier: $ => $._identifier,
-  // config_identifier: $ => alias($._identifier, $.config_identifier),
-  const_identifier: $ => alias($._identifier, $.const_identifier),
-  constraint_identifier: $ => alias($._identifier, $.constraint_identifier),
-
+  config_identifier: $ => $._identifier,
+  const_identifier: $ => $._identifier,
+  constraint_identifier: $ => $._identifier,
   covergroup_identifier: $ => $._identifier,
-
-  // // covergroup_variable_identifier = variable_identifier
+  covergroup_variable_identifier: $ => $.variable_identifier,
   cover_point_identifier: $ => $._identifier,
   cross_identifier: $ => $._identifier,
   dynamic_array_variable_identifier: $ => $.variable_identifier,
-  enum_identifier: $ => alias($._identifier, $.enum_identifier),
-  escaped_identifier: $ => seq('\\', /[^\s]*/),
+  enum_identifier: $ => $._identifier,
+  escaped_identifier: $ => seq('\\', /[^\s]*/), // \ { any_printable_ASCII_character_except_white_space } white_space
+  formal_identifier: $ => $._identifier,
   formal_port_identifier: $ => $._identifier,
   function_identifier: $ => $._identifier,
-  generate_block_identifier: $ => alias($._identifier, $.generate_block_identifier),
+  generate_block_identifier: $ => $._identifier,
   genvar_identifier: $ => $._identifier,
-  _hierarchical_array_identifier: $ => $.hierarchical_identifier,
-  _hierarchical_block_identifier: $ => $.hierarchical_identifier,
-  _hierarchical_event_identifier: $ => $.hierarchical_identifier,
 
-  // prec.left because of:
-  // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '.'  …
-  //   1:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier  _identifier)  •  '.'  …
-  //   2:  module_nonansi_header  'var'  _identifier  '='  (hierarchical_identifier_repeat1  _identifier  •  '.')
-  // hierarchical_identifier: $ => prec.left('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
-  // hierarchical_identifier: $ => prec.left('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
-  // hierarchical_identifier: $ => prec.right('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
-  // hierarchical_identifier: $ => seq( // TODO: Not sure if it's prec.left
-  hierarchical_identifier: $ => prec('hierarchical_identifier', seq( // TODO: Not sure if it's prec.left
-    optional(seq('$root', '.')),
-    // INFO: Slightly out of LRM to support use of macros as part of hierarchical identifiers
-    repeat(prec('hierarchical_identifier', seq(choice($._identifier, $.text_macro_usage), optional($.constant_bit_select), '.'))),
-    // repeat(prec('hierarchical_identifier', seq($._identifier, optional($.constant_bit_select), '.'))),
-    // End of INFO
+  hierarchical_array_identifier: $ => $.hierarchical_identifier,
+  hierarchical_block_identifier: $ => $.hierarchical_identifier,
+  hierarchical_event_identifier: $ => $.hierarchical_identifier,
+
+  hierarchical_identifier: $ => prec('hierarchical_identifier', seq(
+    optseq('$root', '.'),
+    repeat(prec('hierarchical_identifier', seq(
+      choice($._identifier, $.text_macro_usage), // Slightly out of LRM to support use of $.text_macro_usage as part of hierarchical identifiers
+      optional($.constant_bit_select),
+      '.'))) ,
     $._identifier
   )),
-  // INFO: After removin the prec.left it allowed the ['constant_primary', 'primary'] conflict in precedences!!
 
-  _hierarchical_net_identifier: $ => $.hierarchical_identifier,
-  _hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
-  _hierarchical_property_identifier: $ => $.hierarchical_identifier,
-  _hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
-  _hierarchical_task_identifier: $ => $.hierarchical_identifier,
-  _hierarchical_tf_identifier: $ => $.hierarchical_identifier,
-  _hierarchical_variable_identifier: $ => $.hierarchical_identifier,
+  hierarchical_net_identifier: $ => $.hierarchical_identifier,
+  hierarchical_parameter_identifier: $ => $.hierarchical_identifier,
+  hierarchical_property_identifier: $ => $.hierarchical_identifier,
+  hierarchical_sequence_identifier: $ => $.hierarchical_identifier,
+  hierarchical_task_identifier: $ => $.hierarchical_identifier,
+  hierarchical_tf_identifier: $ => $.hierarchical_identifier,
+  hierarchical_variable_identifier: $ => $.hierarchical_identifier,
 
   _identifier: $ => choice(
     $.simple_identifier,
     $.escaped_identifier
   ),
 
-  index_variable_identifier: $ => alias($._identifier, $.index_variable_identifier),
+  index_variable_identifier: $ => $._identifier,
   interface_identifier: $ => $._identifier,
-  // interface_instance_identifier: $ => alias($._identifier, $.interface_instance_identifier),
   interface_port_identifier: $ => $._identifier,
   inout_port_identifier: $ => $._identifier,
   input_port_identifier: $ => $._identifier,
-  instance_identifier: $ => alias($._identifier, $.instance_identifier),
-  // library_identifier: $ => alias($._identifier, $.library_identifier),
-  member_identifier: $ => alias($._identifier, $.member_identifier),
-  method_identifier: $ => alias($._identifier, $.method_identifier),
+  instance_identifier: $ => $._identifier,
+  library_identifier: $ => $._identifier,
+  member_identifier: $ => $._identifier,
+  method_identifier: $ => $._identifier,
   modport_identifier: $ => $._identifier,
   module_identifier: $ => $._identifier,
   net_identifier: $ => $._identifier,
@@ -4254,22 +4246,16 @@ const rules = {
   output_port_identifier: $ => $._identifier,
   package_identifier: $ => $._identifier,
 
-  package_scope: $ => prec('package_scope', choice(
-    seq($.package_identifier, '::'),
-    seq('$unit', '::')
-  )),
+  package_scope: $ => seq(
+    choice($.package_identifier, '$unit'),
+    '::'
+  ),
 
-  parameter_identifier: $ => alias($._identifier, $.parameter_identifier),
+  parameter_identifier: $ => $._identifier,
   port_identifier: $ => $._identifier,
-  // production_identifier: $ => alias($._identifier, $.production_identifier),
   program_identifier: $ => $._identifier,
   property_identifier: $ => $._identifier,
 
-  // Set prec.left because of:
-  // module_nonansi_header  'var'  _identifier  '='  _identifier  •  '::'  …
-  //   1:  module_nonansi_header  'var'  _identifier  '='  (package_scope  _identifier  •  '::')
-  //   2:  module_nonansi_header  'var'  _identifier  '='  (ps_class_identifier  _identifier)  •  '::'  …
-  // ps_class_identifier: $ => prec.left(seq(
   ps_class_identifier: $ => seq(
     optional($.package_scope), $.class_identifier
   ),
@@ -4282,100 +4268,73 @@ const rules = {
     optional($.package_scope), $.checker_identifier
   ),
 
-  ps_identifier: $ => prec('ps_identifier', seq(
+  ps_identifier: $ => seq(
     optional($.package_scope), $._identifier
-  )),
+  ),
 
   ps_or_hierarchical_array_identifier: $ => seq(
-    optional(choice(
+    optchoice(
       seq($.implicit_class_handle, '.'),
       $.class_scope,
       $.package_scope
-    )),
-    $._hierarchical_array_identifier
+    ),
+    $.hierarchical_array_identifier
   ),
 
-  // ps_or_hierarchical_net_identifier: $ => choice(
-  //   prec.left(PREC.PARENTHESIS, seq(optional($.package_scope), $.net_identifier)),
-  //   $._hierarchical_net_identifier
-  // ),
   ps_or_hierarchical_net_identifier: $ => choice(
     seq(optional($.package_scope), $.net_identifier),
-    $._hierarchical_net_identifier
+    $.hierarchical_net_identifier
   ),
 
   ps_or_hierarchical_property_identifier: $ => choice(
     seq(optional($.package_scope), $.property_identifier),
-    $._hierarchical_property_identifier
+    $.hierarchical_property_identifier
   ),
 
   ps_or_hierarchical_sequence_identifier: $ => choice(
     seq(optional($.package_scope), $.sequence_identifier),
-    $._hierarchical_sequence_identifier
+    $.hierarchical_sequence_identifier
   ),
 
   ps_or_hierarchical_tf_identifier: $ => choice(
     seq(optional($.package_scope), $.tf_identifier),
-    $._hierarchical_tf_identifier
+    $.hierarchical_tf_identifier
   ),
 
-  // TODO: Fill and set all the cases
-  ps_parameter_identifier: $ => prec('ps_parameter_identifier', choice(
+  ps_parameter_identifier: $ => choice(
     seq(
-      optional(choice(
-        $.package_scope,
-        $.class_scope
-      )),
+      optchoice($.package_scope, $.class_scope),
       $.parameter_identifier
     ),
-    // seq(
-    //   repseq(
-    //     $.generate_block_identifier,
-    //     optseq('[', $.constant_expression, ']'),
-    //     '.'
-    //   ),
-    //   $.parameter_identifier
-    // )
-  )),
+    seq(
+      repseq($.generate_block_identifier, optseq('[', $.constant_expression, ']'), '.'),
+      $.parameter_identifier
+    )
+  ),
 
-  ps_type_identifier: $ => prec('ps_type_identifier', seq(
-    optional(choice(
-      seq('local', '::'),
-      $.package_scope,
-      $.class_scope
-    )),
+  ps_type_identifier: $ => seq(
+    optchoice(seq('local', '::'), $.package_scope, $.class_scope),
     $.type_identifier
-  )),
+  ),
 
   rs_production_identifier: $ => $._identifier,
-
   sequence_identifier: $ => $._identifier,
-
-  _signal_identifier: $ => $._identifier,
-
-  // // A simple_identifier or c_identifier shall
-  // // start with an alpha or underscore ( _ ) character,
-  // // shall have at least one character, and shall not have any spaces.
+  signal_identifier: $ => $._identifier,
   simple_identifier: $ => /[a-zA-Z_][a-zA-Z0-9_$]*/,
-
   specparam_identifier: $ => $._identifier,
-
-  // // The $ character in a system_tf_identifier shall
-  // // not be followed by white_space. A system_tf_identifier shall not be escaped.
   system_tf_identifier: $ => /\$[a-zA-Z0-9_$]+/,
-
   task_identifier: $ => $._identifier,
-  tf_identifier: $ => alias($._identifier, $.tf_identifier),
-  // terminal_identifier: $ => alias($._identifier, $.terminal_identifier),
-  // topmodule_identifier: $ => alias($._identifier, $.topmodule_identifier),
+  tf_identifier: $ => $._identifier,
+  terminal_identifier: $ => $._identifier,
+  topmodule_identifier: $ => $._identifier,
   type_identifier: $ => $._identifier,
-  // _udp_identifier: $ => $._identifier,
+  udp_identifier: $ => $._identifier,
   variable_identifier: $ => $._identifier,
 
+
 // ** A.9.4 White space
-
-  // // white_space: $ => space | tab | newline | eof};
-
+  // white_space: $ => space | tab | newline | eof;
+  // Set as /\s/ in $.extras
 
 
 // * 20. Utility system tasks and system functions
@@ -4678,36 +4637,9 @@ module.exports = grammar({
     // Reviewed
     $.snippets,
 
-    // A.1
-    $.module_identifier,
-    $.interface_identifier,
-    $.program_identifier,
-    $.checker_identifier,
-    $.class_identifier,
-    $.package_identifier,
-
-    $.port_identifier,
-    $.modport_identifier,
-    $.clocking_identifier,
-    $.specparam_identifier,
-    $.genvar_identifier,
-
     $.var_data_type,
-
     $.any_parameter_declaration,
-
     $.elaboration_severity_system_task,
-
-    // A.2
-    $.net_identifier,
-    $.nettype_identifier,
-    $.type_identifier,
-    $.interface_port_identifier,
-
-    $.covergroup_identifier,
-
-    $.function_identifier,
-    $.task_identifier,
 
     $._binary_expression,
     $._constant_binary_expression,
@@ -4715,66 +4647,99 @@ module.exports = grammar({
     // pattern (PREC.MATCHES) and subexpressions, I think these should be numeric instead of named?
     $._constant_conditional_expression,
 
-    $.sequence_identifier,
-
-
-    // TODO: Not reviewed
-
-    // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
-    $._hierarchical_parameter_identifier,
-    $._hierarchical_net_identifier,
-    $._hierarchical_variable_identifier,
-    $._hierarchical_tf_identifier,
-    $._hierarchical_sequence_identifier,
-    $._hierarchical_property_identifier,
-    $._hierarchical_block_identifier,
-    $._hierarchical_task_identifier,
-
-  //   $.ps_or_hierarchical_net_identifier,
-    $.ps_or_hierarchical_tf_identifier,
-  //   $.ps_or_hierarchical_sequence_identifier,
-  //   $.ps_or_hierarchical_property_identifier,
-
-    $.ps_class_identifier,
-    $.ps_covergroup_identifier,
-    $.ps_parameter_identifier,
-    $.ps_type_identifier,
-    $.ps_checker_identifier,
-
-    $.parameter_identifier,
-    $.enum_identifier,
-    $.formal_port_identifier,
-    $.tf_identifier,
-    $.variable_identifier,
-  //   $._udp_identifier,
-    $.dynamic_array_variable_identifier,
-    $.class_variable_identifier,
-  //   $.interface_instance_identifier,
-    $.let_identifier,
-  //   $.sequence_identifier,
-    $.member_identifier,
-    $._block_identifier,
-    $.instance_identifier,
-    $.property_identifier,
-    $.input_port_identifier,
-    $.output_port_identifier,
-    $.inout_port_identifier,
-  //   // $.input_identifier,
-  //   // $.output_identifier,
-    $.cover_point_identifier,
-    $.cross_identifier,
-
-    // $._expression_or_cond_pattern,
-    // $.pragma_keyword,
-    // $.incomplete_class_scoped_type,
-    // $._constant_assignment_pattern_expression,
-
     $.attr_name,
 
-    // $.hex_digit,
-    // $.x_digit,
-    // $.z_digit,
+    // INFO: Identifiers
+    $.array_identifier,
+    $.block_identifier,
+    $.bin_identifier,
+    $.cell_identifier,
+    $.checker_identifier,
+    $.class_identifier,
+    $.class_variable_identifier,
+    $.clocking_identifier,
+    $.config_identifier,
+    $.const_identifier,
+    $.constraint_identifier,
+    $.covergroup_identifier,
+    $.covergroup_variable_identifier,
+    $.cover_point_identifier,
+    $.cross_identifier,
+    $.dynamic_array_variable_identifier,
+    $.enum_identifier,
+    $.formal_identifier,
+    $.formal_port_identifier,
+    $.function_identifier,
+    $.generate_block_identifier,
+    $.genvar_identifier,
 
+    // TODO: Hierarchical stuff
+    $.hierarchical_array_identifier,
+    $.hierarchical_block_identifier,
+    $.hierarchical_event_identifier,
+    // $.hierarchical_identifier, // DANGER:  Deinlined on purpose!
+    $.hierarchical_net_identifier,
+    $.hierarchical_parameter_identifier,
+    $.hierarchical_property_identifier,
+    $.hierarchical_sequence_identifier,
+    $.hierarchical_task_identifier,
+    $.hierarchical_tf_identifier,
+    $.hierarchical_variable_identifier,
+    // End of TODO
+
+    $.index_variable_identifier,
+    $.interface_identifier,
+    $.interface_port_identifier,
+    $.inout_port_identifier,
+    $.input_port_identifier,
+    $.instance_identifier,
+    $.library_identifier,
+    $.member_identifier,
+    $.method_identifier,
+    $.modport_identifier,
+    $.module_identifier,
+    $.net_identifier,
+    $.nettype_identifier,
+    $.output_port_identifier,
+    $.package_identifier,
+    // $.package_scope, // DANGER: Don't inline this one
+    $.parameter_identifier,
+    $.port_identifier,
+    $.program_identifier,
+    $.property_identifier,
+
+    // TODO: ps stuff: review
+    $.ps_class_identifier,
+    $.ps_covergroup_identifier,
+    $.ps_checker_identifier,
+    $.ps_identifier,
+    $.ps_or_hierarchical_array_identifier,
+    $.ps_or_hierarchical_net_identifier,
+    $.ps_or_hierarchical_property_identifier,
+    $.ps_or_hierarchical_sequence_identifier,
+    $.ps_or_hierarchical_tf_identifier,
+    $.ps_parameter_identifier, // TODO: Many conflicts and precedences
+    $.ps_type_identifier,
+    // End of TODO
+
+    $.rs_production_identifier,
+    $.sequence_identifier,
+    $.signal_identifier,
+    $.specparam_identifier,
+    $.task_identifier,
+    $.tf_identifier,
+    $.terminal_identifier,
+    $.topmodule_identifier,
+    $.type_identifier,
+    $.udp_identifier,
+    $.variable_identifier,
+
+    // Identifiers out of A.9
+    $.hierarchical_btf_identifier, // DANGER: In section A.2.11 not in Identifiers one
+    $.let_identifier,
+    $.input_identifier,
+    $.output_identifier,
+    // $.edge_identifier, // DANGER: Don't inline this one
   ],
 
 // ** Precedences
@@ -5123,11 +5088,26 @@ module.exports = grammar({
     ['_size', 'decimal_number'],
 
 
+    // $.block_event_expression is at a higher level in the syntax tree
+    //
+    //   'covergroup'  _identifier  '@@'  '('  'begin'  _identifier  •  ')'  …
+    //   1:  'covergroup'  _identifier  '@@'  '('  'begin'  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
+    //   2:  'covergroup'  _identifier  '@@'  '('  (block_event_expression  'begin'  _identifier)  •  ')'  …
+    ['block_event_expression', 'hierarchical_identifier'],
+
 
 
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
+
+    // 'assign'  _identifier  •  '.'  …
+    // 1:  'assign'  (hierarchical_identifier  _identifier)  •  '.'  …       (precedence: 'hierarchical_identifier')
+    // 2:  'assign'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
+    // 3:  'assign'  (net_lvalue  _identifier  •  constant_select)
+    // ['hierarchical_identifier', 'net_lvalue'],
+    ['net_lvalue'],
+
 
     // TODO: Review this one after deinlining hierarchical_identifier
     // Set higher precedence to hierarchical_identifier than to select/constant_select since
@@ -5144,7 +5124,7 @@ module.exports = grammar({
     //   6:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier  bit_select1)
     //   7:  module_nonansi_header  'var'  _identifier  '='  _identifier  (select1_repeat1  '.'  •  _identifier)
     // ['hierarchical_identifier', 'select'], // INFO: I think this one is redundant or not needed anymore
-    ['hierarchical_identifier', 'constant_select'],
+    // ['hierarchical_identifier', 'constant_select'],
 
 
     // TODO: Removed to fix the expressions with primaries inside a bit_select1!!
@@ -5172,7 +5152,7 @@ module.exports = grammar({
     //   module_nonansi_header  'initial'  '@'  _identifier  •  ';'  …
     //     1:  module_nonansi_header  'initial'  '@'  (hierarchical_identifier  _identifier)  •  ';'  …  (precedence: 'hierarchical_identifier', associativity: Right)
     //     2:  module_nonansi_header  'initial'  '@'  (ps_identifier  _identifier)  •  ';'  …            (precedence: 'ps_identifier')
-    ['hierarchical_identifier', 'ps_identifier'],
+    // ['hierarchical_identifier', 'ps_identifier'],
 
 
     // TODO: Not sure about this one either.
@@ -5277,7 +5257,7 @@ module.exports = grammar({
     // 1:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …
     // 2:  ''{'  (_simple_type  class_scope  _identifier)  •  ':'  …      (precedence: 'ps_parameter_identifier')
     // 3:  ''{'  (constant_primary  class_scope  _identifier)  •  ':'  …  (precedence: 'ps_parameter_identifier')
-    ['ps_parameter_identifier', 'ps_type_identifier', '_structure_pattern_key'],
+    // ['ps_parameter_identifier', 'ps_type_identifier', '_structure_pattern_key'],
 
 
     // 'sequence'  sequence_identifier  ';'  '##'  '['  constant_expression  ':'  '$'  •  ']'  …
@@ -5320,8 +5300,12 @@ module.exports = grammar({
     // 1:  (_directives  text_macro_usage)  •  '['  …                                         (precedence: '_directives')
     // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     ['hierarchical_identifier', '_directives'],
-    ['_method_call_root', '_directives'],
+    // ['_method_call_root', '_directives'],
 
+
+    // ['property_expr', 'sequence_expr'],
+
+    // ['method_call', 'tf_call'],
 
 
 
@@ -5383,6 +5367,24 @@ module.exports = grammar({
     ['sequence_list_of_arguments'],
     ['_bind_instantiation'],
     ['_checker_or_generate_item_declaration'],
+    ['method_call'],
+    ['property_spec'],
+    ['property_expr'],
+    ['property_instance'],
+    ['sequence_expr'],
+    ['sequence_instance'],
+
+
+    // INFO: These ones fixed the isue with sequences/properties in sv-tests!!
+    ['property_spec', 'property_expr'],
+    ['_sequence_actual_arg', 'property_expr'],
+    // ['mintypmax_expression', 'expression_or_dist'],
+    // End of INFO
+
+    // ['_simple_type', 'constant_primary'],
+    // ['constant_primary', '_simple_type'],
+
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
   ],
@@ -5432,7 +5434,13 @@ module.exports = grammar({
     [$.program_declaration, $._program_header],
 
 
-    // INFO: To be reviewed
+    // SystemVerilog allows continuous assignment both to nets and logic variables:
+    //
+    // module_nonansi_header  'assign'  hierarchical_identifier  •  '.'  …
+    // 1:  module_nonansi_header  'assign'  (ps_or_hierarchical_net_identifier  hierarchical_identifier)  •  '.'  …
+    // 2:  module_nonansi_header  'assign'  (variable_lvalue  hierarchical_identifier  •  select)
+    [$.net_lvalue, $.variable_lvalue],
+
 
     // This one had no option if setting right associativity on conditional_statement to handle recursion
     //
@@ -5451,22 +5459,140 @@ module.exports = grammar({
     [$.hierarchical_identifier],
 
 
-    // SystemVerilog allows continuous assignment both to nets and logic variables:
+    // From the LRM:
+    //   In a data_declaration, it shall be illegal to omit the explicit data_type
+    //   before a list_of_variable_decl_assignments unless the var keyword is used.
     //
-    // module_nonansi_header  'assign'  hierarchical_identifier  •  '.'  …
-    // 1:  module_nonansi_header  'assign'  (ps_or_hierarchical_net_identifier  hierarchical_identifier)  •  '.'  …
-    // 2:  module_nonansi_header  'assign'  (variable_lvalue  hierarchical_identifier  •  select)
-    [$.variable_lvalue, $.ps_or_hierarchical_net_identifier],
+    //   'input'  'var'  •  '\'  …
+    //   1:  'input'  (variable_port_type  'var'  •  data_type_or_implicit)
+    //   2:  'input'  (variable_port_type  'var')  •  '\'  …
+    [$.variable_port_type],
 
 
-    // This one doesn't seem very important, since it should only refer to identifiers
-    // when hierarchical only have 1 level of nesting
+    // Setting left associativity (prec.left) prevents having more than 1 bit_select dimension:
     //
-    //   module_nonansi_header  'assign'  _identifier  •  '.'  …
-    //     1:  module_nonansi_header  'assign'  (hierarchical_identifier  _identifier)  •  '.'  …            (precedence: 'hierarchical_identifier')
-    //     2:  module_nonansi_header  'assign'  (hierarchical_identifier_repeat1  _identifier  •  '.')       (precedence: 'hierarchical_identifier')
-    //     3:  module_nonansi_header  'assign'  (ps_or_hierarchical_net_identifier  _identifier)  •  '.'  …
-    [$.hierarchical_identifier, $.ps_or_hierarchical_net_identifier],
+    // module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  bit_select1_repeat1  •  '['  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1  bit_select1_repeat1)  •  '['  …
+    //   2:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1_repeat1  bit_select1_repeat1  •  bit_select1_repeat1)
+    [$.bit_select1],
+    //   '['  _identifier  constant_bit_select1_repeat1  •  '['  …
+    //   1:  '['  _identifier  (constant_bit_select  constant_bit_select1_repeat1)  •  '['  …
+    //   2:  '['  _identifier  (constant_bit_select1_repeat1  constant_bit_select1_repeat1  •  constant_bit_select1_repeat1)
+    [$.constant_bit_select],
+
+
+    // Examples:
+    //   input my_custom_nettype_identifier ... my_signal (user defined net)
+    //   input my_signal ... (net)
+    //   input my_type_t ... my_signal (variable)
+    //
+    //   _module_header1  '('  port_direction  •  simple_identifier  …
+    //   1:  _module_header1  '('  (net_port_header  port_direction  •  net_port_type)           (precedence: 'net_port_header')
+    //   2:  _module_header1  '('  (net_port_header  port_direction)  •  simple_identifier  …     (precedence: 'net_port_header')
+    //   3:  _module_header1  '('  (variable_port_header  port_direction  •  variable_port_type)  (precedence: 'variable_port_header')
+    [$.net_port_header, $.variable_port_header],
+
+
+    // Be able to differentiate between:
+    //  input wire logic ...
+    //  input wire identifier
+    //
+    //   _module_header1  '('  net_type  •  simple_identifier  …
+    //   1:  _module_header1  '('  (net_port_type  net_type  •  data_type_or_implicit)  (precedence: 'net_port_type')
+    //   2:  _module_header1  '('  (net_port_type  net_type)  •  simple_identifier  …    (precedence: 'net_port_type')
+    [$.net_port_type],
+
+
+    // It could be a case or case-inside expression (case inside does not accept casex/casez expressions)
+    //
+    // module_nonansi_header  'initial'  'case'  •  '('  …
+    // 1:  module_nonansi_header  'initial'  (case_keyword  'case')  •  '('  …
+    // 2:  module_nonansi_header  'initial'  (case_statement  'case'  •  '('  case_expression  ')'  'inside'  case_statement_repeat3  'endcase')
+    [$.case_statement, $.case_keyword],
+
+
+    // Implicit can be both options. Until checking following token 'super' it's not possible to know when it ends
+    //
+    //   module_nonansi_header  'initial'  'this'  •  '.'  …
+    //   1:  module_nonansi_header  'initial'  (implicit_class_handle  'this'  •  '.'  'super')  (precedence: 'implicit_class_handle')
+    //   2:  module_nonansi_header  'initial'  (implicit_class_handle  'this')  •  '.'  …        (precedence: 'implicit_class_handle')
+    [$.implicit_class_handle],
+
+
+    // Avoid adding associativity in data_type so that it can differentiate between data_types/net_types
+    //
+    //   'function'  function_identifier  '('  class_scope  _identifier  •  '['  …
+    //   1:  'function'  function_identifier  '('  (data_type  class_scope  _identifier  •  data_type_repeat1)  (precedence: 'data_type')
+    //   2:  'function'  function_identifier  '('  (data_type  class_scope  _identifier)  •  '['  …             (precedence: 'data_type')
+    [$.data_type],
+
+
+    // Need to set these to allow correct parsing of external and static methods
+    //
+    // module_nonansi_header  'var'  _identifier  '='  _identifier  parameter_value_assignment  •  '::'  …
+    //   1:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment  •  class_type_repeat1)
+    //   2:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment)  •  '::'  …
+    [$.class_type],
+
+
+    // Need to know if the optional select is to be included in the primary
+    //
+    // '['  class_qualifier  hierarchical_identifier  •  '.'  …
+    // 1:  '['  (primary  class_qualifier  hierarchical_identifier  •  select)  (precedence: 'primary')
+    // 2:  '['  (primary  class_qualifier  hierarchical_identifier)  •  '.'  …  (precedence: 'primary')
+    [$.primary],
+
+
+    // select branches include repetition of bit_select and dot-member identifier
+    //
+    // '('  hierarchical_identifier  '.'  _identifier  •  '.'  …
+    // 1:  '('  hierarchical_identifier  (select  '.'  _identifier)  •  '.'  …
+    // 2:  '('  hierarchical_identifier  (select_repeat1  '.'  _identifier)  •  '.'  …
+    [$.select],
+
+
+    // Impossible to know with just one :: if it's a class_type or an ambiguity of class_type/package_scope
+    //
+    // _identifier  •  '::'  …
+    // 1:  (class_type  _identifier  •  class_type_repeat1)
+    // 2:  (class_type  _identifier)  •  '::'  …
+    // 3:  (package_scope  _identifier  •  '::')             (precedence: 'package_scope')
+    [$.class_type, $.package_scope],
+
+
+    // It's not possible to know after class declaration if 'virtual' belongs to a virtual interface or a virtual method
+    //
+    // 'class'  _identifier  ';'  class_item_qualifier  •  'virtual'  …
+    // 1:  'class'  _identifier  ';'  (_property_qualifier  class_item_qualifier)  •  'virtual'  …
+    // 2:  'class'  _identifier  ';'  (method_qualifier  class_item_qualifier)  •  'virtual'  …     (precedence: 'method_qualifier')
+    [$._property_qualifier, $.method_qualifier],
+
+
+    // `pragma could be followed by:
+    // - pragma_keyword
+    // - pragma_keyword = pragma_value
+    // - pragma_value
+    //
+    // 'pragma_token1'  pragma_name  simple_identifier  •  ';'  …
+    // 1:  'pragma_token1'  pragma_name  (_identifier  simple_identifier)  •  ';'  …
+    // 2:  'pragma_token1'  pragma_name  (pragma_keyword  simple_identifier)  •  ';'  …
+    [$.pragma_keyword, $._identifier],
+
+
+    // Allow proper detection of select/constant_select with assign and net_lvalue/variable_lvalue
+    //
+    // 'assign'  _identifier  •  '.'  …
+    // 1:  'assign'  (hierarchical_identifier  _identifier)  •  '.'  …       (precedence: 'hierarchical_identifier')
+    // 2:  'assign'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
+    // 3:  'assign'  (net_lvalue  _identifier  •  constant_select)           (precedence: 'net_lvalue')
+    [$.net_lvalue, $.hierarchical_identifier],
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
+    // INFO: To be reviewed
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
 
 
     // No way to fix this conflict in the precedences array since the constant_expression has numeric precedence,
@@ -5485,7 +5611,7 @@ module.exports = grammar({
     //   module_nonansi_header  'var'  _identifier  '='  cond_predicate  '?'  expression  ':'  expression  •  '?'  …
     //   1:  module_nonansi_header  'var'  _identifier  '='  (conditional_expression  cond_predicate  '?'  expression  ':'  expression)  •  '?'  …  (precedence: 23, associativity: Right)
     //   2:  module_nonansi_header  'var'  _identifier  '='  cond_predicate  '?'  expression  ':'  (cond_predicate  expression)  •  '?'  …          (precedence: 23)
-    [$.cond_predicate, $.conditional_expression],
+    // [$.cond_predicate, $.conditional_expression],
 
 
     //  Declaration of net/type in the unit scope, true conflict
@@ -5494,20 +5620,6 @@ module.exports = grammar({
     //   1:  (data_type  _identifier)  •  simple_identifier  …
     //   2:  (net_declaration  _identifier  •  list_of_net_decl_assignments  ';')
     // [$.net_declaration, $.data_type],
-
-
-    // Setting prec.left prevented having more than 1 bit_select dimension:
-    //
-    // module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  bit_select1_repeat1  •  '['  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1  bit_select1_repeat1)  •  '['  …
-    //   2:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1_repeat1  bit_select1_repeat1  •  bit_select1_repeat1)
-    [$.bit_select1],
-    // Same case below
-    //
-    //   '['  _identifier  constant_bit_select1_repeat1  •  '['  …
-    //   1:  '['  _identifier  (constant_bit_select  constant_bit_select1_repeat1)  •  '['  …
-    //   2:  '['  _identifier  (constant_bit_select1_repeat1  constant_bit_select1_repeat1  •  constant_bit_select1_repeat1)
-    [$.constant_bit_select],
 
 
     // Parser needs more information to know which of these possibiliies is the correct one:
@@ -5524,39 +5636,6 @@ module.exports = grammar({
     // [$.net_declaration, $.data_type, $.module_instantiation],
 
 
-    // This is derived from the LRM:
-    // In a data_declaration, it shall be illegal to omit the explicit data_type
-    // before a list_of_variable_decl_assignments unless the var keyword is used.
-    //
-    //   'input'  'var'  •  '\'  …
-    //   1:  'input'  (variable_port_type  'var'  •  data_type_or_implicit)
-    //   2:  'input'  (variable_port_type  'var')  •  '\'  …
-    [$.variable_port_type],
-
-
-    // Examples:
-    //   input my_custom_nettype_identifier ... my_signal (user defined net)
-    //   input my_signal ... (net)
-    //   input my_type_t ... my_signal (variable)
-    //
-    // Even though we do not aim to support user defined nets (example 1), there is a conflict between examples 2 and 3
-    //
-    //   _module_header1  '('  port_direction  •  simple_identifier  …
-    //   1:  _module_header1  '('  (net_port_header  port_direction  •  net_port_type)           (precedence: 'net_port_header')
-    //   2:  _module_header1  '('  (net_port_header  port_direction)  •  simple_identifier  …     (precedence: 'net_port_header')
-    //   3:  _module_header1  '('  (variable_port_header  port_direction  •  variable_port_type)  (precedence: 'variable_port_header')
-    [$.net_port_header, $.variable_port_header],
-
-
-    // It seems the more general option 1 would be the correct, but adding associativity would probably cause some
-    // errors in the parsing of some file, so set as a conflict to increase lookahead 1 token
-    //
-    //   _module_header1  '('  net_type  •  simple_identifier  …
-    //   1:  _module_header1  '('  (net_port_type  net_type  •  data_type_or_implicit)  (precedence: 'net_port_type')
-    //   2:  _module_header1  '('  (net_port_type  net_type)  •  simple_identifier  …    (precedence: 'net_port_type')
-    [$.net_port_type],
-
-
     // This is not that obvious, and seems better to create a conflict since bit_select and brackets are involved
     //
     //   'function'  function_identifier  ';'  _identifier  •  '['  …
@@ -5564,22 +5643,6 @@ module.exports = grammar({
     //   2:  'function'  function_identifier  ';'  (hierarchical_identifier  _identifier)  •  '['  …                             (precedence: 'hierarchical_identifier')
     //   3:  'function'  function_identifier  ';'  (hierarchical_identifier_repeat1  _identifier  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     [$.data_type, $.hierarchical_identifier],
-
-
-    // Avoid adding right associativity in data_type so that it can differentiate between data_types/net_types
-    //
-    //   'function'  function_identifier  '('  class_scope  _identifier  •  '['  …
-    //   1:  'function'  function_identifier  '('  (data_type  class_scope  _identifier  •  data_type_repeat1)  (precedence: 'data_type')
-    //   2:  'function'  function_identifier  '('  (data_type  class_scope  _identifier)  •  '['  …             (precedence: 'data_type')
-    [$.data_type],
-
-
-    // case inside does not accept casex/casez expressions
-    //
-    // module_nonansi_header  'initial'  'case'  •  '('  …
-    // 1:  module_nonansi_header  'initial'  (case_keyword  'case')  •  '('  …
-    // 2:  module_nonansi_header  'initial'  (case_statement  'case'  •  '('  case_expression  ')'  'inside'  case_statement_repeat3  'endcase')
-    [$.case_statement, $.case_keyword],
 
 
     // 2nd option is for the case when there is a clocking event, so it needs to check further.
@@ -5600,31 +5663,15 @@ module.exports = grammar({
     // [$.data_type, $.tf_call, $.hierarchical_identifier],
 
 
-    // It's not possible to know after 'local static' (e.g) if it's a property or a method:
-    //
-    //   'class'  _identifier  ';'  class_item_qualifier  •  'static'  …
-    //   1:  'class'  _identifier  ';'  (_property_qualifier  class_item_qualifier)  •  'static'  …
-    //   2:  'class'  _identifier  ';'  (method_qualifier  class_item_qualifier)  •  'static'  …
-    [$._property_qualifier, $.method_qualifier],
-
-
-    // Implicit can be both options depending on the context. Tried with right associativity but didn't work well.
-    //
-    //   module_nonansi_header  'initial'  'this'  •  '.'  …
-    //   1:  module_nonansi_header  'initial'  (implicit_class_handle  'this'  •  '.'  'super')  (precedence: 'implicit_class_handle')
-    //   2:  module_nonansi_header  'initial'  (implicit_class_handle  'this')  •  '.'  …        (precedence: 'implicit_class_handle')
-    [$.implicit_class_handle],
-
-
     // Assumes that since this comes from statement_item, it could be in many places and therefore
     // it's a better idea to set a conflict (it could be inside a forever block inside a class for a method_call_root)
     //
     //   module_nonansi_header  'initial'  implicit_class_handle  •  '.'  …
     //   1:  module_nonansi_header  'initial'  (_method_call_root  implicit_class_handle)  •  '.'  …                                         (precedence: '_method_call_root')
     //   2:  module_nonansi_header  'initial'  (class_qualifier  implicit_class_handle  •  '.')                                              (precedence: 'class_qualifier')
-    //   3:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  _hierarchical_variable_identifier  select)  (precedence: 'variable_lvalue')
-    //   4:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  _hierarchical_variable_identifier)           (precedence: 'variable_lvalue')
-    [$._method_call_root, $.class_qualifier, $.variable_lvalue],
+    //   3:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  hierarchical_variable_identifier  select)  (precedence: 'variable_lvalue')
+    //   4:  module_nonansi_header  'initial'  (variable_lvalue  implicit_class_handle  •  '.'  hierarchical_variable_identifier)           (precedence: 'variable_lvalue')
+    // [$._method_call_root, $.class_qualifier, $.variable_lvalue],
 
 
     // Same as before, this case could be all the options inside the initial, need more lookahead
@@ -5638,30 +5685,11 @@ module.exports = grammar({
 
 
     // All of these also seemed needed after implementing method calls, external methods and static methods
-    [$.tf_call, $.hierarchical_identifier],
-    [$.primary],
+    // [$.tf_call, $.hierarchical_identifier],
     [$.primary, $.variable_lvalue],
-    [$._method_call_root, $.class_qualifier],
     [$.tf_call, $.primary],
     [$.method_call_body, $.array_method_name],
-    [$.select],
 
-
-    // Need to set these to allow correct parsing of external methods and static methods
-    //
-    // module_nonansi_header  'var'  _identifier  '='  _identifier  parameter_value_assignment  •  '::'  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment  •  class_type_repeat1)
-    //   2:  module_nonansi_header  'var'  _identifier  '='  (class_type  _identifier  parameter_value_assignment)  •  '::'  …
-    [$.class_type],
-    // _identifier  •  '::'  …
-    // 1:  (class_type  _identifier  •  class_type_repeat1)
-    // 2:  (class_type  _identifier)  •  '::'  …
-    // 3:  (package_scope  _identifier  •  '::')             (precedence: 'package_scope')
-    [$.class_type, $.package_scope],
-
-
-    // Directives conflicts
-    [$.pragma_keyword, $._identifier],
 
 
     // TODO: Typedef conflicts
@@ -5710,26 +5738,13 @@ module.exports = grammar({
 
 
     // Casting
-    [$._simple_type, $.constant_primary],
-    [$._simple_type, $._structure_pattern_key, $.constant_primary],
+    // [$._simple_type, $.constant_primary],
+    // [$._simple_type, $._structure_pattern_key, $.constant_primary],
 
-
-    // Big conflict after inlining constant assignment pattern expression
-    //
-    // '('  expression  'matches'  ''{'  _identifier  •  ':'  …
-    // 1:  '('  expression  'matches'  ''{'  (_simple_type  _identifier)  •  ':'  …                         (precedence: 'ps_parameter_identifier')
-    // 2:  '('  expression  'matches'  ''{'  (_simple_type  _identifier)  •  ':'  …                         (precedence: 'ps_type_identifier')
-    // 3:  '('  expression  'matches'  ''{'  (_structure_pattern_key  _identifier)  •  ':'  …               (precedence: '_structure_pattern_key')
-    // 4:  '('  expression  'matches'  ''{'  (constant_primary  _identifier)  •  ':'  …                     (precedence: 'ps_parameter_identifier')
-    // 5:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  '}')                   (precedence: 'pattern')
-    // 6:  '('  expression  'matches'  (pattern  ''{'  _identifier  •  ':'  pattern  pattern_repeat2  '}')  (precedence: 'pattern')
-    // [$._simple_type, $.pattern, $._structure_pattern_key, $.constant_primary],
 
     // Type-reference
     [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
     [$.data_type, $.constant_primary],
-    [$.expression, $.constant_primary],
-    [$.data_type, $.expression],
 
     // Queue dimensions
     [$.primary, $.implicit_class_handle],
@@ -5750,7 +5765,6 @@ module.exports = grammar({
     [$.data_type, $.class_type, $.net_port_type],
     [$.class_type, $.module_instantiation],
     [$.data_type, $.class_type, $.tf_port_item],
-    [$.data_type, $.class_type, $.constant_primary],
 
     [$.ansi_port_declaration],
 
@@ -5769,7 +5783,6 @@ module.exports = grammar({
     // delay3
     [$.randomize_call],
     [$.system_tf_call],
-    [$._assignment_pattern_expression_type, $.expression],
     [$.expression, $.mintypmax_expression],
     [$.tf_call],
     [$.array_manipulation_call],
@@ -5805,19 +5818,10 @@ module.exports = grammar({
     [$.variable_decl_assignment, $._variable_dimension],
     [$.variable_decl_assignment, $.packed_dimension, $._variable_dimension],
 
-    [$._method_call_root, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.select, $.nonrange_select],
-    [$.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
     [$.constant_primary, $.primary],
-
-
-    // TODO: Remove!
-    [$.select, $.variable_lvalue],
-
 
     // INFO: Added to fix issue with expressions inside bit_select1
     [$.tf_call, $.constant_primary, $.hierarchical_identifier],
@@ -5842,13 +5846,10 @@ module.exports = grammar({
     [$.class_type, $.tf_call, $.hierarchical_identifier],
     [$.incomplete_class_scoped_type, $.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
     [$.class_scope, $._method_call_root],
-    [$.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
 
 
     // Needed to parse standalone module_items (snippets)
-    [$.interface_port_declaration, $.class_type, $.tf_call, $.hierarchical_identifier],
     [$.list_of_variable_assignments, $.procedural_continuous_assignment],
-    [$.interface_port_declaration, $.hierarchical_identifier],
 
     // Conditional generate
     // 'case'  •  '('  …
@@ -5870,14 +5871,14 @@ module.exports = grammar({
     [$._description, $._non_port_module_item, $._package_or_generate_item_declaration, $.statement_item],
 
     // After adding text_macro_usage to _method_call_root
-    [$._directives, $._method_call_root],
+    // [$._directives, $._method_call_root],
 
 
     // Fix error with method call with bit_select
     [$.class_qualifier, $.select],
     [$.select, $.hierarchical_identifier],
     [$.constant_select, $.hierarchical_identifier],
-    [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
+    // [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$._method_call_root, $.primary],
     [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue],
     [$._method_call_root, $.primary, $.class_qualifier],
@@ -5895,74 +5896,44 @@ module.exports = grammar({
     // Text macros on hierarchical identifiers
     // INFO: Seems that after this, hierarchical_identifier has a higher dynamic precedence over _method_call_root
     [$._method_call_root, $.hierarchical_identifier],
-    [$._directives, $._method_call_root, $.hierarchical_identifier],
+    // [$._directives, $._method_call_root, $.hierarchical_identifier],
 
 
     // Coverage: TODO
-    [$._cross_item],
-    [$.hierarchical_identifier, $.method_identifier],
     [$._covergroup_expression, $.cond_pattern],
     [$._covergroup_expression, $.mintypmax_expression],
     [$._covergroup_expression, $.concatenation],
     [$.covergroup_value_range, $.primary],
-    [$.bins_expression],
     [$._integer_covergroup_expression, $.primary],
 
 
     // TODO: sequences/properties/assertions
-    [$.concurrent_assertion_item, $.deferred_immediate_assertion_item, $.generate_block_identifier],
+    // [$.concurrent_assertion_item, $.deferred_immediate_assertion_item, $.generate_block_identifier],
     [$.expression_or_dist, $.mintypmax_expression],
     [$.property_expr, $.sequence_expr],
     [$.cover_sequence_statement, $.sequence_expr],
-    [$.property_spec, $.property_expr],
-    [$.property_expr, $._sequence_actual_arg],
+    // [$.property_spec, $.property_expr],
+    // [$.property_expr, $._sequence_actual_arg],
     [$.expression_or_dist, $.event_expression, $.mintypmax_expression],
 
-    [$.tf_call, $.ps_or_hierarchical_property_identifier],
-    [$.tf_call, $.primary, $.ps_or_hierarchical_property_identifier],
-    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier],
-    [$.property_list_of_arguments, $.expression_or_dist, $.event_expression],
-
-    [$.tf_call, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.primary, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.primary, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.sequence_identifier],
-    [$.tf_call, $.hierarchical_identifier, $.sequence_identifier],
-    [$.tf_call, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.ps_or_hierarchical_property_identifier, $.sequence_identifier],
-    [$.tf_call, $.sequence_identifier],
 
     // TODO: Add procedural assertion item probably these could be removed by inlining
     [$.concurrent_assertion_item, $._procedural_assertion_statement],
     [$.deferred_immediate_assertion_item, $._immediate_assertion_statement],
 
     // TODO: Add clocking_drive to statement_item
-    [$.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.clockvar, $.variable_lvalue],
 
     // TODO: Fixing the local:: class_qualifier
     [$._simple_type, $._assignment_pattern_expression_type, $.class_qualifier],
 
-    // TODO: Randsequence conflicts
-    [$.rs_production_list],
-    [$.rs_rule],
-
     // TODO: bind
-    [$.bind_target_scope],
     [$.bind_target_scope, $.hierarchical_identifier],
-
-    // TODO: Adding branches on constant_primary
-    [$.constant_primary],
 
     // TODO: After adding nested static class access on LHS
     [$._assignment_pattern_expression_type, $.class_qualifier],
 
     // TODO: Fixing constant_primary on casting_type
-    [$.interface_port_declaration, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.sequence_identifier],
-    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.sequence_identifier],
-    [$.port_reference, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.select_expression, $.tf_call, $.constant_primary, $.hierarchical_identifier],
 
 
@@ -5986,12 +5957,68 @@ module.exports = grammar({
     [$.blocking_assignment, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
-    // TODO: After inlining sequence_identifier:
-    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.hierarchical_identifier, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_property_identifier, $.ps_or_hierarchical_sequence_identifier],
-    [$.tf_call, $.constant_primary, $.hierarchical_identifier, $.ps_or_hierarchical_sequence_identifier],
+    // TODO: After reviewing/inlining many identifiers
+    [$.interface_port_declaration, $.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.data_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
 
+    [$.interface_port_declaration, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.interface_port_declaration, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.interface_port_declaration, $.constant_select, $.hierarchical_identifier],
+
+    [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.class_qualifier],
+    [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.constant_primary, $.class_qualifier],
+    [$.clocking_event, $.hierarchical_identifier],
+    [$.property_instance, $.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.property_instance, $.sequence_instance, $.tf_call, $.hierarchical_identifier],
+    [$.sequence_instance, $.tf_call, $.hierarchical_identifier],
+    [$.select, $.constant_select],
+    [$._constant_part_select_range, $._part_select_range],
+    [$.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.property_instance, $.sequence_instance, $.tf_call],
+    [$.sequence_instance, $.tf_call],
+    [$.property_list_of_arguments, $.sequence_list_of_arguments, $.list_of_arguments],
+    [$._property_actual_arg, $.sequence_list_of_arguments],
+    [$.expression_or_dist, $.event_expression, $.list_of_arguments],
+    [$.sequence_list_of_arguments, $.list_of_arguments],
+    [$._simple_type, $._structure_pattern_key],
+
+
+    [$.sequence_expr, $.event_expression],
+    [$.block_event_expression, $.hierarchical_identifier],
+
+    [$.property_expr],
+    [$.expression_or_dist, $.expression],
+
+
+
+    // INFO: After removing constant_primary from casting_type to fix issue with concatenation on RHS
+    [$.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.interface_port_declaration, $.class_type, $.tf_call, $.hierarchical_identifier],
+    [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.class_qualifier],
+    [$.interface_port_declaration, $.hierarchical_identifier],
+    [$._simple_type, $.constant_primary],
+
+
+    // TODO: After uncommenting the other branch in `ps_parameter_identifier'
+
+
+    [$.interface_port_declaration, $.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
+    [$.data_type, $._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
+    [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
+    [$._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
+    [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._assignment_pattern_expression_type, $.net_lvalue, $.hierarchical_identifier],
+    [$.interface_port_declaration, $._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
+    [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_select, $.hierarchical_identifier],
+    [$.data_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
+    [$._assignment_pattern_expression_type, $.constant_select, $.hierarchical_identifier],
+    [$.constant_select],
+    [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_bit_select],
+
+    // After adding back the constant primary in casting_type
+    // [$.interface_port_declaration, $._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_select, $.hierarchical_identifier],
   ],
 
 });
