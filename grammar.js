@@ -2606,9 +2606,9 @@ const rules = {
   procedural_continuous_assignment: $ => choice(
     seq('assign', $.variable_assignment),
     seq('deassign', $.variable_lvalue),
-    seq('force', $.variable_assignment),
+    prec.dynamic(1, seq('force', $.variable_assignment)),
     seq('force', $.net_assignment),
-    seq('release', $.variable_lvalue),
+    prec.dynamic(1, seq('release', $.variable_lvalue)),
     seq('release', $.net_lvalue)
   ),
 

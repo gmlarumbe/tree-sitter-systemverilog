@@ -1,7 +1,9 @@
 // Section 40.1: Force
 
-force f = a && b;
-/*...*/
-release f;
+initial begin
+    force f = a && b;
+    /*...*/
+    release f;
+end
 
 

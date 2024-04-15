@@ -4,9 +4,11 @@ doulos/40.1_force
 
 // Section 40.1: Force
 
-force f = a && b;
-/*...*/
-release f;
+initial begin
+    force f = a && b;
+    /*...*/
+    release f;
+end
 
 
 
@@ -14,24 +16,33 @@ release f;
 
 (source_file
   (comment)
-  (statement
-    (statement_item
-      (procedural_continuous_assignment
-        (net_assignment
-          (net_lvalue
-            (simple_identifier))
-          (expression
-            left: (expression
-              (primary
-                (hierarchical_identifier
-                  (simple_identifier))))
-            right: (expression
-              (primary
-                (hierarchical_identifier
-                  (simple_identifier)))))))))
-  (comment)
-  (statement
-    (statement_item
-      (procedural_continuous_assignment
-        (net_lvalue
-          (simple_identifier))))))
+  (initial_construct
+    (statement_or_null
+      (statement
+        (statement_item
+          (seq_block
+            (statement_or_null
+              (statement
+                (statement_item
+                  (procedural_continuous_assignment
+                    (variable_assignment
+                      (variable_lvalue
+                        (hierarchical_identifier
+                          (simple_identifier)))
+                      (expression
+                        left: (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier))))
+                        right: (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier))))))))))
+            (comment)
+            (statement_or_null
+              (statement
+                (statement_item
+                  (procedural_continuous_assignment
+                    (variable_lvalue
+                      (hierarchical_identifier
+                        (simple_identifier)))))))))))))
