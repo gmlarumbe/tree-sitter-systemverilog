@@ -4309,10 +4309,12 @@ const rules = {
       optchoice($.package_scope, $.class_scope),
       $.parameter_identifier
     ),
-    seq(
-      repseq($.generate_block_identifier, optseq('[', $.constant_expression, ']'), '.'),
-      $.parameter_identifier
-    )
+    // INFO: This choice does not add branches that are not already covered by other rules.
+    //       On the other and it adds numerous unnecessary conflicts
+    // seq(
+    //   repseq($.generate_block_identifier, optseq('[', $.constant_expression, ']'), '.'),
+    //   $.parameter_identifier
+    // )
   ),
 
   ps_type_identifier: $ => seq(
@@ -5649,7 +5651,6 @@ module.exports = grammar({
     [$.data_type, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.data_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.data_type, $.class_type, $.tf_call, $.constant_primary],
-    [$._assignment_pattern_expression_type, $.hierarchical_identifier],
 
     // Modports
     // INFO: Not sure about this...
@@ -5754,7 +5755,6 @@ module.exports = grammar({
 
 
     // TODO: After reviewing/inlining many identifiers
-    [$.data_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.class_qualifier],
     [$.clocking_event, $.hierarchical_identifier],
     [$.property_instance, $.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
@@ -5780,21 +5780,6 @@ module.exports = grammar({
     [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.class_qualifier],
 
 
-    // TODO: After uncommenting the other branch in `ps_parameter_identifier'
-    [$.interface_port_declaration, $.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
-    [$.data_type, $._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
-    [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.hierarchical_identifier],
-    [$._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
-    [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.interface_port_declaration, $._simple_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
-    [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_select, $.hierarchical_identifier],
-    [$.data_type, $._assignment_pattern_expression_type, $.hierarchical_identifier],
-    [$._assignment_pattern_expression_type, $.constant_select, $.hierarchical_identifier],
-    [$.constant_select],
-    [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.constant_bit_select],
-
-
     // TODO: Adding primitives -> Fixed partially with named precedences
     // The only one left is the $.net_lvalue / $.variable_lvalue that exists above on purpose
     [$.tf_call, $.primary, $.net_lvalue, $.variable_lvalue],
@@ -5814,14 +5799,9 @@ module.exports = grammar({
 
 
     // TODO: Giving higher prioriy to module_instantiation than to udp_instantiation
-    [$._assignment_pattern_expression_type, $.net_lvalue, $.hierarchical_identifier],
     [$.net_lvalue, $.hierarchical_identifier],
     [$.tf_call, $.primary, $.net_lvalue],
     [$.tf_call, $.net_lvalue, $.hierarchical_identifier],
-    [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
-    [$._simple_type, $._assignment_pattern_expression_type, $.net_lvalue, $.hierarchical_identifier],
-    [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
-    [$._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
     [$.property_instance, $.sequence_instance, $.tf_call, $.primary, $.net_lvalue],
     [$.property_instance, $.sequence_instance, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
     [$.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
@@ -5844,6 +5824,14 @@ module.exports = grammar({
     [$.parallel_path_description, $.parallel_edge_sensitive_path_description],
     [$.scalar_timing_check_condition, $.mintypmax_expression],
     [$.constant_function_call, $.module_path_primary],
+
+
+    // TODO: Fixing last error of method calls inside indexes
+    [$.interface_port_declaration, $.class_type, $.tf_call, $.hierarchical_identifier],
+    [$.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.interface_port_declaration, $.hierarchical_identifier],
+    [$.class_type, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
+    [$.class_type, $.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
   ],
 
 });
