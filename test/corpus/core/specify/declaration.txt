@@ -1,0 +1,87 @@
+============================================
+core/specify/declaration
+============================================
+
+specify
+    specparam tRise_clk_q = 150, tFall_clk_q = 200;
+    specparam tSetup = 70;
+
+    (clk => q) = (tRise_clk_q, tFall_clk_q);
+
+    $setup(d, posedge clk, tSetup);
+endspecify
+
+----
+
+(source_file
+  (specify_block
+    (specify_item
+      (specparam_declaration
+        (list_of_specparam_assignments
+          (specparam_assignment
+            (simple_identifier)
+            (constant_mintypmax_expression
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))
+          (specparam_assignment
+            (simple_identifier)
+            (constant_mintypmax_expression
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number)))))))))))
+    (specify_item
+      (specparam_declaration
+        (list_of_specparam_assignments
+          (specparam_assignment
+            (simple_identifier)
+            (constant_mintypmax_expression
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number)))))))))))
+    (specify_item
+      (path_declaration
+        (simple_path_declaration
+          (parallel_path_description
+            (specify_input_terminal_descriptor
+              (simple_identifier))
+            (specify_output_terminal_descriptor
+              (simple_identifier)))
+          (path_delay_value
+            (list_of_path_delay_expressions
+              (path_delay_expression
+                (constant_mintypmax_expression
+                  (constant_expression
+                    (constant_primary
+                      (simple_identifier)))))
+              (path_delay_expression
+                (constant_mintypmax_expression
+                  (constant_expression
+                    (constant_primary
+                      (simple_identifier))))))))))
+    (specify_item
+      (system_timing_check
+        ($setup_timing_check
+          (data_event
+            (timing_check_event
+              (specify_input_terminal_descriptor
+                (simple_identifier))))
+          (reference_event
+            (timing_check_event
+              (timing_check_event_control)
+              (specify_input_terminal_descriptor
+                (simple_identifier))))
+          (timing_check_limit
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))))

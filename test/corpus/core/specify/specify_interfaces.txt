@@ -1,0 +1,113 @@
+============================================
+core/specify/specify_interfaces
+============================================
+
+module dtype (itf.flop ch);
+
+    always_ff @(posedge ch.c) ch.q <= ch.d;
+
+    specify
+        ( posedge ch.c => (ch.q+:ch.d)) = (5,6);
+        $setup( ch.d, posedge ch.c, 1 );
+    endspecify
+
+endmodule
+
+----
+
+(source_file
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (interface_port_header
+            interface_name: (simple_identifier)
+            modport_name: (simple_identifier))
+          port_name: (simple_identifier))))
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (nonblocking_assignment
+                    (variable_lvalue
+                      (hierarchical_identifier
+                        (simple_identifier)
+                        (simple_identifier)))
+                    (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)
+                          (simple_identifier))))))))))))
+    (specify_block
+      (specify_item
+        (path_declaration
+          (edge_sensitive_path_declaration
+            (parallel_edge_sensitive_path_description
+              (edge_identifier)
+              (specify_input_terminal_descriptor
+                (simple_identifier)
+                (simple_identifier))
+              (specify_output_terminal_descriptor
+                (simple_identifier)
+                (simple_identifier))
+              (polarity_operator)
+              (data_source_expression
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier)
+                      (simple_identifier))))))
+            (path_delay_value
+              (list_of_path_delay_expressions
+                (path_delay_expression
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number))))))))
+                (path_delay_expression
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number)))))))))))))
+      (specify_item
+        (system_timing_check
+          ($setup_timing_check
+            (data_event
+              (timing_check_event
+                (specify_input_terminal_descriptor
+                  (simple_identifier)
+                  (simple_identifier))))
+            (reference_event
+              (timing_check_event
+                (timing_check_event_control)
+                (specify_input_terminal_descriptor
+                  (simple_identifier)
+                  (simple_identifier))))
+            (timing_check_limit
+              (expression
+                (primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number)))))))))))))

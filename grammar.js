@@ -600,8 +600,8 @@ const rules = {
   _non_port_module_item: $ => prec('_non_port_module_item', choice(
     $.generate_region,
     $._module_or_generate_item,
-    // $.specify_block,                                            // TODO: Pending
-    // seq(repeat($.attribute_instance), $.specparam_declaration), // TODO: Pending
+    $.specify_block,
+    seq(repeat($.attribute_instance), $.specparam_declaration),
     $.program_declaration,
     $.module_declaration,
     $.interface_declaration,
@@ -3140,427 +3140,416 @@ const rules = {
 
 // * A.7 Specify section
 // ** A.7.1 Specify block declaration
-  // specify_block: $ => seq('specify', repeat($._specify_item), 'endspecify'),
+  specify_block: $ => seq(
+    'specify',
+    repeat($.specify_item),
+    'endspecify'
+  ),
 
-  // _specify_item: $ => choice(
-  //   $.specparam_declaration,
-  //   $.pulsestyle_declaration,
-  //   $.showcancelled_declaration,
-  //   $.path_declaration,
-  //   $._system_timing_check
-  // ),
+  specify_item: $ => choice(
+    $.specparam_declaration,
+    $.pulsestyle_declaration,
+    $.showcancelled_declaration,
+    $.path_declaration,
+    $.system_timing_check
+  ),
 
-  // pulsestyle_declaration: $ => seq(
-  //   choice('pulsestyle_onevent', 'pulsestyle_ondetect'),
-  //   $.list_of_path_outputs,
-  //   ';'
-  // ),
+  pulsestyle_declaration: $ => seq(
+    choice('pulsestyle_onevent', 'pulsestyle_ondetect'),
+    $.list_of_path_outputs,
+    ';'
+  ),
 
-  // showcancelled_declaration: $ => seq(
-  //   choice('showcancelled', 'noshowcancelled'),
-  //   $.list_of_path_outputs,
-  //   ';'
-  // ),
+  showcancelled_declaration: $ => seq(
+    choice('showcancelled', 'noshowcancelled'),
+    $.list_of_path_outputs,
+    ';'
+  ),
+
 
 // ** A.7.2 Specify path declarations
-  // path_declaration: $ => seq(
-  //   choice(
-  //     $.simple_path_declaration,
-  //     $.edge_sensitive_path_declaration,
-  //     $.state_dependent_path_declaration
-  //   ),
-  //   ';'
-  // ),
+  path_declaration: $ => seq(
+    choice(
+      $.simple_path_declaration,
+      $.edge_sensitive_path_declaration,
+      $.state_dependent_path_declaration
+    ),
+    ';'
+  ),
 
-  // simple_path_declaration: $ => seq(
-  //   choice($.parallel_path_description, $.full_path_description),
-  //   '=',
-  //   $.path_delay_value
-  // ),
+  simple_path_declaration: $ => seq(
+    choice($.parallel_path_description, $.full_path_description),
+    '=',
+    $.path_delay_value
+  ),
 
-  // parallel_path_description: $ => seq(
-  //   '(',
-  //   $.specify_input_terminal_descriptor,
-  //   optional($.polarity_operator),
-  //   '=>',
-  //   $.specify_output_terminal_descriptor,
-  //   ')'
-  // ),
+  parallel_path_description: $ => seq(
+    '(',
+    $.specify_input_terminal_descriptor,
+    optional($.polarity_operator),
+    '=>',
+    $.specify_output_terminal_descriptor,
+    ')'
+  ),
 
-  // full_path_description: $ => seq(
-  //   '(',
-  //   $.list_of_path_inputs,
-  //   optional($.polarity_operator),
-  //   '*>',
-  //   $.list_of_path_outputs,
-  //   ')'
-  // ),
+  full_path_description: $ => seq(
+    '(',
+    $.list_of_path_inputs,
+    optional($.polarity_operator),
+    '*>',
+    $.list_of_path_outputs,
+    ')'
+  ),
 
-  // list_of_path_inputs: $ => sep1(',', $.specify_input_terminal_descriptor),
+  edge_sensitive_path_declaration: $ => seq(
+    choice(
+      $.parallel_edge_sensitive_path_description,
+      $.full_edge_sensitive_path_description
+    ),
+    '=',
+    $.path_delay_value
+  ),
 
-  // list_of_path_outputs: $ => sep1(',', $.specify_output_terminal_descriptor),
+  parallel_edge_sensitive_path_description: $ => seq(
+    '(',
+    optional($.edge_identifier),
+    $.specify_input_terminal_descriptor,
+    optional($.polarity_operator),
+    '=>',
+    choice(
+      seq('(', $.specify_output_terminal_descriptor, optional($.polarity_operator), ':', $.data_source_expression, ')'),
+      $.specify_output_terminal_descriptor,
+    ),
+    ')'
+  ),
+
+  full_edge_sensitive_path_description: $ => seq(
+    '(',
+    optional($.edge_identifier),
+    $.list_of_path_inputs,
+    optional($.polarity_operator),
+    '*>',
+    choice(
+      seq('(', $.list_of_path_outputs, optional($.polarity_operator), ':', $.data_source_expression, ')'),
+      $.list_of_path_outputs,
+    ),
+    ')'
+  ),
+
+  state_dependent_path_declaration: $ => choice(
+    seq('if', '(', $.module_path_expression, ')', choice($.simple_path_declaration, $.edge_sensitive_path_declaration)),
+    seq('ifnone', $.simple_path_declaration)
+  ),
+
+  data_source_expression: $ => $.expression,
+
+  edge_identifier: $ => choice('posedge', 'negedge', 'edge'),
+
+  polarity_operator: $ => choice('+', '-'),
 
 
 // ** A.7.3 Specify block terminals
-  // TODO: Double check
+  list_of_path_inputs: $ => sepBy1(',', $.specify_input_terminal_descriptor),
+
+  list_of_path_outputs: $ => sepBy1(',', $.specify_output_terminal_descriptor),
+
   specify_input_terminal_descriptor: $ => seq(
     $.input_identifier, optseq('[', $._constant_range_expression, ']')
   ),
 
-  // TODO: Double check
   specify_output_terminal_descriptor: $ => seq(
     $.output_identifier, optseq('[', $._constant_range_expression, ']')
   ),
 
-  // TODO: Double check
   input_identifier: $ => choice(
     $.input_port_identifier,
     $.inout_port_identifier,
-    seq($.interface_identifier, '.', $.port_identifier) // FIXME glue dot?
+    seq($.interface_identifier, '.', $.port_identifier)
   ),
 
-  // TODO: Double check
   output_identifier: $ => choice(
     $.output_port_identifier,
     $.inout_port_identifier,
     seq($.interface_identifier, '.', $.port_identifier)
   ),
 
+
 // ** A.7.4 Specify path delays
-  // path_delay_value: $ => choice(
-  //   $.list_of_path_delay_expressions,
-  //   seq('(', $.list_of_path_delay_expressions, ')')
-  // ),
+  path_delay_value: $ => choice(
+    $.list_of_path_delay_expressions,
+    seq('(', $.list_of_path_delay_expressions, ')')
+  ),
 
-  // list_of_path_delay_expressions: $ => sep1(',', $.path_delay_expression),
+  list_of_path_delay_expressions: $ => choice(
+    $.t_path_delay_expression,
+    seq($.trise_path_delay_expression, ',', $.tfall_path_delay_expression),
+    seq($.trise_path_delay_expression, ',', $.tfall_path_delay_expression, ',', $.tz_path_delay_expression),
+    seq(
+      $.t01_path_delay_expression, ',', $.t10_path_delay_expression, ',', $.t0z_path_delay_expression, ',',
+      $.tz1_path_delay_expression, ',', $.t1z_path_delay_expression, ',', $.tz0_path_delay_expression
+    ),
+    seq(
+      $.t01_path_delay_expression, ',', $.t10_path_delay_expression, ',', $.t0z_path_delay_expression, ',',
+      $.tz1_path_delay_expression, ',', $.t1z_path_delay_expression, ',', $.tz0_path_delay_expression, ',',
+      $.t0x_path_delay_expression, ',', $.tx1_path_delay_expression, ',', $.t1x_path_delay_expression, ',',
+      $.tx0_path_delay_expression, ',', $.txz_path_delay_expression, ',', $.tzx_path_delay_expression
+    )
+  ),
 
-  // // list_of_path_delay_expressions: $ => choice(
-  // //   $.t_path_delay_expression,
-  // //   seq($.trise_path_delay_expression, ',', $.tfall_path_delay_expression),
-  // //   seq(
-  // //     $.trise_path_delay_expression, ',', $.tfall_path_delay_expression, ',',
-  // //     $.tz_path_delay_expression
-  // //   ),
-  // //   seq(
-  // //     $.t01_path_delay_expression, ',', $.t10_path_delay_expression, ',',
-  // //     $.t0z_path_delay_expression, ',', $.tz1_path_delay_expression, ',',
-  // //     $.t1z_path_delay_expression, ',', $.tz0_path_delay_expression
-  // //   ),
-  // //   seq(
-  // //     $.t01_path_delay_expression, ',', $.t10_path_delay_expression, ',',
-  // //     $.t0z_path_delay_expression, ',', $.tz1_path_delay_expression, ',',
-  // //     $.t1z_path_delay_expression, ',', $.tz0_path_delay_expression, ',',
-  // //     $.t0x_path_delay_expression, ',', $.tx1_path_delay_expression, ',',
-  // //     $.t1x_path_delay_expression, ',', $.tx0_path_delay_expression, ',',
-  // //     $.txz_path_delay_expression, ',', $.tzx_path_delay_expression
-  // //   )
-  // // ),
-  // //
-  // // t_path_delay_expression: $ => alias($.path_delay_expression, $.t_path_delay_expression),
-  // // trise_path_delay_expression: $ => alias($.path_delay_expression, $.trise_path_delay_expression),
-  // // tfall_path_delay_expression: $ => alias($.path_delay_expression, $.tfall_path_delay_expression),
-  // // tz_path_delay_expression: $ => alias($.path_delay_expression, $.tz_path_delay_expression),
-  // // t01_path_delay_expression: $ => alias($.path_delay_expression, $.t01_path_delay_expression),
-  // // t10_path_delay_expression: $ => alias($.path_delay_expression, $.t10_path_delay_expression),
-  // // t0z_path_delay_expression: $ => alias($.path_delay_expression, $.t0z_path_delay_expression),
-  // // tz1_path_delay_expression: $ => alias($.path_delay_expression, $.tz1_path_delay_expression),
-  // // t1z_path_delay_expression: $ => alias($.path_delay_expression, $.t1z_path_delay_expression),
-  // // tz0_path_delay_expression: $ => alias($.path_delay_expression, $.tz0_path_delay_expression),
-  // // t0x_path_delay_expression: $ => alias($.path_delay_expression, $.t0x_path_delay_expression),
-  // // tx1_path_delay_expression: $ => alias($.path_delay_expression, $.tx1_path_delay_expression),
-  // // t1x_path_delay_expression: $ => alias($.path_delay_expression, $.t1x_path_delay_expression),
-  // // tx0_path_delay_expression: $ => alias($.path_delay_expression, $.tx0_path_delay_expression),
-  // // txz_path_delay_expression: $ => alias($.path_delay_expression, $.txz_path_delay_expression),
-  // // tzx_path_delay_expression: $ => alias($.path_delay_expression, $.tzx_path_delay_expression),
+  t_path_delay_expression: $ => $.path_delay_expression,
 
-  // path_delay_expression: $ => $.constant_mintypmax_expression,
+  trise_path_delay_expression: $ => $.path_delay_expression,
 
-  // edge_sensitive_path_declaration: $ => seq(
-  //   choice(
-  //     $.parallel_edge_sensitive_path_description,
-  //     $.full_edge_sensitive_path_description
-  //   ),
-  //   '=', $.path_delay_value
-  // ),
+  tfall_path_delay_expression: $ => $.path_delay_expression,
 
-  // parallel_edge_sensitive_path_description: $ => seq(
-  //   '(',
-  //   optional($.edge_identifier),
-  //   $.specify_input_terminal_descriptor,
-  //   optional($.polarity_operator),
-  //   '=>',
-  //   '(',
-  //   $.specify_output_terminal_descriptor,
-  //   optional($.polarity_operator),
-  //   ':',
-  //   $.data_source_expression,
-  //   ')',
-  //   ')'
-  // ),
+  tz_path_delay_expression: $ => $.path_delay_expression,
 
-  // full_edge_sensitive_path_description: $ => seq(
-  //   '(',
-  //   optional($.edge_identifier),
-  //   $.list_of_path_inputs,
-  //   optional($.polarity_operator),
-  //   '*>',
-  //   '(',
-  //   $.list_of_path_outputs,
-  //   optional($.polarity_operator),
-  //   ':',
-  //   $.data_source_expression,
-  //   ')',
-  //   ')'
-  // ),
+  t01_path_delay_expression: $ => $.path_delay_expression,
 
-  // data_source_expression: $ => $.expression,
+  t10_path_delay_expression: $ => $.path_delay_expression,
 
-  edge_identifier: $ => choice('posedge', 'negedge', 'edge'),
+  t0z_path_delay_expression: $ => $.path_delay_expression,
 
-  // state_dependent_path_declaration: $ => choice(
-  //   seq('if', '(', $.module_path_expression, ')', $.simple_path_declaration),
-  //   seq('if', '(', $.module_path_expression, ')', $.edge_sensitive_path_declaration),
-  //   seq('ifnone', $.simple_path_declaration)
-  // ),
+  tz1_path_delay_expression: $ => $.path_delay_expression,
 
-  // polarity_operator: $ => choice('+', '-'),
+  t1z_path_delay_expression: $ => $.path_delay_expression,
+
+  tz0_path_delay_expression: $ => $.path_delay_expression,
+
+  t0x_path_delay_expression: $ => $.path_delay_expression,
+
+  tx1_path_delay_expression: $ => $.path_delay_expression,
+
+  t1x_path_delay_expression: $ => $.path_delay_expression,
+
+  tx0_path_delay_expression: $ => $.path_delay_expression,
+
+  txz_path_delay_expression: $ => $.path_delay_expression,
+
+  tzx_path_delay_expression: $ => $.path_delay_expression,
+
+  path_delay_expression: $ => $.constant_mintypmax_expression,
+
 
 // ** A.7.5 System timing checks
 // *** A.7.5.1 System timing check commands
-  // _system_timing_check: $ => choice(
-  //   $.$setup_timing_check,
-  //   $.$hold_timing_check,
-  //   $.$setuphold_timing_check,
-  //   $.$recovery_timing_check,
-  //   $.$removal_timing_check,
-  //   $.$recrem_timing_check,
-  //   $.$skew_timing_check,
-  //   $.$timeskew_timing_check,
-  //   $.$fullskew_timing_check,
-  //   $.$period_timing_check,
-  //   $.$width_timing_check,
-  //   $.$nochange_timing_check
-  // ),
+  system_timing_check: $ => choice(
+    $.$setup_timing_check,
+    $.$hold_timing_check,
+    $.$setuphold_timing_check,
+    $.$recovery_timing_check,
+    $.$removal_timing_check,
+    $.$recrem_timing_check,
+    $.$skew_timing_check,
+    $.$timeskew_timing_check,
+    $.$fullskew_timing_check,
+    $.$period_timing_check,
+    $.$width_timing_check,
+    $.$nochange_timing_check
+  ),
 
-  // $setup_timing_check: $ => seq(
-  //   '$setup', '(',
-  //   $.data_event, ',', $.reference_event, ',', $.timing_check_limit,
-  //   optseq(',', optional($.notifier)),
-  //   ')', ';'
-  // ),
+  $setup_timing_check: $ => seq(
+    '$setup',
+    '(',
+    $.data_event, ',', $.reference_event, ',', $.timing_check_limit, optseq(',', optional($.notifier)),
+    ')', ';'
+  ),
 
-  // $hold_timing_check: $ => seq(
-  //   '$hold', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.timing_check_limit,
-  //   optseq(',', optional($.notifier)),
-  //   ')', ';'
-  // ),
+  $hold_timing_check: $ => seq(
+    '$hold',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.timing_check_limit, optseq(',', optional($.notifier)),
+    ')', ';'
+  ),
 
-  // $setuphold_timing_check: $ => seq(
-  //   '$setuphold', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.timing_check_limit, ',', $.timing_check_limit,
-  //   optseq(
-  //     ',',
-  //     optional($.notifier),
-  //     optseq(
-  //       ',',
-  //       optional($.timestamp_condition),
-  //       optseq(
-  //         ',',
-  //         optional($.timecheck_condition),
-  //         optseq(
-  //           ',',
-  //           optional($.delayed_reference),
-  //           optseq(
-  //             ',',
-  //             optional($.delayed_data)
-  //           )
-  //         )
-  //       )
-  //     )
-  //   ),
-  //   ')', ';'
-  // ),
+  $setuphold_timing_check: $ => seq(
+    '$setuphold',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.timing_check_limit, ',', $.timing_check_limit,
+    optseq(',', optional($.notifier),
+      optseq(',', optional($.timestamp_condition),
+        optseq(',', optional($.timecheck_condition),
+          optseq(',', optional($.delayed_reference),
+            optseq(',', optional($.delayed_data))
+          )
+        )
+      )
+    ),
+    ')', ';'
+  ),
 
-  // $recovery_timing_check: $ => seq(
-  //   '$recovery', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.timing_check_limit,
-  //   optseq(',', optional($.notifier)),
-  //   ')', ';'
-  // ),
+  $recovery_timing_check: $ => seq(
+    '$recovery',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.timing_check_limit, optseq(',', optional($.notifier)),
+    ')', ';'
+  ),
 
-  // $removal_timing_check: $ => seq(
-  //   '$removal', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.timing_check_limit,
-  //   optseq(',', optional($.notifier)),
-  //   ')', ';'
-  // ),
+  $removal_timing_check: $ => seq(
+    '$removal',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.timing_check_limit, optseq(',', optional($.notifier)),
+    ')', ';'
+  ),
 
-  // $recrem_timing_check: $ => seq(
-  //   '$recrem', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.timing_check_limit, ',', $.timing_check_limit,
-  //   optseq(
-  //     ',',
-  //     optional($.notifier),
-  //     optseq(',',
-  //       optional($.timestamp_condition),
-  //       optseq(',', optional($.timecheck_condition)),
-  //       optseq(
-  //         ',',
-  //         optional($.delayed_reference),
-  //         optseq(',', optional($.delayed_data))
-  //       )
-  //     )
-  //   ),
-  //   ')', ';'
-  // ),
+  $recrem_timing_check: $ => seq(
+    '$recrem',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.timing_check_limit, ',', $.timing_check_limit,
+    optseq(',', optional($.notifier),
+      optseq(',', optional($.timestamp_condition),
+        optseq(',', optional($.timecheck_condition),
+          optseq(',', optional($.delayed_reference),
+            optseq(',', optional($.delayed_data))
+          )
+        )
+      )
+    ),
+    ')', ';'
+  ),
 
-  // $skew_timing_check: $ => seq(
-  //   '$skew', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.timing_check_limit,
-  //   optseq(',', optional($.notifier)),
-  //   ')', ';'
-  // ),
+  $skew_timing_check: $ => seq(
+    '$skew',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.timing_check_limit, optseq(',', optional($.notifier)),
+    ')', ';'
+  ),
 
-  // $timeskew_timing_check: $ => seq(
-  //   '$timeskew', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.timing_check_limit,
-  //   optseq(',',
-  //     optional($.notifier),
-  //     optseq(',',
-  //       optional($.event_based_flag),
-  //       optseq(',', optional($.remain_active_flag))
-  //     )
-  //   ),
-  //   ')', ';'
-  // ),
+  $timeskew_timing_check: $ => seq(
+    '$timeskew',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.timing_check_limit,
+    optseq(',', optional($.notifier),
+      optseq(',', optional($.event_based_flag),
+        optseq(',', optional($.remain_active_flag))
+      )
+    ),
+    ')', ';'
+  ),
 
-  // $fullskew_timing_check: $ => seq(
-  //   '$fullskew', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.timing_check_limit, ',', $.timing_check_limit,
-  //   optseq(',',
-  //     optional($.notifier),
-  //     optseq(',',
-  //       optional($.event_based_flag),
-  //       optseq(',', optional($.remain_active_flag))
-  //     )
-  //   ),
-  //   ')', ';'
-  // ),
+  $fullskew_timing_check: $ => seq(
+    '$fullskew',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.timing_check_limit, ',', $.timing_check_limit,
+    optseq(',', optional($.notifier),
+      optseq(',', optional($.event_based_flag),
+        optseq(',', optional($.remain_active_flag))
+      )
+    ),
+    ')', ';'
+  ),
 
-  // $period_timing_check: $ => seq(
-  //   '$period', '(', $.controlled_reference_event, ',', $.timing_check_limit,
-  //   optseq(',', optional($.notifier)),
-  //   ')', ';'
-  // ),
+  $period_timing_check: $ => seq(
+    '$period',
+    '(',
+    $.controlled_reference_event, ',', $.timing_check_limit, optseq(',', optional($.notifier)),
+    ')', ';'
+  ),
 
-  // $width_timing_check: $ => seq(
-  //   '$width', '(',
-  //   $.controlled_reference_event, ',', $.timing_check_limit, ',', $.threshold,
-  //   optseq(',', optional($.notifier)),
-  //   ')', ';'
-  // ),
+  $width_timing_check: $ => seq(
+    '$width',
+    '(',
+    $.controlled_reference_event, ',', $.timing_check_limit, ',', $.threshold, optseq(',', optional($.notifier)),
+    ')', ';'
+  ),
 
-  // $nochange_timing_check: $ => seq(
-  //   '$nochange', '(',
-  //   $.reference_event, ',', $.data_event, ',', $.start_edge_offset, ',', $.end_edge_offset,
-  //   optseq(',', optional($.notifier)),
-  //   ')', ';'
-  // ),
+  $nochange_timing_check: $ => seq(
+    '$nochange',
+    '(',
+    $.reference_event, ',', $.data_event, ',', $.start_edge_offset, ',', $.end_edge_offset, optseq(',', optional($.notifier)),
+    ')', ';'
+  ),
+
 
 // *** A.7.5.2 System timing check command arguments
-  // timecheck_condition: $ => $.mintypmax_expression,
+  controlled_reference_event: $ => $.controlled_timing_check_event,
 
-  // controlled_reference_event: $ => alias($.controlled_timing_check_event, $.controlled_reference_event),
+  data_event: $ => $.timing_check_event,
 
-  // data_event: $ => $.timing_check_event,
+  delayed_data: $ => seq(
+    $.terminal_identifier, optional($.constant_mintypmax_expression)
+  ),
 
-  // delayed_data: $ => seq(
-  //   $.terminal_identifier, optional($.constant_mintypmax_expression)
-  // ),
+  delayed_reference: $ => seq(
+    $.terminal_identifier, optional($.constant_mintypmax_expression)
+  ),
 
-  // delayed_reference: $ => seq(
-  //   $.terminal_identifier, optional($.constant_mintypmax_expression)
-  // ),
+  end_edge_offset: $ => $.mintypmax_expression,
 
-  // end_edge_offset: $ => $.mintypmax_expression,
+  event_based_flag: $ => $.constant_expression,
 
-  // event_based_flag: $ => $.constant_expression,
+  notifier: $ => $.variable_identifier,
 
-  // notifier: $ => $.variable_identifier,
+  reference_event: $ => $.timing_check_event,
 
-  // reference_event: $ => $.timing_check_event,
+  remain_active_flag: $ => $.constant_mintypmax_expression,
 
-  // remain_active_flag: $ => $.constant_mintypmax_expression,
+  timecheck_condition: $ => $.mintypmax_expression,
 
-  // timestamp_condition: $ => $.mintypmax_expression,
+  timestamp_condition: $ => $.mintypmax_expression,
 
-  // start_edge_offset: $ => $.mintypmax_expression,
+  start_edge_offset: $ => $.mintypmax_expression,
 
-  // threshold: $ => $.constant_expression,
+  threshold: $ => $.constant_expression,
 
-  // timing_check_limit: $ => $.expression,
+  timing_check_limit: $ => $.expression,
+
 
 // *** A.7.5.3 System timing check event definitions
-  // timing_check_event: $ => seq(
-  //   optional($.timing_check_event_control),
-  //   $._specify_terminal_descriptor,
-  //   optseq('&&&', $.timing_check_condition)
-  // ),
+  timing_check_event: $ => seq(
+    optional($.timing_check_event_control),
+    $._specify_terminal_descriptor,
+    optseq('&&&', $.timing_check_condition)
+  ),
 
-  // controlled_timing_check_event: $ => seq(
-  //   $.timing_check_event_control,
-  //   $._specify_terminal_descriptor,
-  //   optseq('&&&', $.timing_check_condition)
-  // ),
+  controlled_timing_check_event: $ => seq(
+    $.timing_check_event_control,
+    $._specify_terminal_descriptor,
+    optseq('&&&', $.timing_check_condition)
+  ),
 
-  // timing_check_event_control: $ => choice(
-  //   'posedge', 'negedge', 'edge', $.edge_control_specifier
-  // ),
+  timing_check_event_control: $ => choice(
+    'posedge', 'negedge', 'edge', $.edge_control_specifier
+  ),
 
-  // _specify_terminal_descriptor: $ => choice(
-  //   $.specify_input_terminal_descriptor,
-  //   $.specify_output_terminal_descriptor
-  // ),
+  _specify_terminal_descriptor: $ => choice(
+    $.specify_input_terminal_descriptor,
+    $.specify_output_terminal_descriptor
+  ),
 
-  // edge_control_specifier: $ => seq(
-  //   'edge', '[', sep1(',', $.edge_descriptor), ']'
-  // ),
+  edge_control_specifier: $ => seq(
+    'edge', '[', sepBy1(',', $.edge_descriptor), ']'
+  ),
 
-  // // Note: Embedded spaces are illegal.
-  // edge_descriptor: $ => choice(
-  //   '01',
-  //   '10',
-  //   /[xXzZ][01]/,
-  //   /[01][xXzZ]/
-  // ),
+  edge_descriptor: $ => choice(
+    '01',
+    '10',
+    /[xXzZ][01]/, // $.z_or_x, token.immediate(/[01]/),
+    /[01][xXzZ]/  // $.zero_or_one, token.immediate(/[xXzZ]/),
+  ),
 
-  // timing_check_condition: $ => choice(
-  //   $.scalar_timing_check_condition,
-  //   seq('(', $.scalar_timing_check_condition, ')')
-  // ),
+  zero_or_one: $ => /[01]/, // Unused
 
-  // scalar_timing_check_condition: $ => choice(
-  //   $.expression,
-  //   seq('~', $.expression),
-  //   seq($.expression, '==', $.scalar_constant),
-  //   seq($.expression, '===', $.scalar_constant),
-  //   seq($.expression, '!=', $.scalar_constant),
-  //   seq($.expression, '!==', $.scalar_constant)
-  // ),
+  z_or_x: $ => /[xXzZ]/, // Unused
 
-  // scalar_constant: $ => choice(
-  //   '1\'b0',
-  //   '1\'b1',
-  //   '1\'B0',
-  //   '1\'B1',
-  //   '\'b0',
-  //   '\'b1',
-  //   '\'B0',
-  //   '\'B1',
-  //   '1',
-  //   '0'
-  // ),
+  timing_check_condition: $ => choice(
+    $.scalar_timing_check_condition,
+    seq('(', $.scalar_timing_check_condition, ')')
+  ),
+
+  scalar_timing_check_condition: $ => choice(
+    $.expression,
+    prec.left(PREC.UNARY, seq('~', $.expression)),
+    prec.left(PREC.EQUAL, seq($.expression, '==', $.scalar_constant)),
+    prec.left(PREC.EQUAL, seq($.expression, '===', $.scalar_constant)),
+    prec.left(PREC.EQUAL, seq($.expression, '!=', $.scalar_constant)),
+    prec.left(PREC.EQUAL, seq($.expression, '!==', $.scalar_constant))
+  ),
+
+  scalar_constant: $ => choice(
+    "1'b0", "1'b1", "1'B0", "1'B1", "'b0", "'b1", "'B0", "'B1", "1", "0"
+  ),
+
 
 // * A.8 Expressions
 // ** A.8.1 Concatenations
@@ -4676,6 +4665,24 @@ module.exports = grammar({
     $.output_identifier,
     // $.edge_identifier, // Don't inline
     $.text_macro_identifier,
+
+    // Specify expressions
+    $.t_path_delay_expression,
+    $.trise_path_delay_expression,
+    $.tfall_path_delay_expression,
+    $.tz_path_delay_expression,
+    $.t01_path_delay_expression,
+    $.t10_path_delay_expression,
+    $.t0z_path_delay_expression,
+    $.tz1_path_delay_expression,
+    $.t1z_path_delay_expression,
+    $.tz0_path_delay_expression,
+    $.t0x_path_delay_expression,
+    $.tx1_path_delay_expression,
+    $.t1x_path_delay_expression,
+    $.tx0_path_delay_expression,
+    $.txz_path_delay_expression,
+    $.tzx_path_delay_expression,
   ],
 
 // ** Precedences
@@ -5809,6 +5816,24 @@ module.exports = grammar({
     [$.property_instance, $.sequence_instance, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
     [$.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
     [$.constant_primary, $.net_lvalue],
+
+
+    // TODO: Specify conflicts
+    [$.parallel_path_description, $.parallel_edge_sensitive_path_description, $.list_of_path_inputs],
+    [$.parallel_edge_sensitive_path_description, $.list_of_path_inputs],
+    [$.tf_call, $.module_path_primary, $.hierarchical_identifier],
+    [$.parallel_path_description, $.list_of_path_inputs],
+    [$.specify_input_terminal_descriptor, $.specify_output_terminal_descriptor],
+    [$.unary_operator, $.unary_module_path_operator],
+    [$.constant_function_call, $.module_path_primary, $.primary],
+    [$.module_path_primary, $.primary_literal],
+    [$.tf_call, $.constant_primary, $.module_path_primary, $.hierarchical_identifier],
+    [$.module_path_primary, $.primary],
+    [$.casting_type, $.path_delay_expression, $.constant_primary],
+    [$.full_path_description, $.full_edge_sensitive_path_description],
+    [$.parallel_path_description, $.parallel_edge_sensitive_path_description],
+    [$.scalar_timing_check_condition, $.mintypmax_expression],
+    [$.constant_function_call, $.module_path_primary],
   ],
 
 });
