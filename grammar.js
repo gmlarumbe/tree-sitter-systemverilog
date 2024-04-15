@@ -1403,7 +1403,17 @@ const rules = {
   pulse_control_specparam: $ => choice(
     seq('PATHPULSE$', '=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'),
     seq(
-      'PATHPULSE$', $.specify_input_terminal_descriptor, '$', $.specify_output_terminal_descriptor,
+      // https://stackoverflow.com/questions/39178478/verilog-pathpulse-syntax
+      // https://accellera.mantishub.io/view.php?id=1050
+      // - Do not allow $ as part of identifiers
+      // - Do not allow escaped identifiers (even though it would be possible)
+      // - Do not allow optseq('[', $._constant_range_expression, ']') to simplify parser
+      token(seq(
+        'PATHPULSE$',
+        /[a-zA-Z_][a-zA-Z0-9_]*/, // $.specify_input_terminal_descriptor,
+        '$',
+        /[a-zA-Z_][a-zA-Z0-9_]*/  // $.specify_output_terminal_descriptor),
+      )),
       '=', '(', $.reject_limit_value, optseq(',', $.error_limit_value), ')'
     )
   ),
@@ -3800,7 +3810,7 @@ const rules = {
 
   _module_path_unary_expression: $ => unary_expr($, $.unary_module_path_operator, $.module_path_primary),
 
-  _module_path_binary_expression: $ => binary_expr($, BINARY_MOD_PATH_OP_TABLE, $.module_path_primary),
+  _module_path_binary_expression: $ => binary_expr($, BINARY_MOD_PATH_OP_TABLE, $.module_path_expression),
 
 
 // ** A.8.4 Primaries

@@ -10,7 +10,7 @@ specify
 
   $hold(posedge Clk, Data, Thold);
   $nochange(posedge Clock, Data, 0, 0 );
-  $period(posedge Clk, 20, FastClock]);
+  $period(posedge Clk, 20, FastClock);
   $recovery(posedge Clk, Rst, Trecover);
   $setup(Data, posedge Clk, Tsetup);
   $setuphold(posedge Clk &&& !Reset, Data,
@@ -26,5 +26,4 @@ specify
   $timeskew(posedge Rst &&& Clk1, negedge Clk2, 50);
   $fullskew(posedge Rst &&& Clk1, negedge Clk2, 50, 70);
 endspecify
-
 

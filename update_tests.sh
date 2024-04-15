@@ -77,12 +77,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    #################################################################
                    # TODO: The ones below are to be added after grammar.js cleanup #
                    #################################################################
-                   # Specify
-                   doulos/150.1_timing_checks.sv
-                   doulos/77.1_pathpulse$.sv
-                   doulos/91.1_specify.sv
-                   doulos/91.2_specify.sv
-                   doulos/92.1_specparam.sv
                    # Let
                    doulos/61.2_let.sv # Complex let construct, macro-like (come back if integrating $.let_expression with dynamic precedence)
                    # Attribute
