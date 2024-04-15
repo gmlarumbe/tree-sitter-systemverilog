@@ -77,12 +77,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    #################################################################
                    # TODO: The ones below are to be added after grammar.js cleanup #
                    #################################################################
-                   # UDP
-                   doulos/110.1_user_defined_primitive.sv
-                   doulos/110.2_user_defined_primitive.sv
-                   doulos/110.3_user_defined_primitive.sv
-                   doulos/110.4_user_defined_primitive.sv
-                   doulos/55.1_instantiation.sv
                    # Specify
                    doulos/150.1_timing_checks.sv
                    doulos/77.1_pathpulse$.sv

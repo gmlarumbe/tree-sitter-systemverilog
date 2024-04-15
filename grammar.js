@@ -242,7 +242,7 @@ const rules = {
 // ** A.1.2 SystemVerilog source text
   _description: $ => prec('_description', choice(
     $.module_declaration,
-    // $.udp_declaration, // TODO:
+    $.udp_declaration,
     $.interface_declaration,
     $.program_declaration,
     $.package_declaration,
@@ -583,8 +583,8 @@ const rules = {
     choice(
       $.parameter_override,
       $.gate_instantiation,
-      // $.udp_instantiation,  // TODO: Removed temporarily to simplify parsing
       $.module_instantiation,
+      $.udp_instantiation,
       $._module_common_item
     )
   )),
@@ -2410,127 +2410,143 @@ const rules = {
 
 // * A.5 UDP declaration and instantiation
 // ** A.5.1 UDP declaration
-  // udp_nonansi_declaration: $ => seq(
-  //   repeat($.attribute_instance), 'primitive', $.udp_identifier, '(', $.udp_port_list, ')', ';'
-  // ),
+  udp_nonansi_declaration: $ => seq(
+    repeat($.attribute_instance), 'primitive', $.udp_identifier, '(', $.udp_port_list, ')', ';'
+  ),
 
-  // udp_ansi_declaration: $ => seq(
-  //   repeat($.attribute_instance), 'primitive', $.udp_identifier, '(', $.udp_declaration_port_list, ')', ';'
-  // ),
+  udp_ansi_declaration: $ => seq(
+    repeat($.attribute_instance), 'primitive', $.udp_identifier, '(', $.udp_declaration_port_list, ')', ';'
+  ),
 
-  // udp_declaration: $ => choice(
-  //   seq(
-  //     $.udp_nonansi_declaration, $.udp_port_declaration, repeat($.udp_port_declaration),
-  //     $._udp_body,
-  //     'endprimitive', optseq(':', $.udp_identifier)
-  //   ),
-  //   seq($.udp_ansi_declaration, $._udp_body, 'endprimitive', optseq(':', $.udp_identifier)),
-  //   seq('extern', $.udp_nonansi_declaration),
-  //   seq('extern', $.udp_ansi_declaration),
-  //   seq(
-  //     repeat($.attribute_instance), 'primitive', $.udp_identifier, '(', '.*', ')', ';',
-  //     repeat($.udp_port_declaration),
-  //     $._udp_body,
-  //     'endprimitive', optseq(':', $.udp_identifier)
-  //   )
-  // ),
+  udp_declaration: $ => choice(
+    seq(
+      $.udp_nonansi_declaration,
+      repeat1($.udp_port_declaration),
+      $._udp_body,
+      enclosing('endprimitive', $.udp_identifier)
+    ),
+    seq(
+      $.udp_ansi_declaration,
+      $._udp_body,
+      enclosing('endprimitive', $.udp_identifier)
+    ),
+    seq('extern', $.udp_nonansi_declaration),
+    seq('extern', $.udp_ansi_declaration),
+    seq(
+      repeat($.attribute_instance),
+      'primitive',
+      $.udp_identifier,
+      '(', '.*', ')', ';',
+      repeat($.udp_port_declaration),
+      $._udp_body,
+      enclosing('endprimitive', $.udp_identifier)
+    )
+  ),
 
 // ** A.5.2 UDP ports
+  udp_port_list: $ => seq(
+    $.output_port_identifier, ',', sepBy1(',', $.input_port_identifier)
+  ),
 
-  // udp_port_list: $ => seq(
-  //   $.output_port_identifier, ',', sep1(',', $.input_port_identifier)
-  // ),
+  udp_declaration_port_list: $ => seq(
+    $.udp_output_declaration, ',', sepBy1(',', $.udp_input_declaration)
+  ),
 
-  // udp_declaration_port_list: $ => seq(
-  //   $.udp_output_declaration, ',', sep1(',', $.udp_input_declaration)
-  // ),
+  udp_port_declaration: $ => seq(
+    choice(
+      $.udp_output_declaration,
+      $.udp_input_declaration,
+      $.udp_reg_declaration
+    ),
+    ';'
+  ),
 
-  // udp_port_declaration: $ => seq(
-  //   choice(
-  //     $.udp_output_declaration,
-  //     $.udp_input_declaration,
-  //     $.udp_reg_declaration
-  //   ),
-  //   ';'
-  // ),
+  udp_output_declaration: $ => seq(
+    repeat($.attribute_instance), 'output',
+    choice(
+      $.port_identifier,
+      seq('reg', $.port_identifier, optseq('=', $.constant_expression))
+    )
+  ),
 
-  // udp_output_declaration: $ => seq(
-  //   repeat($.attribute_instance),
-  //   'output',
-  //   choice(
-  //     $.port_identifier,
-  //     seq('reg', $.port_identifier, optseq('=', $.constant_expression))
-  //   )
-  // ),
+  udp_input_declaration: $ => seq(
+    repeat($.attribute_instance), 'input', $.list_of_udp_port_identifiers
+  ),
 
-  // udp_input_declaration: $ => seq(
-  //   repeat($.attribute_instance), 'input', $.list_of_udp_port_identifiers
-  // ),
+  udp_reg_declaration: $ => seq(
+    repeat($.attribute_instance), 'reg', $.variable_identifier
+  ),
 
-  // udp_reg_declaration: $ => seq(
-  //   repeat($.attribute_instance), 'reg', $.variable_identifier
-  // ),
 
 // ** A.5.3 UDP body
-  // _udp_body: $ => choice($.combinational_body, $.sequential_body),
+  _udp_body: $ => choice(
+    $.combinational_body,
+    $.sequential_body
+  ),
 
-  // combinational_body: $ => seq(
-  //   'table', repeat1($.combinational_entry), 'endtable'
-  // ),
+  combinational_body: $ => seq(
+    'table', repeat1($.combinational_entry), 'endtable'
+  ),
 
-  // combinational_entry: $ => seq($.level_input_list, ':', $.output_symbol, ';'),
+  combinational_entry: $ => seq($.level_input_list, ':', $.output_symbol, ';'),
 
-  // sequential_body: $ => seq(
-  //   optional($.udp_initial_statement),
-  //   'table', repeat1($.sequential_entry), 'endtable'
-  // ),
+  sequential_body: $ => seq(
+    optional($.udp_initial_statement), 'table', repeat1($.sequential_entry), 'endtable'
+  ),
 
-  // udp_initial_statement: $ => seq(
-  //   'initial', $.output_port_identifier, '=', $.init_val, ';'
-  // ),
+  udp_initial_statement: $ => seq(
+    'initial', $.output_port_identifier, '=', $.init_val, ';'
+  ),
 
-  // init_val: $ => choice(
-  //   "1'b0", "1'b1", "1'bx", "1'bX", "1'B0", "1'B1", "1'Bx", "1'BX", "1", "0"
-  // ),
+  init_val: $ => choice(
+    "1'b0", "1'b1", "1'bx", "1'bX", "1'B0", "1'B1", "1'Bx", "1'BX", "1", "0"
+  ),
 
-  // sequential_entry: $ => seq(
-  //   $._seq_input_list, ':', $._current_state, ':', $.next_state, ';'
-  // ),
+  sequential_entry: $ => seq(
+    $._seq_input_list, ':', $._current_state, ':', $.next_state, ';'
+  ),
 
-  // _seq_input_list: $ => choice($.level_input_list, $.edge_input_list),
+  _seq_input_list: $ => choice(
+    $.level_input_list,
+    $.edge_input_list
+  ),
 
-  // level_input_list: $ => repeat1($.level_symbol),
+  level_input_list: $ => repeat1($.level_symbol),
 
-  // edge_input_list: $ => seq(repeat($.level_symbol), $.edge_indicator, repeat($.level_symbol)),
+  edge_input_list: $ => seq(
+    repeat($.level_symbol), $.edge_indicator, repeat($.level_symbol)
+  ),
 
-  // edge_indicator: $ => choice(
-  //   seq('(', $.level_symbol, $.level_symbol, ')'),
-  //   $.edge_symbol
-  // ),
+  edge_indicator: $ => choice(
+    seq('(', $.level_symbol, $.level_symbol, ')'),
+    $.edge_symbol
+  ),
 
-  // _current_state: $ => $.level_symbol,
+  _current_state: $ => $.level_symbol,
 
-  // next_state: $ => choice($.output_symbol, '-'),
+  next_state: $ => choice($.output_symbol, '-'),
 
-  // output_symbol: $ => /[01xX]/,
+  output_symbol: $ => /[01xX]/,
 
-  // level_symbol: $ => /[01xX?bB]/,
+  level_symbol: $ => /[01xX?bB]/,
 
-  // edge_symbol: $ => /[rRfFpPnN*]/,
+  edge_symbol: $ => /[rRfFpPnN*]/,
+
 
 // ** A.5.4 UDP instantiation
-  // udp_instantiation: $ => seq(
-  //   $.udp_identifier,
-  //   optional($.drive_strength),
-  //   optional($.delay2),
-  //   sep1(',', $.udp_instance),
-  //   ';'
-  // ),
+  udp_instantiation: $ => seq(
+    $.udp_identifier,
+    optional($.drive_strength),
+    optional($.delay2),
+    prec.dynamic(-1, sepBy1(',', $.udp_instance)), // Give $.hierarchical_instance and $.module_instantiation higher priority
+    ';'
+  ),
 
-  // udp_instance: $ => seq(
-  //   optional($.name_of_instance),
-  //   '(', $.output_terminal, ',', sep1(',', $.input_terminal), ')'
-  // ),
+  udp_instance: $ => seq(
+    optional($.name_of_instance),
+    '(', $.output_terminal, ',', sepBy1(',', $.input_terminal), ')'
+  ),
+
 
 // * A.6 Behavioral statements
 // ** A.6.1 Continuous assignment and net alias statements
@@ -5090,22 +5106,6 @@ module.exports = grammar({
     ['variable_lvalue', 'tf_call'],
 
 
-    // INFO: Removed from conflicts when implementing primitives.
-    // The only conflict that keeps here is the ['net_lvalue', 'variable_lvalue'] to differentiate between
-    // nets and values in declarations.
-    //
-    //   1:  n_output_gatetype  '('  output_terminal  ','  (net_lvalue  hierarchical_identifier  •  constant_select)  (precedence: 'net_lvalue')
-    //   2:  n_output_gatetype  '('  output_terminal  ','  (primary  hierarchical_identifier  •  select)              (precedence: 'primary')
-    //   3:  n_output_gatetype  '('  output_terminal  ','  (primary  hierarchical_identifier)  •  '.'  …              (precedence: 'primary')
-    //   4:  n_output_gatetype  '('  output_terminal  ','  (tf_call  hierarchical_identifier)  •  '.'  …              (precedence: 'tf_call')
-    //   5:  n_output_gatetype  '('  output_terminal  ','  (variable_lvalue  hierarchical_identifier  •  select)      (precedence: 'variable_lvalue')
-    ['net_lvalue', 'tf_call'],
-    ['net_lvalue', 'primary'],
-    ['net_lvalue', 'constant_primary'],
-    ['net_lvalue', 'hierarchical_identifier'],
-    // ['net_lvalue', 'variable_lvalue'], // INFO: Do include on purpose
-
-
     ////////////////////////////////////////////////////////////////////////////////
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5224,6 +5224,7 @@ module.exports = grammar({
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
+
   ],
 
 // ** Conflicts
@@ -5719,7 +5720,6 @@ module.exports = grammar({
 
 
     // TODO: After adding checkers
-    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.checker_instantiation],
     [$.data_type, $.class_type, $.checker_instantiation],
     [$.named_port_connection, $.named_checker_port_connection],
     [$.expression_or_dist, $.ordered_port_connection, $.event_expression],
@@ -5781,6 +5781,34 @@ module.exports = grammar({
     // TODO: Adding primitives -> Fixed partially with named precedences
     // The only one left is the $.net_lvalue / $.variable_lvalue that exists above on purpose
     [$.tf_call, $.primary, $.net_lvalue, $.variable_lvalue],
+
+
+    // TODO: After adding udp instantiation
+    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.checker_instantiation, $.udp_instantiation],
+    [$.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.udp_instantiation],
+    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.udp_instantiation],
+    [$.delay2, $.delay_control],
+    [$.delay2, $.param_expression],
+    [$.delay2, $.delay_control, $.param_expression],
+
+    // TODO: After adding udp declaration
+    [$.combinational_entry, $._seq_input_list], // This one is legit, could have the same syntax for $.sequential_body and $.combinational_body
+    [$.list_of_udp_port_identifiers], // No idea about this one, I was very asleep
+
+
+    // TODO: Giving higher prioriy to module_instantiation than to udp_instantiation
+    [$._assignment_pattern_expression_type, $.net_lvalue, $.hierarchical_identifier],
+    [$.net_lvalue, $.hierarchical_identifier],
+    [$.tf_call, $.primary, $.net_lvalue],
+    [$.tf_call, $.net_lvalue, $.hierarchical_identifier],
+    [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
+    [$._simple_type, $._assignment_pattern_expression_type, $.net_lvalue, $.hierarchical_identifier],
+    [$.class_type, $._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
+    [$._simple_type, $._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
+    [$.property_instance, $.sequence_instance, $.tf_call, $.primary, $.net_lvalue],
+    [$.property_instance, $.sequence_instance, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
+    [$.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
+    [$.constant_primary, $.net_lvalue],
   ],
 
 });
