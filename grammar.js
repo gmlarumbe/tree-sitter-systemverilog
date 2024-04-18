@@ -3634,20 +3634,20 @@ const rules = {
 // ** A.8.2 Subroutine calls
   constant_function_call: $ => $.function_subroutine_call,
 
-  tf_call: $ => prec('tf_call', seq(
+  tf_call: $ => prec.right('tf_call', seq(
     $.ps_or_hierarchical_tf_identifier,
     repeat($.attribute_instance),
     optseq('(', optional($.list_of_arguments), ')')
   )),
 
-  system_tf_call: $ => seq(
+  system_tf_call: $ => prec.right(seq(
     $.system_tf_identifier,
     choice(
       prec.dynamic(1, optseq('(', optional($.list_of_arguments), ')')),
       seq('(', $.data_type, optseq(',', $.expression), ')'),
       prec.dynamic(0, seq('(', commaSep1($.expression), optseq(',', $.clocking_event), ')'))
     )
-  ),
+  )),
 
   subroutine_call: $ => choice(
     prec.dynamic(-1, $.tf_call), // Give $.method_call higher priority
@@ -3666,14 +3666,14 @@ const rules = {
     $.method_call_body
   )),
 
-  method_call_body: $ => choice(
+  method_call_body: $ => prec.right(choice(
     seq(
       field('name', $.method_identifier),
       repeat($.attribute_instance),
       field('arguments', optseq('(', optional($.list_of_arguments), ')'))
     ),
     $._built_in_method_call
-  ),
+  )),
 
   _built_in_method_call: $ => choice(
     $.array_manipulation_call,
@@ -3681,18 +3681,18 @@ const rules = {
     $.string_method_call, // Out of LRM
   ),
 
-  array_manipulation_call: $ => seq(
+  array_manipulation_call: $ => prec.right(seq(
     $.array_method_name,
     repeat($.attribute_instance),
     optseq('(', optional($.list_of_arguments), ')'),
     optseq('with', '(', $.expression, ')')
-  ),
+  )),
 
-  randomize_call: $ => seq(
+  randomize_call: $ => prec.right(seq(
     'randomize', repeat($.attribute_instance),
     optseq('(', optchoice($.variable_identifier_list, 'null'), ')'),
     optseq('with', optseq('(', optional($.identifier_list), ')'), $.constraint_block)
-  ),
+  )),
 
   variable_identifier_list: $ => commaSep1($.variable_identifier),
 
@@ -5633,12 +5633,6 @@ module.exports = grammar({
     //   2:  _identifier  (delay_control  '#'  '('  mintypmax_expression  •  ')')
     [$.delay_control, $.param_expression],
 
-    // delay3
-    [$.randomize_call],
-    [$.system_tf_call],
-    [$.tf_call],
-    [$.array_manipulation_call],
-    [$.method_call_body],
 
     // Constant function call (13.4.3)
     [$.constant_function_call, $.primary],
