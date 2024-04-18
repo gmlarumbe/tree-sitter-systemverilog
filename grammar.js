@@ -1225,10 +1225,10 @@ const rules = {
 
   class_scope: $ => seq($.class_type, '::'),
 
-  class_type: $ => seq(
+  class_type: $ => prec('class_type', seq(
     $.ps_class_identifier, optional($.parameter_value_assignment),
-    repeat(seq('::', $.class_identifier, optional($.parameter_value_assignment)))
-  ),
+    repeat(prec('class_type_repeat1', seq('::', $.class_identifier, optional($.parameter_value_assignment))))
+  )),
 
   interface_class_type: $ => seq($.ps_class_identifier, optional($.parameter_value_assignment)),
 
@@ -1291,16 +1291,16 @@ const rules = {
 
   _data_type_or_incomplete_class_scoped_type: $ => prec('_data_type_or_incomplete_class_scoped_type', choice(
     $.data_type,
-    $.incomplete_class_scoped_type
+    $._incomplete_class_scoped_type
   )),
 
   // Set precedence to fix parsing conflict: could result in an endless loop due to recursivity
-  incomplete_class_scoped_type: $ => prec('incomplete_class_scoped_type', choice(
-    seq($.type_identifier, '::', $.type_identifier_or_class_type),
-    $.incomplete_class_scoped_type, '::', $.type_identifier_or_class_type
+  _incomplete_class_scoped_type: $ => prec('_incomplete_class_scoped_type', choice(
+    seq($.type_identifier, '::', $._type_identifier_or_class_type),
+    $._incomplete_class_scoped_type, '::', $._type_identifier_or_class_type
   )),
 
-  type_identifier_or_class_type: $ => choice($.type_identifier, $.class_type),
+  _type_identifier_or_class_type: $ => prec('_type_identifier_or_class_type', choice($.type_identifier, $.class_type)),
 
   // Out of LRM, used to restrict the choices to
   associative_dimension_data_type: $ => choice(
@@ -4335,10 +4335,10 @@ const rules = {
   output_port_identifier: $ => $._identifier,
   package_identifier: $ => $._identifier,
 
-  package_scope: $ => seq(
+  package_scope: $ => prec('package_scope', seq(
     choice($.package_identifier, '$unit'),
     '::'
-  ),
+  )),
 
   parameter_identifier: $ => $._identifier,
   port_identifier: $ => $._identifier,
@@ -4871,10 +4871,10 @@ module.exports = grammar({
 
     // Not sure about this one, but the other way around creates an endless loop in the parsing process
     //
-    // 'typedef'  incomplete_class_scoped_type  •  '\'  …
-    // 1:  'typedef'  (_data_type_or_incomplete_class_scoped_type  incomplete_class_scoped_type)  •  '\'  …
-    // 2:  'typedef'  (incomplete_class_scoped_type  incomplete_class_scoped_type)  •  '\'  …
-    ['_data_type_or_incomplete_class_scoped_type', 'incomplete_class_scoped_type'],
+    // 'typedef'  _incomplete_class_scoped_type  •  '\'  …
+    // 1:  'typedef'  (_data_type_or_incomplete_class_scoped_type  _incomplete_class_scoped_type)  •  '\'  …
+    // 2:  'typedef'  (_incomplete_class_scoped_type  _incomplete_class_scoped_type)  •  '\'  …
+    ['_data_type_or_incomplete_class_scoped_type', '_incomplete_class_scoped_type'],
 
 
     // pure virtual function will always be a function prototype overriden in the extended class
@@ -5249,6 +5249,34 @@ module.exports = grammar({
     ['hierarchical_identifier', '_directives'],
 
 
+    // Set the one higher in the syntax tree: _incomplete_class_scoped_type
+    //
+    // 'typedef'  _identifier  •  '::'  …
+    // 1:  'typedef'  (class_type  _identifier  •  class_type_repeat1)                                     (precedence: 'class_type')
+    // 2:  'typedef'  (class_type  _identifier)  •  '::'  …                                                (precedence: 'class_type')
+    // 3:  'typedef'  (_incomplete_class_scoped_type  _identifier  •  '::'  _type_identifier_or_class_type)  (precedence: '_incomplete_class_scoped_type')
+    // 4:  'typedef'  (package_scope  _identifier  •  '::')                                                (precedence: 'package_scope')
+    ['_incomplete_class_scoped_type', 'class_type'],
+    ['_incomplete_class_scoped_type', 'package_scope'],
+
+
+    // Make class_type include LHS of the ::
+    //
+    // 'typedef'  _identifier  '::'  _identifier  •  '\'  …
+    // 1:  'typedef'  _identifier  '::'  (class_type  _identifier)  •  '\'  …                     (precedence: 'class_type')
+    // 2:  'typedef'  _identifier  '::'  (_type_identifier_or_class_type  _identifier)  •  '\'  …
+    // 3:  'typedef'  _identifier  (class_type_repeat1  '::'  _identifier)  •  '\'  …             (precedence: 'class_type')
+    ['class_type_repeat1', '_type_identifier_or_class_type'],
+
+
+    // Save one extra level of unnecessary nesting with data_type
+    //
+    // 'typedef'  class_type  •  '\'  …
+    // 1:  'typedef'  (_type_identifier_or_class_type  class_type)  •  '\'  …  (precedence: '_type_identifier_or_class_type')
+    // 2:  'typedef'  (data_type  class_type)  •  '\'  …                       (precedence: 'data_type')
+    ['_type_identifier_or_class_type', 'data_type'],
+
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header'],
@@ -5319,12 +5347,12 @@ module.exports = grammar({
     ['ps_type_identifier'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
+
+
   ],
 
 // ** Conflicts
   conflicts: $ => [
-    // INFO: Reviewed
-
     // Help differentiate between many parameters and list of parameters:
     //
     //   module_keyword  module_identifier  '#'  '('  param_assignment  •  ','  …
@@ -5581,6 +5609,37 @@ module.exports = grammar({
     [$.property_expr],
 
 
+    // _forward_type branch would refer to the type of declaration that is done
+    // at the beginning of a file so that the enum is known to be declared
+    // (e.g.what is done with classes on the UVM)
+    //
+    // 'typedef'  'enum'  •  '\'  …
+    // 1:  'typedef'  (_forward_type  'enum')  •  '\'  …
+    // 2:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  '}'  data_type_repeat1)                     (precedence: 'data_type')
+    // 3:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  '}')                                        (precedence: 'data_type')
+    // 4:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  data_type_repeat3  '}'  data_type_repeat1)  (precedence: 'data_type')
+    // 5:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  data_type_repeat3  '}')                     (precedence: 'data_type')
+    [$._forward_type, $.data_type],
+
+
+    // case / case inside / conditional generate
+    // 'case'  •  '('  …
+    // 1:  (case_generate_construct  'case'  •  '('  constant_expression  ')'  case_generate_item  'endcase')
+    // 2:  (case_generate_construct  'case'  •  '('  constant_expression  ')'  case_generate_item  case_generate_construct_repeat1  'endcase')
+    // 3:  (case_keyword  'case')  •  '('  …
+    // 4:  (case_statement  'case'  •  '('  case_expression  ')'  'inside'  case_statement_repeat3  'endcase')
+    [$.case_generate_construct, $.case_statement, $.case_keyword],
+
+
+    // $.delay_control -> Net declaration delay
+    // $.param_expression -> class variable paramemeter (e.g: uvm_config_db #(some_type))
+    //
+    //   _identifier  '#'  '('  mintypmax_expression  •  ')'  …
+    //   1:  _identifier  '#'  '('  (param_expression  mintypmax_expression)  •  ')'  …  (precedence: 'param_expression')
+    //   2:  _identifier  (delay_control  '#'  '('  mintypmax_expression  •  ')')
+    [$.delay_control, $.param_expression],
+
+
 
 // ** Conflicts to be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5588,6 +5647,11 @@ module.exports = grammar({
     // INFO: To be reviewed
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
+
+
+    // After adding support for directives in packages,
+    [$._interface_or_generate_item, $._package_or_generate_item_declaration],
+    [$._description, $._non_port_module_item, $._package_or_generate_item_declaration, $.statement_item],
 
 
     // Same as before, this case could be all the options inside the initial, need more lookahead
@@ -5601,49 +5665,17 @@ module.exports = grammar({
     [$.tf_call, $.primary],
 
 
-    // TODO: Typedef conflicts
-    // 'typedef'  _identifier  •  '::'  …
-    // 1:  'typedef'  (class_type  _identifier  •  class_type_repeat1)                                     (precedence: 'class_type')
-    // 2:  'typedef'  (class_type  _identifier)  •  '::'  …                                                (precedence: 'class_type')
-    // 3:  'typedef'  (incomplete_class_scoped_type  _identifier  •  '::'  type_identifier_or_class_type)  (precedence: 'incomplete_class_scoped_type')
-    // 4:  'typedef'  (package_scope  _identifier  •  '::')                                                (precedence: 'package_scope')
-    [$.incomplete_class_scoped_type, $.class_type, $.package_scope],
-
-
-    // In this case, _forward_type would refer to the type of declaration
-    // that is done at the beginning of a file so that the enum is known to be declared
-    // (e.g.what is done with classes on the UVM)
-    //
-    // 'typedef'  'enum'  •  '\'  …
-    // 1:  'typedef'  (_forward_type  'enum')  •  '\'  …
-    // 2:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  '}'  data_type_repeat1)                     (precedence: 'data_type')
-    // 3:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  '}')                                        (precedence: 'data_type')
-    // 4:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  data_type_repeat3  '}'  data_type_repeat1)  (precedence: 'data_type')
-    // 5:  'typedef'  (data_type  'enum'  •  enum_base_type  '{'  enum_name_declaration  data_type_repeat3  '}')                     (precedence: 'data_type')
-    [$._forward_type, $.data_type],
-
-
     // 'typedef'  _identifier  •  '\'  …
     // 1:  'typedef'  (class_type  _identifier)  •  '\'  …                     (precedence: 'class_type')
     // 2:  'typedef'  (data_type  _identifier)  •  '\'  …                      (precedence: 'data_type')
-    // 3:  'typedef'  (type_identifier_or_class_type  _identifier)  •  '\'  …
-    [$.type_identifier_or_class_type, $.data_type, $.class_type],
+    // 3:  'typedef'  (_type_identifier_or_class_type  _identifier)  •  '\'  …
+    [$._type_identifier_or_class_type, $.data_type, $.class_type],
 
 
     // 'typedef'  package_scope  _identifier  •  '\'  …
     // 1:  'typedef'  (class_type  package_scope  _identifier)  •  '\'  …  (precedence: 'class_type')
     // 2:  'typedef'  (data_type  package_scope  _identifier)  •  '\'  …   (precedence: 'data_type')
     [$.data_type, $.class_type],
-
-
-    // Seems that any could be valid. Also incomplete_class_scoped_type could be recursive
-    // so more tokens of lookahead could help
-    //
-    // 'typedef'  _identifier  '::'  _identifier  •  '\'  …
-    // 1:  'typedef'  _identifier  '::'  (class_type  _identifier)  •  '\'  …                     (precedence: 'class_type')
-    // 2:  'typedef'  _identifier  '::'  (type_identifier_or_class_type  _identifier)  •  '\'  …
-    // 3:  'typedef'  _identifier  (class_type_repeat1  '::'  _identifier)  •  '\'  …             (precedence: 'class_type')
-    [$.type_identifier_or_class_type, $.class_type],
 
 
     // Type-reference
@@ -5661,7 +5693,6 @@ module.exports = grammar({
 
     // Class_type as data_type
     [$.net_declaration, $.data_type, $.class_type],
-    [$.type_identifier_or_class_type, $.data_type],
     [$.nettype_declaration, $.data_type, $.class_type],
     [$.net_declaration, $.data_type, $.class_type, $.module_instantiation],
     [$.interface_port_header, $.data_type, $.class_type, $.net_port_type], // INFO: This one seems a true one (checked somehow)
@@ -5673,12 +5704,6 @@ module.exports = grammar({
     [$.sequence_expr],
     [$._assignment_pattern_expression_type, $.constant_primary],
     [$.expression_or_dist, $.event_expression],
-
-    // Net declaration delay
-    //   _identifier  '#'  '('  mintypmax_expression  •  ')'  …
-    //   1:  _identifier  '#'  '('  (param_expression  mintypmax_expression)  •  ')'  …  (precedence: 'param_expression')
-    //   2:  _identifier  (delay_control  '#'  '('  mintypmax_expression  •  ')')
-    [$.delay_control, $.param_expression],
 
 
     // Constant function call (13.4.3)
@@ -5729,25 +5754,14 @@ module.exports = grammar({
     // Support for static method calls
     [$.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
     [$.class_type, $.tf_call, $.hierarchical_identifier],
-    [$.incomplete_class_scoped_type, $.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
+    [$._incomplete_class_scoped_type, $.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
     [$.class_scope, $._method_call_root],
 
 
     // Needed to parse standalone module_items (snippets)
     [$.list_of_variable_assignments, $.procedural_continuous_assignment],
 
-    // Conditional generate
-    // 'case'  •  '('  …
-    // 1:  (case_generate_construct  'case'  •  '('  constant_expression  ')'  case_generate_item  'endcase')
-    // 2:  (case_generate_construct  'case'  •  '('  constant_expression  ')'  case_generate_item  case_generate_construct_repeat1  'endcase')
-    // 3:  (case_keyword  'case')  •  '('  …
-    // 4:  (case_statement  'case'  •  '('  case_expression  ')'  'inside'  case_statement_repeat3  'endcase')
-    [$.case_generate_construct, $.case_statement, $.case_keyword],
 
-
-    // After adding support for directives in packages,
-    [$._interface_or_generate_item, $._package_or_generate_item_declaration],
-    [$._description, $._non_port_module_item, $._package_or_generate_item_declaration, $.statement_item],
 
 
     // Fix error with method call with bit_select
@@ -5797,9 +5811,6 @@ module.exports = grammar({
 
     // TODO: After adding nested static class access on LHS
     [$._assignment_pattern_expression_type, $.class_qualifier],
-
-    // TODO: Fixing constant_primary on casting_type
-    // [$.select_expression, $.tf_call, $.constant_primary, $.hierarchical_identifier], // TODO: Checking last conflict
 
 
     // TODO: After adding checkers
