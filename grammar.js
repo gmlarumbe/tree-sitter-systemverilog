@@ -1119,9 +1119,9 @@ const rules = {
   type_declaration: $ => seq(
     'typedef',
     choice(
-      seq($._data_type_or_incomplete_class_scoped_type, $.type_identifier, repeat($._variable_dimension)),
-      seq($.interface_port_identifier, optional($.constant_bit_select), '.', $.type_identifier, $.type_identifier),
-      seq(optional($._forward_type), $.type_identifier)
+      seq($._data_type_or_incomplete_class_scoped_type, field('type_name', $.type_identifier), repeat($._variable_dimension)),
+      seq($.interface_port_identifier, optional($.constant_bit_select), '.', $.type_identifier, field('type_name', $.type_identifier)),
+      seq(optional($._forward_type), field('type_name', $.type_identifier))
     ),
     ';'
   ),
@@ -1441,8 +1441,8 @@ const rules = {
   _limit_value: $ => $.constant_mintypmax_expression,
 
   type_assignment: $ => seq(
-    $.type_identifier,
-    optseq('=', $._data_type_or_incomplete_class_scoped_type)
+    field('name', $.type_identifier),
+    optseq('=', field('value', $._data_type_or_incomplete_class_scoped_type))
   ),
 
   variable_decl_assignment: $ => choice(
@@ -4792,9 +4792,12 @@ module.exports = grammar({
     ['_description', '_non_port_module_item'],
     ['_description', '_module_common_item'],
     ['_description', 'data_declaration'],
+    ['_description', '_package_or_generate_item_declaration'],
+    ['_description', 'statement_item'],
     ['_package_or_generate_item_declaration', '_non_port_module_item'],
     ['_package_or_generate_item_declaration', 'statement_item'],
     ['_package_or_generate_item_declaration', '_library_description'],
+    ['_package_or_generate_item_declaration', '_interface_or_generate_item'],
 
 
     // Common item for module/package without context -> Consider it a module item
@@ -5277,6 +5280,16 @@ module.exports = grammar({
     ['_type_identifier_or_class_type', 'data_type'],
 
 
+    // Set the one higher in the syntax tree: _type_identifier_or_class_type
+    //
+    // 'typedef'  _identifier  •  '\'  …
+    // 1:  'typedef'  (_type_identifier_or_class_type  _identifier)  •  '\'  …  (precedence: '_type_identifier_or_class_type')
+    // 2:  'typedef'  (class_type  _identifier)  •  '\'  …                      (precedence: 'class_type')
+    // 3:  'typedef'  (data_type  _identifier)  •  '\'  …                       (precedence: 'data_type')
+    ['_type_identifier_or_class_type', 'class_type'],
+
+
+
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
     ['net_port_header'],
@@ -5648,12 +5661,6 @@ module.exports = grammar({
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
 
-
-    // After adding support for directives in packages,
-    [$._interface_or_generate_item, $._package_or_generate_item_declaration],
-    [$._description, $._non_port_module_item, $._package_or_generate_item_declaration, $.statement_item],
-
-
     // Same as before, this case could be all the options inside the initial, need more lookahead
     //
     // module_nonansi_header  'initial'  hierarchical_identifier  •  '.'  …
@@ -5665,17 +5672,13 @@ module.exports = grammar({
     [$.tf_call, $.primary],
 
 
-    // 'typedef'  _identifier  •  '\'  …
-    // 1:  'typedef'  (class_type  _identifier)  •  '\'  …                     (precedence: 'class_type')
-    // 2:  'typedef'  (data_type  _identifier)  •  '\'  …                      (precedence: 'data_type')
-    // 3:  'typedef'  (_type_identifier_or_class_type  _identifier)  •  '\'  …
-    [$._type_identifier_or_class_type, $.data_type, $.class_type],
-
-
     // 'typedef'  package_scope  _identifier  •  '\'  …
     // 1:  'typedef'  (class_type  package_scope  _identifier)  •  '\'  …  (precedence: 'class_type')
     // 2:  'typedef'  (data_type  package_scope  _identifier)  •  '\'  …   (precedence: 'data_type')
     [$.data_type, $.class_type],
+
+
+    ////////////////////////////////////////////////////////////////////////////////
 
 
     // Type-reference
