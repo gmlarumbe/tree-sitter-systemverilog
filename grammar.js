@@ -3678,7 +3678,12 @@ const rules = {
   _built_in_method_call: $ => choice(
     $.array_manipulation_call,
     $.randomize_call,
-    $.string_method_call, // Out of LRM
+    $.string_method_call,                    // Out of LRM
+    $.enum_method_call,                      // Out of LRM
+    $.associative_array_method_call,         // Out of LRM
+    $.queue_method_call,                     // Out of LRM
+    $.enum_or_associative_array_method_call, // Out of LRM
+    $.array_or_queue_method_call,            // Out of LRM
   ),
 
   array_manipulation_call: $ => prec.right(seq(
@@ -3719,19 +3724,61 @@ const rules = {
     // 7.12.2 Array ordering methods
     'reverse', 'sort', 'rsort', 'shuffle',
     // 7.12.3 Array reduction methods
-    'sum', 'product', 'and', 'or', 'xor'
+    'sum', 'product', 'and', 'or', 'xor',
+    // 7.12.5 Array mapping method
+    'map'
   ),
 
   // INFO: The following builtin method call entries are not in the LRM
   string_method_call: $ => prec.right(seq(
     $.string_method_name,
-    repeat($.attribute_instance),
     optseq('(', optional($.list_of_arguments), ')'),
   )),
 
   string_method_name: $ => choice(
-    'len', 'putc', 'getc', 'toupper', 'tolower', 'compare', 'icompare', 'substr', 'atoi',
-    'atohex', 'atooct', 'atobin', 'atoreal', 'itoa', 'hextoa', 'octtoa', 'bintoa', 'realtoa'
+    // 6.16 String data type
+    'len', 'putc', 'getc', 'toupper', 'tolower', 'compare', 'icompare',
+    'substr', 'atoi', 'atohex', 'atooct', 'atobin', 'atoreal', 'itoa', 'hextoa',
+    'octtoa', 'bintoa', 'realtoa'
+  ),
+
+  enum_method_call: $ => prec.right(seq(
+    $.enum_method_name,
+    optseq('(', optional($.list_of_arguments), ')'),
+  )),
+
+  enum_method_name: $ => 'name',
+
+  associative_array_method_call: $ => prec.right(seq(
+    $.associative_array_method_name,
+    optseq('(', optional($.list_of_arguments), ')'),
+  )),
+
+  associative_array_method_name: $ => 'exists',
+
+  queue_method_call: $ => prec.right(seq(
+    $.queue_method_name,
+    optseq('(', optional($.list_of_arguments), ')'),
+  )),
+
+  queue_method_name: $ => choice('insert', 'pop_front', 'pop_back', 'push_front', 'push_back'),
+
+  array_or_queue_method_call: $ => prec.right(seq(
+    $.array_or_queue_method_name,
+    optseq('(', optional($.list_of_arguments), ')'),
+  )),
+
+  array_or_queue_method_name: $ => choice('size', 'delete'),
+
+  enum_or_associative_array_method_call: $ => prec.right(seq(
+    $.enum_or_associative_array_method_name,
+    optseq('(', optional($.list_of_arguments), ')'),
+  )),
+
+  enum_or_associative_array_method_name: $ => choice(
+    // 6.19.5 Enumerated type methods
+    // 7.9 Associative array methods
+    'num', 'first', 'last', 'next', 'prev'
   ),
 
 
