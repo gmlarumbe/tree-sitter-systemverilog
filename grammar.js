@@ -2854,7 +2854,7 @@ const rules = {
 
   range_list: $ => commaSep1($.value_range),
 
-  value_range: $ => choice(
+  value_range: $ => prec('value_range', choice(
     $.expression,
     seq('[',
       choice(
@@ -2866,7 +2866,7 @@ const rules = {
       ),
       ']'
     )
-  ),
+  )),
 
 
 // *** A.6.7.1 Patterns
@@ -3803,17 +3803,17 @@ const rules = {
     optseq(':', $.constant_expression, ':', $.constant_expression)
   ),
 
-  constant_param_expression: $ => choice(
+  constant_param_expression: $ => prec('constant_param_expression', choice(
     prec.dynamic(1, $.constant_mintypmax_expression),
     prec.dynamic(0, $.data_type),
     '$'
-  ),
+  )),
 
-  param_expression: $ => choice(
+  param_expression: $ => prec('param_expression', choice(
     $.mintypmax_expression,
     $.data_type,
     '$'
-  ),
+  )),
 
   _constant_range_expression: $ => choice(
     $.constant_expression,
@@ -5289,6 +5289,33 @@ module.exports = grammar({
     ['_type_identifier_or_class_type', 'class_type'],
 
 
+    // Both options are illegal syntax, consequence of adding '$' as a primary for queue dimension indexing.
+    // Choose param_expression since primary is legal only for queue dimensions.
+    //
+    // '`'  _identifier  '('  '$'  •  ','  …
+    // 1:  '`'  _identifier  '('  (param_expression  '$')  •  ','  …  (precedence: 'param_expression')
+    // 2:  '`'  _identifier  '('  (primary  '$')  •  ','  …           (precedence: 'primary')
+    ['param_expression', 'primary'],
+
+    // Both options are illegal syntax, consequence of adding '$' as a primary for queue dimension indexing.
+    // Choose value_range since primary is legal only for queue dimensions.
+    //
+    // '('  expression  'inside'  '{'  '['  '$'  •  ':'  …
+    // 1:  '('  expression  'inside'  '{'  '['  (primary  '$')  •  ':'  …                    (precedence: 'primary')
+    // 2:  '('  expression  'inside'  '{'  (value_range  '['  '$'  •  ':'  expression  ']')
+    ['value_range', 'primary'],
+
+
+    // Second option is illegal syntax, consequence of adding '$' as a primary for queue dimension indexing.
+    // Choose constant_param_expression since constant_primary is legal only for queue dimensions.
+    // - See: test/corpus/sv-tests/chapter-20/20.6--isunbounded.txt
+    //
+    // 'localparam'  _identifier  '='  '$'  •  ';'  …
+    // 1:  'localparam'  _identifier  '='  (constant_param_expression  '$')  •  ';'  …
+    // 2:  'localparam'  _identifier  '='  (constant_primary  '$')  •  ';'  …           (precedence: 'constant_primary')
+    ['constant_param_expression', 'constant_primary'],
+
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5360,7 +5387,6 @@ module.exports = grammar({
     ['ps_type_identifier'],
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
-
 
   ],
 
@@ -5664,6 +5690,51 @@ module.exports = grammar({
     [$.modport_tf_ports_declaration],
 
 
+    // This is misleading. It is needed to detect standalone 'this' as a (primary) instead of as
+    // a (primary (implicit_class_handle)).
+    //
+    // 'this'  •  '.'  …
+    // 1:  (implicit_class_handle  'this'  •  '.'  'super')  (precedence: 'implicit_class_handle')
+    // 2:  (implicit_class_handle  'this')  •  '.'  …        (precedence: 'implicit_class_handle')
+    // 3:  (primary  'this')  •  '.'  …                      (precedence: 'primary')
+    [$.primary, $.implicit_class_handle],
+
+
+    // There could be macros both in constant_expressions and expressions, e.g:
+    // - constant_expression: test/files/uvm/1800.2-2020-2.0/src/base/uvm_packer.svh:42
+    // - expression:          test/files/uvm/1800.2-2020-2.0/src/base/uvm_root.svh:1181
+    //
+    // '('  text_macro_usage  •  ':'  …
+    // 1:  '('  (constant_expression  text_macro_usage)  •  ':'  …
+    // 2:  '('  (expression  text_macro_usage)  •  ':'  …
+    [$.constant_expression, $.expression],
+
+
+    // $.nonrange_select would cover the $.dynamic_array_new case
+    //
+    // hierarchical_identifier  bit_select  •  '='  …
+    // 1:  hierarchical_identifier  (nonrange_select  bit_select)  •  '='  …
+    // 2:  hierarchical_identifier  (select  bit_select)  •  '='  …
+    [$.select, $.nonrange_select],
+
+
+    // 1) Corresponds to declaration of a variable via $.list_of_variable_decl_assignments
+    // 2) Corresponds to declaration of a port via $.list_of_variable_identifiers
+    //
+    // 'var'  _identifier  unsized_dimension  •  ';'  …
+    // 1:  'var'  (variable_decl_assignment  _identifier  unsized_dimension)  •  ';'  …
+    // 2:  'var'  _identifier  (_variable_dimension  unsized_dimension)  •  ';'  …       (precedence: '_variable_dimension')
+    [$.variable_decl_assignment, $._variable_dimension],
+    // The same happens below
+    //
+    // 'var'  _identifier  unsized_dimension  •  '['  …
+    // 1:  'var'  (variable_decl_assignment  _identifier  unsized_dimension  •  ansi_port_declaration_repeat2  '='  dynamic_array_new)
+    // 2:  'var'  (variable_decl_assignment  _identifier  unsized_dimension  •  ansi_port_declaration_repeat2)
+    // 3:  'var'  _identifier  (_variable_dimension  unsized_dimension)  •  '['  …                                                      (precedence: '_variable_dimension')  4:  'var'  _identifier  (packed_dimension  unsized_dimension)  •  '['  …                                                         (precedence: 'packed_dimension')
+    // 4:  'var'  _identifier  (packed_dimension  unsized_dimension)  •  '['  …                                                         (precedence: 'packed_dimension')
+    [$.variable_decl_assignment, $.packed_dimension, $._variable_dimension],
+
+
 
 // ** Conflicts to be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5694,21 +5765,10 @@ module.exports = grammar({
     [$._method_call_root, $.hierarchical_identifier],
 
 
-    ////////////////////////////////////////////////////////////////////////////////
-
-
     // Type-reference
     [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
     [$.data_type, $.constant_primary],
 
-    // Queue dimensions
-    [$.primary, $.implicit_class_handle],
-    [$.param_expression, $.primary],
-    [$.value_range, $.primary],
-    [$.constant_param_expression, $.constant_primary],
-
-    // Tagged union
-    // [$.tagged_union_expression],
 
     // Class_type as data_type
     [$.net_declaration, $.data_type, $.class_type],
@@ -5736,19 +5796,10 @@ module.exports = grammar({
     [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary],
 
 
-    [$.constant_expression, $.expression],
-
-
     // Inout/ref/interface ports
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation],
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type],
     [$.list_of_interface_identifiers, $.net_decl_assignment],
-
-    // Dynamic array new
-    [$.variable_decl_assignment, $._variable_dimension],
-    [$.variable_decl_assignment, $.packed_dimension, $._variable_dimension],
-
-    [$.select, $.nonrange_select],
 
 
     // INFO: Added to fix issue with expressions inside bit_select
