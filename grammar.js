@@ -3677,7 +3677,8 @@ const rules = {
 
   _built_in_method_call: $ => choice(
     $.array_manipulation_call,
-    $.randomize_call
+    $.randomize_call,
+    $.string_method_call, // Out of LRM
   ),
 
   array_manipulation_call: $ => seq(
@@ -3719,6 +3720,18 @@ const rules = {
     'reverse', 'sort', 'rsort', 'shuffle',
     // 7.12.3 Array reduction methods
     'sum', 'product', 'and', 'or', 'xor'
+  ),
+
+  // INFO: The following builtin method call entries are not in the LRM
+  string_method_call: $ => prec.right(seq(
+    $.string_method_name,
+    repeat($.attribute_instance),
+    optseq('(', optional($.list_of_arguments), ')'),
+  )),
+
+  string_method_name: $ => choice(
+    'len', 'putc', 'getc', 'toupper', 'tolower', 'compare', 'icompare', 'substr', 'atoi',
+    'atohex', 'atooct', 'atobin', 'atoreal', 'itoa', 'hextoa', 'octtoa', 'bintoa', 'realtoa'
   ),
 
 
