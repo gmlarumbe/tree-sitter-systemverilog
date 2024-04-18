@@ -1302,6 +1302,14 @@ const rules = {
 
   type_identifier_or_class_type: $ => choice($.type_identifier, $.class_type),
 
+  // Out of LRM, used to restrict the choices to
+  associative_dimension_data_type: $ => choice(
+    seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension)), // 7.8.4
+    seq($.integer_atom_type, optional($._signing)), // 7.8.4
+    'string', // 7.8.2
+    // Do not include 7.8.3 Class index to avoid ambiguities with packed array declarations
+  ),
+
 
 // *** A.2.2.2 Strengths
   drive_strength: $ => seq(
@@ -1477,7 +1485,7 @@ const rules = {
   )),
 
   associative_dimension: $ => seq(
-    '[', choice($.data_type, '*'), ']'
+    '[', choice(alias($.associative_dimension_data_type, $.data_type), '*'), ']'
   ),
 
   _variable_dimension: $ => prec('_variable_dimension', choice(
