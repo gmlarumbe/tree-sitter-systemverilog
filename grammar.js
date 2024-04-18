@@ -3650,7 +3650,7 @@ const rules = {
   ),
 
   subroutine_call: $ => choice(
-    $.tf_call,
+    prec.dynamic(-1, $.tf_call), // Give $.method_call higher priority
     $.system_tf_call,
     $.method_call,
     seq(optseq('std', '::'), $.randomize_call),
@@ -3709,7 +3709,17 @@ const rules = {
     $.text_macro_usage, // Out of LRM, Added to fix parsing errors in UVM
   )),
 
-  array_method_name: $ => choice($.method_identifier, 'unique', 'and', 'or', 'xor'),
+  // Different from the LRM. The LRM possibly groups all these identifiers under $.method_identifier.
+  // Setting them explicitly helps avoiding potential ambiguities and conflicts.
+  array_method_name: $ => choice(
+    // 7.12.1 Array locator method
+    'find', 'find_index', 'find_first', 'find_first_index', 'find_last', 'find_last_index',
+    'min', 'max', 'unique', 'unique_index',
+    // 7.12.2 Array ordering methods
+    'reverse', 'sort', 'rsort', 'shuffle',
+    // 7.12.3 Array reduction methods
+    'sum', 'product', 'and', 'or', 'xor'
+  ),
 
 
 // ** A.8.3 Expressions
@@ -3879,7 +3889,7 @@ const rules = {
     $.empty_unpacked_array_concatenation,
     seq($.concatenation, optseq('[', $.range_expression, ']')),
     seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
-    $.function_subroutine_call,
+    prec.dynamic(-99, $.function_subroutine_call), // Avoid giving precedence to nested method_call instead of to hierarchical_identifier
     // $.let_expression,  // No need to add since its syntax is the same as a tf_call/subroutine_call (true ambiguity that adds conflicts)
     seq('(', $.mintypmax_expression, ')'),
     $.cast,
@@ -4715,10 +4725,6 @@ module.exports = grammar({
 
 // ** Precedences
   precedences: () => [
-    ////////////////////////////////////////////////////////////////////////////////
-    // INFO: Reviewed
-    ////////////////////////////////////////////////////////////////////////////////
-
     // Top level precedence
     //   Used when items, declarations or statements are outside of modules,
     //   classes, packages or checkers
@@ -5141,17 +5147,16 @@ module.exports = grammar({
     ['variable_lvalue', 'tf_call'],
 
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // INFO: To be reviewed
-    ////////////////////////////////////////////////////////////////////////////////
-
+    // '$' is out of LRM, included only to support select in queue variables
+    //
     // 'sequence'  sequence_identifier  ';'  '##'  '['  constant_expression  ':'  '$'  •  ']'  …
     // 1:  'sequence'  sequence_identifier  ';'  '##'  '['  (cycle_delay_const_range_expression  constant_expression  ':'  '$')  •  ']'  …  (precedence: 'cycle_delay_const_range_expression')
     // 2:  'sequence'  sequence_identifier  ';'  '##'  '['  constant_expression  ':'  (constant_primary  '$')  •  ']'  …                    (precedence: 'constant_primary')
     ['cycle_delay_const_range_expression', 'constant_primary'],
 
 
-    // After adding $root as a primary
+    // $root' as a primary is out of LRM, used to cover a corner case in sv-tests
+    //
     // '$root'  •  '.'  …
     // 1:  (hierarchical_identifier  '$root'  •  '.'  _identifier)                                   (precedence: 'hierarchical_identifier')
     // 2:  (hierarchical_identifier  '$root'  •  '.'  hierarchical_identifier_repeat1  _identifier)  (precedence: 'hierarchical_identifier')
@@ -5159,12 +5164,8 @@ module.exports = grammar({
     ['hierarchical_identifier', 'primary'],
 
 
-    // text_macro_usage  •  'resetall_compiler_directive_token1'  …
-    // 1:  (_directives  text_macro_usage)  •  'resetall_compiler_directive_token1'  …
-    // 2:  (statement_item  text_macro_usage)  •  'resetall_compiler_directive_token1'  …
-    ['statement_item', '_directives'],
-
-
+    // Consider $.timeunits_declaration part of the module declaration. The 3rd option is to support snippets of code.
+    //
     // module_nonansi_header  timeunits_declaration  •  'resetall_compiler_directive_token1'  …
     // 1:  (module_declaration  module_nonansi_header  timeunits_declaration  •  module_declaration_repeat1  'endmodule'  ':'  module_identifier)  (precedence: 'module_declaration')
     // 2:  (module_declaration  module_nonansi_header  timeunits_declaration  •  module_declaration_repeat1  'endmodule')                           (precedence: 'module_declaration')
@@ -5172,19 +5173,20 @@ module.exports = grammar({
     ['module_declaration', '_non_port_module_item'],
 
 
+    // randomize with constraint expressions -> constraint_set (emtpy)
+    //
     // 'randomize'  'with'  '{'  expression  '->'  '{'  '}'  •  '+'  …
     // 1:  'randomize'  'with'  '{'  expression  '->'  (constraint_set  '{'  '}')  •  '+'  …
     // 2:  'randomize'  'with'  '{'  expression  '->'  (empty_unpacked_array_concatenation  '{'  '}')  •  '+'  …
     ['constraint_set', 'empty_unpacked_array_concatenation'],
 
 
-    // After adding text_macro support for hierarchical identifiers
+    // Out of LRM support for macros in identifiers
     //
     // text_macro_usage  •  '['  …
     // 1:  (_directives  text_macro_usage)  •  '['  …                                         (precedence: '_directives')
     // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
     ['hierarchical_identifier', '_directives'],
-
 
 
     ///////////////////////////////////////////////////
@@ -5255,11 +5257,8 @@ module.exports = grammar({
     ['blocking_assignment'],
     ['ps_parameter_identifier'],
     ['ps_type_identifier'],
-
-
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
-
   ],
 
 // ** Conflicts
@@ -5539,11 +5538,7 @@ module.exports = grammar({
     // 3:  module_nonansi_header  'initial'  (tf_call  hierarchical_identifier)  •  '.'  …           (precedence: 'tf_call')
     // 4:  module_nonansi_header  'initial'  (variable_lvalue  hierarchical_identifier  •  select)  (precedence: 'variable_lvalue')
     [$.tf_call, $.primary, $.variable_lvalue],
-
-
-    // All of these also seemed needed after implementing method calls, external methods and static methods
     [$.tf_call, $.primary],
-    [$.method_call_body, $.array_method_name],
 
 
     // TODO: Typedef conflicts
