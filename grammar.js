@@ -449,12 +449,12 @@ const rules = {
     enclosing('endpackage',$.package_identifier)
   )),
 
-  timeunits_declaration: $ => choice(
+  timeunits_declaration: $ => prec.right(choice(
     seq('timeunit', $.time_literal, optseq('/', $.time_literal), ';'),
     seq('timeprecision', $.time_literal, ';'),
     seq('timeunit', $.time_literal, ';', 'timeprecision', $.time_literal, ';'),
     seq('timeprecision', $.time_literal, ';', 'timeunit', $.time_literal, ';')
-  ),
+  )),
 
 
 // ** A.1.3 Module parameters and ports
@@ -3843,9 +3843,9 @@ const rules = {
     $.text_macro_usage, // Out of LRM
   ),
 
-  tagged_union_expression: $ => seq(
+  tagged_union_expression: $ => prec.right(seq(
     'tagged', $.member_identifier, optional($.primary)
-  ),
+  )),
 
   inside_expression: $ => prec.left(PREC.RELATIONAL, seq(
     $.expression, 'inside', '{', $.range_list, '}'
@@ -5653,6 +5653,17 @@ module.exports = grammar({
     [$.delay_control, $.param_expression],
 
 
+    // Modport declaration:
+    // Differentiate between a single modport or list of modports, e.g:
+    //   modport A (output .P(r[3:0]), input .Q(x), R); -> 1 declaration with 1 elem (output .P), 1 decl with 2 elems (input .Q, R)
+    //
+    // interface_nonansi_header  'modport'  modport_identifier  '('  port_direction  modport_simple_port  •  ','  …
+    // 1:  interface_nonansi_header  'modport'  modport_identifier  '('  (modport_simple_ports_declaration  port_direction  modport_simple_port  •  modport_simple_ports_declaration_repeat1)
+    // 2:  interface_nonansi_header  'modport'  modport_identifier  '('  (modport_simple_ports_declaration  port_direction  modport_simple_port)  •  ','  …
+    [$.modport_simple_ports_declaration],
+    [$.modport_tf_ports_declaration],
+
+
 
 // ** Conflicts to be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5678,6 +5689,11 @@ module.exports = grammar({
     [$.data_type, $.class_type],
 
 
+    // Text macros on hierarchical identifiers
+    // INFO: Seems that after this, hierarchical_identifier has a higher dynamic precedence over _method_call_root
+    [$._method_call_root, $.hierarchical_identifier],
+
+
     ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -5692,7 +5708,7 @@ module.exports = grammar({
     [$.constant_param_expression, $.constant_primary],
 
     // Tagged union
-    [$.tagged_union_expression],
+    // [$.tagged_union_expression],
 
     // Class_type as data_type
     [$.net_declaration, $.data_type, $.class_type],
@@ -5723,9 +5739,6 @@ module.exports = grammar({
     [$.constant_expression, $.expression],
 
 
-    [$.timeunits_declaration],
-
-
     // Inout/ref/interface ports
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation],
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type],
@@ -5745,14 +5758,6 @@ module.exports = grammar({
     [$.data_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.data_type, $.class_type, $.tf_call, $.constant_primary],
 
-    // Modports
-    // INFO: Not sure about this...
-    // interface_nonansi_header  'modport'  modport_identifier  '('  port_direction  modport_simple_port  •  ','  …
-    // 1:  interface_nonansi_header  'modport'  modport_identifier  '('  (modport_simple_ports_declaration  port_direction  modport_simple_port  •  modport_simple_ports_declaration_repeat1)
-    // 2:  interface_nonansi_header  'modport'  modport_identifier  '('  (modport_simple_ports_declaration  port_direction  modport_simple_port)  •  ','  …
-    [$.modport_simple_ports_declaration],
-    [$.modport_tf_ports_declaration],
-
 
     // Support for static method calls
     [$.class_type, $.tf_call, $.hierarchical_identifier, $.package_scope],
@@ -5765,8 +5770,6 @@ module.exports = grammar({
     [$.list_of_variable_assignments, $.procedural_continuous_assignment],
 
 
-
-
     // Fix error with method call with bit_select
     [$.class_qualifier, $.select],
     [$.select, $.hierarchical_identifier],
@@ -5777,11 +5780,6 @@ module.exports = grammar({
 
     // Constraints
     [$.class_method, $.constraint_prototype_qualifier],
-
-
-    // Text macros on hierarchical identifiers
-    // INFO: Seems that after this, hierarchical_identifier has a higher dynamic precedence over _method_call_root
-    [$._method_call_root, $.hierarchical_identifier],
 
 
     // Coverage: TODO
