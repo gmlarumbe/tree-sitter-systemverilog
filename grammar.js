@@ -2061,7 +2061,10 @@ const rules = {
 
   bins_selection_or_option: $ => seq(
     repeat($.attribute_instance),
-    choice($.coverage_option, $.bins_selection)
+    choice(
+      $.coverage_option,
+      $.bins_selection
+    )
   ),
 
   bins_selection: $ => seq(
@@ -2069,16 +2072,18 @@ const rules = {
     optseq('iff', '(', $.expression, ')')
   ),
 
-  select_expression: $ => prec('select_expression', choice(
+  // Fixed conflicts by keeping numerical precedences on branches that call $.select_expression recursively.
+  // The ones that do not, set named precedences and associativity to solve conflicts.
+  select_expression: $ => choice(
     $.select_condition,
     prec.left(PREC.UNARY, seq('!', $.select_condition)),
     prec.left(PREC.LOGICAL_AND, seq($.select_expression, '&&', $.select_expression)),
     prec.left(PREC.LOGICAL_OR, seq($.select_expression, '||', $.select_expression)),
     paren_expr($.select_expression),
-    seq($.select_expression, 'with', '(', $._with_covergroup_expression, ')', optseq('matches', $._integer_covergroup_expression)),
-    $.cross_identifier,
-    seq($._cross_set_expression, optseq('matches', $._integer_covergroup_expression))
-  )),
+    seq($.select_expression, 'with', '(', $._with_covergroup_expression, ')', prec.right('select_expression', optseq('matches', $._integer_covergroup_expression))),
+    prec('select_expression', $.cross_identifier),
+    prec.right('select_expression', seq($._cross_set_expression, optseq('matches', $._integer_covergroup_expression)))
+  ),
 
   select_condition: $ => seq(
     'binsof', '(', $.bins_expression, ')',
@@ -2092,7 +2097,7 @@ const rules = {
 
   covergroup_range_list: $ => commaSep1($.covergroup_value_range),
 
-  covergroup_value_range: $ => choice(
+  covergroup_value_range: $ => prec('covergroup_value_range', choice(
     $._covergroup_expression,
     seq(
       '[',
@@ -2104,13 +2109,16 @@ const rules = {
         seq($._covergroup_expression, '+%-', $._covergroup_expression)
       ),
       ']'
-    )),
+    ))),
 
   _with_covergroup_expression: $ => $._covergroup_expression,
 
   _set_covergroup_expression: $ => $._covergroup_expression,
 
-  _integer_covergroup_expression: $ => choice($._covergroup_expression, '$'),
+  _integer_covergroup_expression: $ => choice(
+    $._covergroup_expression,
+    '$'
+  ),
 
   _cross_set_expression: $ => $._covergroup_expression,
 
@@ -3588,9 +3596,9 @@ const rules = {
 
 // * A.8 Expressions
 // ** A.8.1 Concatenations
-  concatenation: $ => seq(
+  concatenation: $ => prec('concatenation', seq(
     '{', commaSep1($.expression), '}'
-  ),
+  )),
 
   constant_concatenation: $ => seq(
     '{', commaSep1($.constant_expression), '}'
@@ -4790,6 +4798,14 @@ module.exports = grammar({
     $.tx0_path_delay_expression,
     $.txz_path_delay_expression,
     $.tzx_path_delay_expression,
+
+    // Coverage expressions
+    $._covergroup_expression,
+    $._cross_set_expression,
+    $._integer_covergroup_expression,
+    $._with_covergroup_expression,
+    $._set_covergroup_expression,
+
   ],
 
 // ** Precedences
@@ -5146,18 +5162,6 @@ module.exports = grammar({
     ['property_spec', 'property_expr'],
 
 
-    // In a covergroup the most likely option is the $.cross_identifier of $.select_expression
-    //
-    // 'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  _identifier  •  ')'  …
-    // 1:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (constant_primary  _identifier)  •  ')'  …         (precedence: 'constant_primary')
-    // 2:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
-    // 3:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (select_expression  _identifier)  •  ')'  …        (precedence: 'select_expression')
-    // 4:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (tf_call  _identifier)  •  ')'  …                  (precedence: 'tf_call')
-    ['select_expression', 'constant_primary'],
-    ['select_expression', 'hierarchical_identifier'],
-    ['select_expression', 'tf_call'],
-
-
     // $._simple_type is used for static casting, choose $.constant_primary to reduce the number of conflicts
     //
     // ''{'  class_scope  _identifier  •  ':'  …
@@ -5378,6 +5382,40 @@ module.exports = grammar({
     // 1:  'bind'  (bind_target_scope  _identifier)  •  '\'  …
     // 2:  'bind'  (hierarchical_identifier  _identifier)  •  '\'  …  (precedence: 'hierarchical_identifier')
     ['bind_target_scope', 'hierarchical_identifier'],
+
+
+    // Covergroup and cross cover conflicts. Check $.select_expression comments:
+    // Give $.covergroup_value_range and $.select_expression precedence over nodes lower in the syntax tree
+    //
+    // 'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  '('  expression  •  ')'  …
+    // 1:  'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  '('  (covergroup_value_range  expression)  •  ')'  …  (precedence: 'covergroup_value_range')
+    // 2:  'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  '('  (mintypmax_expression  expression)  •  ')'  …    (precedence: 'mintypmax_expression')
+    ['covergroup_value_range', 'mintypmax_expression'],
+    // 'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  '{'  expression  •  ','  …
+    // 1:  'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  '{'  (covergroup_value_range  expression)  •  ','  …                  (precedence: 'covergroup_value_range')
+    // 2:  'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  (concatenation  '{'  expression  •  assignment_pattern_repeat1  '}')  (precedence: 'concatenation')
+    ['covergroup_value_range', 'concatenation'],
+    // 'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  '('  '['  '$'  •  ':'  …
+    // 1:  'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  '('  '['  (primary  '$')  •  ':'  …                                           (precedence: 'primary')
+    // 2:  'covergroup'  _identifier  ';'  'coverpoint'  expression  '{'  bins_keyword  _identifier  '='  '('  (covergroup_value_range  '['  '$'  •  ':'  _covergroup_expression  ']')  (precedence: 'covergroup_value_range')
+    ['covergroup_value_range', 'primary'],
+    // 'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  expression  •  ')'  …
+    // 1:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (mintypmax_expression  expression)  •  ')'  …  (precedence: 'mintypmax_expression')
+    // 2:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (select_expression  expression)  •  ')'  …     (precedence: 'select_expression', associativity: Right)
+    ['select_expression', 'mintypmax_expression'],
+    // 'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  expression  'matches'  '$'  •  ';'  …
+    // 1:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  (select_expression  expression  'matches'  '$')  •  ';'  …  (precedence: 'select_expression', associativity: Right)
+    // 2:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  expression  'matches'  (primary  '$')  •  ';'  …            (precedence: 'primary')
+    ['select_expression', 'primary'],
+    // 'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  _identifier  •  ')'  …
+    // 1:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (constant_primary  _identifier)  •  ')'  …         (precedence: 'constant_primary')
+    // 2:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
+    // 3:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (select_expression  _identifier)  •  ')'  …        (precedence: 'select_expression')
+    // 4:  'covergroup'  _identifier  ';'  'cross'  list_of_cross_items  '{'  bins_keyword  _identifier  '='  '('  (tf_call  _identifier)  •  ')'  …                  (precedence: 'tf_call')
+    ['select_expression', 'constant_primary'],
+    ['select_expression', 'hierarchical_identifier'],
+    ['select_expression', 'tf_call'],
+
 
 
     ///////////////////////////////////////////////////
@@ -5924,14 +5962,6 @@ module.exports = grammar({
     [$._method_call_root, $.primary],
     [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue],
     [$._method_call_root, $.primary, $.class_qualifier],
-
-
-    // Coverage: TODO
-    [$._covergroup_expression, $.cond_pattern],
-    [$._covergroup_expression, $.mintypmax_expression],
-    [$._covergroup_expression, $.concatenation],
-    [$.covergroup_value_range, $.primary],
-    [$._integer_covergroup_expression, $.primary],
 
 
     // TODO: sequences/properties/assertions

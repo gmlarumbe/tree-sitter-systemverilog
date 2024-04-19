@@ -1,0 +1,246 @@
+============================================
+core/coverage/default_bin
+============================================
+
+module test();
+
+logic [7:0] addr;
+reg ce;
+
+covergroup address_cov () @ (posedge ce);
+  ADDRESS : coverpoint addr {
+    bins low          = {0,10};
+    // All other values are not counted in coverage calculation
+    bins lazy         = default;
+  }
+endgroup
+
+address_cov my_cov = new();
+
+initial begin
+  ce   <= 0;
+  addr <= 0;
+  $monitor("ce %b addr 8'h%x",ce,addr);
+  repeat (10) begin
+    addr = $random();
+    ce <= 1;
+    #10;
+    ce <= 0;
+    #10;
+  end
+end
+
+endmodule
+
+----
+
+(source_file
+  (module_declaration
+    (module_nonansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_ports))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)
+            (packed_dimension
+              (constant_range
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (covergroup_declaration
+        name: (simple_identifier)
+        (coverage_event
+          (clocking_event
+            (event_expression
+              (edge_identifier)
+              (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))
+        (coverage_spec_or_option
+          (cover_point
+            name: (simple_identifier)
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))
+            (bins_or_empty
+              (bins_or_options
+                (bins_keyword)
+                name: (simple_identifier)
+                (covergroup_range_list
+                  (covergroup_value_range
+                    (expression
+                      (primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number)))))))
+                  (covergroup_value_range
+                    (expression
+                      (primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number)))))))))
+              (comment)
+              (bins_or_options
+                (bins_keyword)
+                name: (simple_identifier)))))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (simple_identifier)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)
+            (class_new)))))
+    (module_item
+      (initial_construct
+        (statement_or_null
+          (statement
+            (statement_item
+              (seq_block
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (nonblocking_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)))
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number))))))))))
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (nonblocking_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)))
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number))))))))))
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (subroutine_call
+                          (system_tf_call
+                            (system_tf_identifier)
+                            (list_of_arguments
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (string_literal
+                                      (quoted_string)))))
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier))))
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier)))))))))))
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (loop_statement
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number))))))
+                        (statement_or_null
+                          (statement
+                            (statement_item
+                              (seq_block
+                                (statement_or_null
+                                  (statement
+                                    (statement_item
+                                      (blocking_assignment
+                                        (operator_assignment
+                                          (variable_lvalue
+                                            (hierarchical_identifier
+                                              (simple_identifier)))
+                                          (assignment_operator)
+                                          (expression
+                                            (primary
+                                              (function_subroutine_call
+                                                (subroutine_call
+                                                  (system_tf_call
+                                                    (system_tf_identifier)))))))))))
+                                (statement_or_null
+                                  (statement
+                                    (statement_item
+                                      (nonblocking_assignment
+                                        (variable_lvalue
+                                          (hierarchical_identifier
+                                            (simple_identifier)))
+                                        (expression
+                                          (primary
+                                            (primary_literal
+                                              (integral_number
+                                                (decimal_number
+                                                  (unsigned_number))))))))))
+                                (statement_or_null
+                                  (statement
+                                    (statement_item
+                                      (procedural_timing_control_statement
+                                        (delay_control
+                                          (delay_value
+                                            (unsigned_number)))
+                                        (statement_or_null)))))
+                                (statement_or_null
+                                  (statement
+                                    (statement_item
+                                      (nonblocking_assignment
+                                        (variable_lvalue
+                                          (hierarchical_identifier
+                                            (simple_identifier)))
+                                        (expression
+                                          (primary
+                                            (primary_literal
+                                              (integral_number
+                                                (decimal_number
+                                                  (unsigned_number))))))))))
+                                (statement_or_null
+                                  (statement
+                                    (statement_item
+                                      (procedural_timing_control_statement
+                                        (delay_control
+                                          (delay_value
+                                            (unsigned_number)))
+                                        (statement_or_null)))))))))))))))))))))
