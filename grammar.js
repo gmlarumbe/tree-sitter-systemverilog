@@ -140,6 +140,15 @@ function repseq1(...rules) {
   return repeat1(seq(...rules));
 }
 
+function repseqprec(precedence, ...rules) {
+  return repeat(prec(precedence, seq(...rules)));
+}
+
+function repseq1prec(precedence, ...rules) {
+  return repeat1(prec(precedence, seq(...rules)));
+}
+
+
 // Written according to $.list_of_arguments and modified to avoid
 // matching the empty string
 function list_of_args($, precedence, arg) {
@@ -492,7 +501,7 @@ const rules = {
       $.input_declaration,
       $.output_declaration,
       $.ref_declaration,
-      $.interface_port_declaration
+      prec.dynamic(-1, $.interface_port_declaration) // Give higher priority to data declaration
     )
   ),
 
@@ -2587,7 +2596,7 @@ const rules = {
 
   list_of_net_assignments: $ => commaSep1($.net_assignment),
 
-  list_of_variable_assignments: $ => commaSep1($.variable_assignment),
+  list_of_variable_assignments: $ => prec('list_of_variable_assignments', commaSep1($.variable_assignment)),
 
   net_alias: $ => prec.right(PREC.ASSIGN, seq(
     'alias', $.net_lvalue, '=', sepBy1('=', $.net_lvalue), ';'
@@ -2629,14 +2638,14 @@ const rules = {
     $.expression
   ),
 
-  procedural_continuous_assignment: $ => choice(
+  procedural_continuous_assignment: $ => prec('procedural_continuous_assignment', choice(
     seq('assign', $.variable_assignment),
     seq('deassign', $.variable_lvalue),
     prec.dynamic(1, seq('force', $.variable_assignment)),
     seq('force', $.net_assignment),
     prec.dynamic(1, seq('release', $.variable_lvalue)),
     seq('release', $.net_lvalue)
-  ),
+  )),
 
   variable_assignment: $ => seq($.variable_lvalue, '=', $.expression),
 
@@ -2692,7 +2701,7 @@ const rules = {
     $.seq_block,
     $.wait_statement,
     $._procedural_assertion_statement,
-    seq($.clocking_drive, ';'),
+    prec.dynamic(-1, seq($.clocking_drive, ';')), // NBA > clocking drive (outside of a clocking block)
     $.randsequence_statement,
     $.randcase_statement,
     $.expect_property_statement,
@@ -2982,21 +2991,21 @@ const rules = {
     $.deferred_immediate_assertion_item
   ),
 
-  deferred_immediate_assertion_item: $ => seq(
+  deferred_immediate_assertion_item: $ => prec('deferred_immediate_assertion_item', seq(
     optseq($.block_identifier, ':'),
     $._deferred_immediate_assertion_statement
-  ),
+  )),
 
-  _procedural_assertion_statement: $ => choice(
+  _procedural_assertion_statement: $ => prec('_procedural_assertion_statement', choice(
     $._concurrent_assertion_statement,
     $._immediate_assertion_statement,
     $.checker_instantiation
-  ),
+  )),
 
-  _immediate_assertion_statement: $ => choice(
+  _immediate_assertion_statement: $ => prec('_immediate_assertion_statement', choice(
     $._simple_immediate_assertion_statement,
     $._deferred_immediate_assertion_statement
-  ),
+  )),
 
   _simple_immediate_assertion_statement: $ => choice(
     $.simple_immediate_assert_statement,
@@ -5316,6 +5325,52 @@ module.exports = grammar({
     ['constant_param_expression', 'constant_primary'],
 
 
+    // 1st option follows the $.list_of_param_assignments branch in $.local_parameter_declaration
+    // 2nd option follows the $.type_parameter_declaration
+    // Seems more logical to set the 2nd path for a type reference
+    //
+    // 'localparam'  _identifier  '='  type_reference  •  ';'  …
+    // 1:  'localparam'  _identifier  '='  (constant_primary  type_reference)  •  ';'  …  (precedence: 'constant_primary')
+    // 2:  'localparam'  _identifier  '='  (data_type  type_reference)  •  ';'  …         (precedence: 'data_type')
+    ['data_type', 'constant_primary'],
+
+
+    // Seems illegal syntax, so choose whichever
+    //
+    // 'expect'  '('  '##'  type_reference  •  ''{'  …
+    // 1:  'expect'  '('  '##'  (_assignment_pattern_expression_type  type_reference)  •  ''{'  …  (precedence: '_assignment_pattern_expression_type')
+    // 2:  'expect'  '('  '##'  (constant_primary  type_reference)  •  ''{'  …                     (precedence: 'constant_primary')
+    ['constant_primary', '_assignment_pattern_expression_type'],
+
+
+    // Sequence instances. Choose the first one to include the right associative 'iff' expression
+    //
+    // _identifier  name_of_instance  '('  expression  •  'iff'  …
+    // 1:  _identifier  name_of_instance  '('  (event_expression  expression  •  'iff'  expression)  (precedence: 'event_expression')
+    // 2:  _identifier  name_of_instance  '('  (expression_or_dist  expression)  •  'iff'  …         (precedence: 'expression_or_dist')
+    ['event_expression', 'expression_or_dist'],
+
+
+    // Consider standalone assign as continuous and not procedural
+    //
+    //   'assign'  variable_assignment  •  ';'  …
+    //   1:  'assign'  (list_of_variable_assignments  variable_assignment)  •  ';'  …      (precedence: 'list_of_variable_assignments')
+    //   2:  (procedural_continuous_assignment  'assign'  variable_assignment)  •  ';'  …  (precedence: 'procedural_continuous_assignment')
+    ['list_of_variable_assignments', 'procedural_continuous_assignment'],
+
+
+    // Consider a snippet concurrent_assertion_statement as non-procedural
+    //
+    // _concurrent_assertion_statement  •  ';'  …
+    // 1:  (_procedural_assertion_statement  _concurrent_assertion_statement)  •  ';'  …
+    // 2:  (concurrent_assertion_item  _concurrent_assertion_statement)  •  ';'  …        (precedence: 'concurrent_assertion_item')
+    ['concurrent_assertion_item', '_procedural_assertion_statement'],
+    // _deferred_immediate_assertion_statement  •  ';'  …
+    // 1:  (_immediate_assertion_statement  _deferred_immediate_assertion_statement)  •  ';'  …
+    // 2:  (deferred_immediate_assertion_item  _deferred_immediate_assertion_statement)  •  ';'  …
+    ['deferred_immediate_assertion_item', '_immediate_assertion_statement'],
+
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5735,6 +5790,50 @@ module.exports = grammar({
     [$.variable_decl_assignment, $.packed_dimension, $._variable_dimension],
 
 
+    // Out of LRM, macros on hierarchical identifiers or method prefixes
+    //
+    // text_macro_usage  •  '.'  …
+    // 1:  (_method_call_root  text_macro_usage)  •  '.'  …             (precedence: '_method_call_root')
+    // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  '.')  (precedence: 'hierarchical_identifier')
+    [$._method_call_root, $.hierarchical_identifier],
+
+
+    // Leave as a conflict since there are many options possible for this rule
+    //
+    // 'expect'  '('  sequence_expr_repeat1  •  '##'  …
+    // 1:  'expect'  '('  (sequence_expr  sequence_expr_repeat1)  •  '##'  …                        (precedence: 'sequence_expr')
+    // 2:  'expect'  '('  (sequence_expr_repeat1  sequence_expr_repeat1  •  sequence_expr_repeat1)
+    [$.sequence_expr],
+
+
+    // Leave conflict to consider declarations below as variables (data_declaration).
+    // Conflict is solved using dynamic precedences
+    //
+    // _identifier  _identifier  •  ';'  …
+    // 1:  _identifier  (list_of_interface_identifiers  _identifier)  •  ';'  …
+    // 2:  _identifier  (net_decl_assignment  _identifier)  •  ';'  …
+    [$.list_of_interface_identifiers, $.net_decl_assignment],
+
+
+    // Need more lookahead to know if extern declaration refers to class constraint or to method
+    //
+    //   'class'  _identifier  ';'  'extern'  •  'static'  …
+    //   1:  'class'  _identifier  ';'  (class_method  'extern'  •  class_method_repeat1  _method_prototype  ';')       (precedence: 'class_method')
+    //   2:  'class'  _identifier  ';'  (class_method  'extern'  •  class_method_repeat1  class_constructor_prototype)  (precedence: 'class_method')
+    //   3:  'class'  _identifier  ';'  (constraint_prototype_qualifier  'extern')  •  'static'  …
+    [$.class_method, $.constraint_prototype_qualifier],
+
+
+    // Give dynamically higher precedence to nonblocking assignemnt than to clockvar for snippets.
+    // Leave conflict to avoid errors in expressions like:
+    //  - CB1.Data <= ##2 Int_Data;
+    //
+    //   hierarchical_identifier  •  '<='  …
+    // 1:  (clockvar  hierarchical_identifier)  •  '<='  …
+    // 2:  (variable_lvalue  hierarchical_identifier)  •  '<='  …  (precedence: 'variable_lvalue')
+    [$.clockvar, $.variable_lvalue],
+
+
 
 // ** Conflicts to be reviewed
     ////////////////////////////////////////////////////////////////////////////////
@@ -5760,14 +5859,13 @@ module.exports = grammar({
     [$.data_type, $.class_type],
 
 
-    // Text macros on hierarchical identifiers
-    // INFO: Seems that after this, hierarchical_identifier has a higher dynamic precedence over _method_call_root
-    [$._method_call_root, $.hierarchical_identifier],
-
-
     // Type-reference
+    //   'type'  '('  package_scope  _identifier  •  ')'  …
+    //   1:  'type'  '('  (class_type  package_scope  _identifier)  •  ')'  …               (precedence: 'class_type')
+    //   2:  'type'  '('  (data_type  package_scope  _identifier)  •  ')'  …                (precedence: 'data_type')
+    //   3:  'type'  '('  (tf_call  package_scope  _identifier)  •  ')'  …                  (precedence: 'tf_call', associativity: Right)
+    //   4:  'type'  '('  package_scope  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
     [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
-    [$.data_type, $.constant_primary],
 
 
     // Class_type as data_type
@@ -5778,11 +5876,6 @@ module.exports = grammar({
     [$.data_type, $.class_type, $.net_port_type],
     [$.class_type, $.module_instantiation],
     [$.data_type, $.class_type, $.tf_port_item],
-
-    // Sequences
-    [$.sequence_expr],
-    [$._assignment_pattern_expression_type, $.constant_primary],
-    [$.expression_or_dist, $.event_expression],
 
 
     // Constant function call (13.4.3)
@@ -5799,7 +5892,6 @@ module.exports = grammar({
     // Inout/ref/interface ports
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation],
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type],
-    [$.list_of_interface_identifiers, $.net_decl_assignment],
 
 
     // INFO: Added to fix issue with expressions inside bit_select
@@ -5817,10 +5909,6 @@ module.exports = grammar({
     [$.class_scope, $._method_call_root],
 
 
-    // Needed to parse standalone module_items (snippets)
-    [$.list_of_variable_assignments, $.procedural_continuous_assignment],
-
-
     // Fix error with method call with bit_select
     [$.class_qualifier, $.select],
     [$.select, $.hierarchical_identifier],
@@ -5828,9 +5916,6 @@ module.exports = grammar({
     [$._method_call_root, $.primary],
     [$._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue],
     [$._method_call_root, $.primary, $.class_qualifier],
-
-    // Constraints
-    [$.class_method, $.constraint_prototype_qualifier],
 
 
     // Coverage: TODO
@@ -5845,21 +5930,15 @@ module.exports = grammar({
     [$.expression_or_dist, $.mintypmax_expression],
     [$.property_expr, $.sequence_expr],
     [$.cover_sequence_statement, $.sequence_expr],
-    [$.expression_or_dist, $.event_expression, $.mintypmax_expression],
 
-
-    // TODO: Add procedural assertion item probably these could be removed by inlining
-    [$.concurrent_assertion_item, $._procedural_assertion_statement],
-    [$.deferred_immediate_assertion_item, $._immediate_assertion_statement],
-
-    // TODO: Add clocking_drive to statement_item
-    [$.clockvar, $.variable_lvalue],
 
     // TODO: Fixing the local:: class_qualifier
     [$._simple_type, $._assignment_pattern_expression_type, $.class_qualifier],
 
+
     // TODO: bind
     [$.bind_target_scope, $.hierarchical_identifier],
+
 
     // TODO: After adding nested static class access on LHS
     [$._assignment_pattern_expression_type, $.class_qualifier],
@@ -5873,7 +5952,6 @@ module.exports = grammar({
 
 
     // TODO: After adding the class_new branch in blocking_assignment
-    [$.blocking_assignment, $.class_qualifier],
     [$.blocking_assignment, $.class_qualifier],
     [$.blocking_assignment, $._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.blocking_assignment, $.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
