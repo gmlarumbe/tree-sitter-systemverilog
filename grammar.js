@@ -638,10 +638,10 @@ const rules = {
     // ';' // INFO: bug in spec, colon already included in $._bind_instantiation
   ),
 
-  bind_target_scope: $ => choice(
+  bind_target_scope: $ => prec('bind_target_scope', choice(
     $.module_identifier,
     $.interface_identifier
-  ),
+  )),
 
   bind_target_instance: $ => seq(
     $.hierarchical_identifier,
@@ -5371,6 +5371,14 @@ module.exports = grammar({
     ['deferred_immediate_assertion_item', '_immediate_assertion_statement'],
 
 
+    // \ refers to a possible escaped identifier. The conflict has to do with two identifiers one after the other.
+    // Therefore since the first has no bit_select at all consider it a bind_target_scope
+    //
+    // 'bind'  _identifier  •  '\'  …
+    // 1:  'bind'  (bind_target_scope  _identifier)  •  '\'  …
+    // 2:  'bind'  (hierarchical_identifier  _identifier)  •  '\'  …  (precedence: 'hierarchical_identifier')
+    ['bind_target_scope', 'hierarchical_identifier'],
+
 
     ///////////////////////////////////////////////////
     ///////////////////////////////////////////////////
@@ -5934,10 +5942,6 @@ module.exports = grammar({
 
     // TODO: Fixing the local:: class_qualifier
     [$._simple_type, $._assignment_pattern_expression_type, $.class_qualifier],
-
-
-    // TODO: bind
-    [$.bind_target_scope, $.hierarchical_identifier],
 
 
     // TODO: After adding nested static class access on LHS
