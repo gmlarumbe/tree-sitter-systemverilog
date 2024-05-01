@@ -1795,8 +1795,8 @@ const rules = {
     $.property_expr
   )),
 
-  property_expr: $ => prec('property_expr', choice(
-    $.sequence_expr,
+  property_expr: $ => choice(
+    prec('sequence_expr', $.sequence_expr),
     seq(choice('strong', 'weak'), '(', $.sequence_expr, ')'),
     paren_expr($.property_expr),
     prec(PREC.PROP_NEXTTIME, seq('not', $.property_expr)),
@@ -1812,8 +1812,8 @@ const rules = {
     prec.right(PREC.PROP_IFF, seq($.property_expr, 'iff', $.property_expr)),
     prec(PREC.PROP_ALWAYS, seq(choice('accept_on', 'reject_on', 'sync_accept_on', 'sync_reject_on'), '(', $.expression_or_dist, ')', $.property_expr)),
     $.property_instance,
-    seq($.clocking_event, $.property_expr)
-  )),
+    prec('property_expr', seq($.clocking_event, $.property_expr))
+  ),
 
   property_case_item: $ => choice(
     seq(commaSep1($.expression_or_dist), ':', $.property_expr, ';'),
@@ -1848,11 +1848,11 @@ const rules = {
     'untyped'
   ),
 
-  sequence_expr: $ => prec('sequence_expr', choice(
+  sequence_expr: $ => choice(
     repseq1($.cycle_delay_range, $.sequence_expr),
     seq($.sequence_expr, repseq1($.cycle_delay_range, $.sequence_expr)),
     seq($.expression_or_dist, optional($._boolean_abbrev)),
-    seq($.sequence_instance, optional($.sequence_abbrev)),
+    prec('sequence_expr', seq($.sequence_instance, optional($.sequence_abbrev))),
     seq('(', $.sequence_expr, repseq(',', $._sequence_match_item), ')', optional($.sequence_abbrev)),
     prec.left(PREC.PROP_SEQ_AND, seq($.sequence_expr, 'and', $.sequence_expr)),
     prec.left(PREC.SEQ_INTERSECT, seq($.sequence_expr, 'intersect', $.sequence_expr)),
@@ -1861,7 +1861,7 @@ const rules = {
     prec.right(PREC.SEQ_THROUGHOUT, seq($.expression_or_dist, 'throughout', $.sequence_expr)),
     prec.left(PREC.SEQ_WITHIN, seq($.sequence_expr, 'within', $.sequence_expr)),
     seq($.clocking_event, $.sequence_expr)
-  )),
+  ),
 
   cycle_delay_range: $ => choice(
     seq('##',
