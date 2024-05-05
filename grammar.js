@@ -1598,7 +1598,7 @@ const rules = {
   tf_port_list: $ => commaSep1($.tf_port_item),
 
   // Modified to avoid matching the empty string
-  tf_port_item: $ => prec('tf_port_item', seq(
+  tf_port_item: $ => seq(
     repeat($.attribute_instance),
     optional($.tf_port_direction),
     optional('var'),
@@ -1610,7 +1610,7 @@ const rules = {
     ),
     repeat($._variable_dimension),
     optseq('=', $.expression)
-  )),
+  ),
 
   tf_port_direction: $ => prec('tf_port_direction', choice(
     $.port_direction,
@@ -1745,10 +1745,10 @@ const rules = {
     'restrict', 'property', '(', $.property_spec, ')', ';'
   ),
 
-  property_instance: $ => prec('property_instance', seq(
+  property_instance: $ => seq(
     $.ps_or_hierarchical_property_identifier,
     optseq('(', optional($.property_list_of_arguments), ')')
-  )),
+  ),
 
   property_list_of_arguments: $ => list_of_args($, 'property_list_of_arguments', $._property_actual_arg),
 
@@ -1881,10 +1881,10 @@ const rules = {
     $.subroutine_call
   ),
 
-  sequence_instance: $ => prec('sequence_instance', seq(
+  sequence_instance: $ => seq(
     $.ps_or_hierarchical_sequence_identifier,
     optseq('(', optional($.sequence_list_of_arguments), ')')
-  )),
+  ),
 
   sequence_list_of_arguments: $ => list_of_args($, 'sequence_list_of_arguments', $._sequence_actual_arg),
 
@@ -2291,12 +2291,12 @@ const rules = {
 // * A.4 Instantiations
 // ** A.4.1 Instantiation
 // *** A.4.1.1 Module instantiation
-  module_instantiation: $ => prec('module_instantiation', seq(
+  module_instantiation: $ => seq(
     field('instance_type', $.module_identifier),
     optional($.parameter_value_assignment),
     commaSep1($.hierarchical_instance),
     ';'
-  )),
+  ),
 
   parameter_value_assignment: $ => seq(
     '#', '(', optional($.list_of_parameter_value_assignments), ')'
@@ -3677,11 +3677,11 @@ const rules = {
 
   list_of_arguments: $ => list_of_args($, 'list_of_arguments', $.expression),
 
-  method_call: $ => prec('method_call', seq(
+  method_call: $ => seq(
     $._method_call_root,
     choice('.', '::'), // :: Out of LRM: Needed to support static method calls
     $.method_call_body
-  )),
+  ),
 
   method_call_body: $ => prec.right(choice(
     seq(
@@ -3725,12 +3725,12 @@ const rules = {
   // condition. However there must be some precedences that prevent this from
   // being detected. This workaround might complicate a bit more the parser but
   // seems to work well.
-  _method_call_root: $ => prec('_method_call_root', choice(
+  _method_call_root: $ => choice(
     $.primary,
     prec.dynamic(2, seq($.implicit_class_handle, optional($.select))), // optional($.select) out of LRM
     $.class_type,       // Out of LRM: Added to support calling parameterized static methods
     $.text_macro_usage, // Out of LRM, Added to fix parsing errors in UVM
-  )),
+  ),
 
   // Different from the LRM. The LRM possibly groups all these identifiers under $.method_identifier.
   // Setting them explicitly helps avoiding potential ambiguities and conflicts.
@@ -4048,9 +4048,9 @@ const rules = {
   ))),
 
   // Modified to avoid matching empty string
-  constant_select: $ => prec('constant_select', choice(
+  constant_select: $ => choice(
     seq(
-      repeat(prec('constant_select', seq('.', $.member_identifier, optional($.constant_bit_select)))), '.', $.member_identifier,
+      repeat(seq('.', $.member_identifier, optional($.constant_bit_select))), '.', $.member_identifier,
       optional($.constant_bit_select),
       optseq('[', $._constant_part_select_range, ']')
     ),
@@ -4059,7 +4059,7 @@ const rules = {
       optseq('[', $._constant_part_select_range, ']')
     ),
     seq('[', $._constant_part_select_range, ']'),
-  )),
+  ),
 
   cast: $ => seq($.casting_type, '\'', '(', $.expression, ')'),
 
@@ -4069,11 +4069,11 @@ const rules = {
 
 
 // ** A.8.5 Expression left-side values
-  net_lvalue: $ => prec('net_lvalue', choice(
+  net_lvalue: $ => choice(
     seq($.ps_or_hierarchical_net_identifier, optional($.constant_select)),
     seq('{', commaSep1($.net_lvalue), '}'),
     seq(optional($._assignment_pattern_expression_type), $.assignment_pattern_net_lvalue)
-  )),
+  ),
 
   variable_lvalue: $ => prec('variable_lvalue', choice(
     seq(
@@ -4673,12 +4673,6 @@ module.exports = grammar({
   rules: rules,
   extras: $ => [/\s/, $.comment],
 
-// ** Supertypes
-  supertypes: $ => [
-    $._property_actual_arg,
-    // TODO: Any use?
-  ],
-
 // ** Inline
   inline: $ => [
     $.snippets,
@@ -4805,7 +4799,6 @@ module.exports = grammar({
     $._integer_covergroup_expression,
     $._with_covergroup_expression,
     $._set_covergroup_expression,
-
   ],
 
 // ** Precedences
@@ -5417,79 +5410,11 @@ module.exports = grammar({
     ['select_expression', 'tf_call'],
 
 
-
-    ///////////////////////////////////////////////////
-    ///////////////////////////////////////////////////
-    ['net_port_header'],
-    ['variable_port_header'],
-    ['net_declaration'],
-    ['module_instantiation'],
-    ['tf_call'],
-    ['list_of_arguments'],
-    ['lifetime'],
-    ['class_item_qualifier'],
-    ['class_constructor_declaration'],
-    ['implicit_class_handle'],
-    ['class_property'],
-    ['_method_call_root'],
-    ['class_type'],
-    ['package_scope'],
-    ['_description'],
-    ['statement'],
-    ['_simple_type'],
-    ['ps_type_identifier'],
-    ['cast'],
-    ['casting_type'],
-    ['constant_primary'],
-    ['_constant_assignment_pattern_expression'],
-    ['nettype_declaration'],
-    ['param_expression'],
-    ['value_range'],
-    ['action_block'],
-    ['cycle_delay_const_range_expression'],
-    ['_sequence_actual_arg'],
-    ['expression_or_dist'],
-    ['text_macro_usage'],
-    ['constant_select'],
-    ['select'],
-
-    ['checker_instantiation'],
-    ['program_instantiation'],
-    ['interface_instantiation'],
-    ['hierarchical_instance'],
-    ['concurrent_assertion_item'],
-    ['interface_port_declaration'],
-    ['port_reference'],
-    ['net_port_type'],
-    ['source_file'],
-
-    ['module_declaration'],
-    ['interface_declaration'],
-    ['program_declaration'],
-    ['package_declaration'],
-
-    ['net_port_type'],
-    ['tf_port_item'],
-    ['tf_port_direction'],
-    ['port_direction'],
+    // Leave these two standalone to avoid having to replicate code with function 'list_of_args'
     ['property_list_of_arguments'],
     ['sequence_list_of_arguments'],
-    ['_bind_instantiation'],
-    ['_checker_or_generate_item_declaration'],
-    ['method_call'],
-    ['property_spec'],
-    ['property_expr'],
-    ['property_instance'],
-    ['sequence_expr'],
-    ['sequence_instance'],
-    ['net_lvalue'],
-    ['blocking_assignment'],
-    ['ps_parameter_identifier'],
-    ['ps_type_identifier'],
-    ///////////////////////////////////////////////////
-    ///////////////////////////////////////////////////
-
   ],
+
 
 // ** Conflicts
   conflicts: $ => [
@@ -5880,67 +5805,76 @@ module.exports = grammar({
     [$.clockvar, $.variable_lvalue],
 
 
-
-// ** Conflicts to be reviewed
-    ////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////
-    // INFO: To be reviewed
-    ////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////
-
-    // Same as before, this case could be all the options inside the initial, need more lookahead
+    // Didn't test but makes sense to leave the conflict to avoid errors
     //
-    // module_nonansi_header  'initial'  hierarchical_identifier  •  '.'  …
-    // 1:  module_nonansi_header  'initial'  (primary  hierarchical_identifier  •  select)          (precedence: 'primary')
-    // 2:  module_nonansi_header  'initial'  (primary  hierarchical_identifier)  •  '.'  …           (precedence: 'primary')
-    // 3:  module_nonansi_header  'initial'  (tf_call  hierarchical_identifier)  •  '.'  …           (precedence: 'tf_call')
-    // 4:  module_nonansi_header  'initial'  (variable_lvalue  hierarchical_identifier  •  select)  (precedence: 'variable_lvalue')
+    // 'assign'  hierarchical_identifier  '.'  _identifier  •  '.'  …
+    // 1:  'assign'  hierarchical_identifier  (constant_select_repeat1  '.'  _identifier)  •  '.'  …  (precedence: 'constant_select')
+    // 2:  'assign'  hierarchical_identifier  (select_repeat1  '.'  _identifier)  •  '.'  …
+    [$.select, $.constant_select],
+
+
+    // Didn't test but makes sense to leave the conflict to avoid errors
+    //
+    // 'assign'  hierarchical_identifier  '['  constant_range  •  ']'  …
+    // 1:  'assign'  hierarchical_identifier  '['  (_constant_part_select_range  constant_range)  •  ']'  …  (precedence: '_constant_part_select_range')
+    // 2:  'assign'  hierarchical_identifier  '['  (_part_select_range  constant_range)  •  ']'  …
+    [$._constant_part_select_range, $._part_select_range],
+
+
+    // Didn't test but makes sense to leave the conflict to avoid errors
+    //
+    // '@'  '('  hierarchical_identifier  '('  ','  •  ','  …
+    // 1:  '@'  '('  hierarchical_identifier  '('  (list_of_arguments_repeat1  ',')  •  ','  …
+    // 2:  '@'  '('  hierarchical_identifier  '('  (sequence_list_of_arguments_repeat1  ',')  •  ','  …
+    [$.sequence_list_of_arguments, $.list_of_arguments],
+
+
+    // Didn't test but makes sense to leave the conflict to avoid errors
+    //
+    // '('  hierarchical_identifier  •  '.'  …
+    // 1:  '('  (primary  hierarchical_identifier  •  select)          (precedence: 'primary')
+    // 2:  '('  (primary  hierarchical_identifier)  •  '.'  …          (precedence: 'primary')
+    // 3:  '('  (tf_call  hierarchical_identifier)  •  '.'  …          (precedence: 'tf_call', associativity: Right)
+    // 4:  '('  (variable_lvalue  hierarchical_identifier  •  select)  (precedence: 'variable_lvalue')
     [$.tf_call, $.primary, $.variable_lvalue],
+
+
+    // Didn't test but makes sense to leave the conflict to avoid errors
+    //
+    // '['  hierarchical_identifier  •  '.'  …
+    // 1:  '['  (primary  hierarchical_identifier  •  select)  (precedence: 'primary')
+    // 2:  '['  (primary  hierarchical_identifier)  •  '.'  …  (precedence: 'primary')
+    // 3:  '['  (tf_call  hierarchical_identifier)  •  '.'  …  (precedence: 'tf_call', associativity: Right)
     [$.tf_call, $.primary],
 
 
-    // 'typedef'  package_scope  _identifier  •  '\'  …
-    // 1:  'typedef'  (class_type  package_scope  _identifier)  •  '\'  …  (precedence: 'class_type')
-    // 2:  'typedef'  (data_type  package_scope  _identifier)  •  '\'  …   (precedence: 'data_type')
+    // Didn't test but makes sense to leave the conflict to avoid errors
+    //
+    // 'ref'  _identifier  •  '\'  …
+    // 1:  'ref'  (class_type  _identifier)  •  '\'  …  (precedence: 'class_type')
+    // 2:  'ref'  (data_type  _identifier)  •  '\'  …   (precedence: 'data_type')
     [$.data_type, $.class_type],
 
 
-    // Type-reference
-    //   'type'  '('  package_scope  _identifier  •  ')'  …
-    //   1:  'type'  '('  (class_type  package_scope  _identifier)  •  ')'  …               (precedence: 'class_type')
-    //   2:  'type'  '('  (data_type  package_scope  _identifier)  •  ')'  …                (precedence: 'data_type')
-    //   3:  'type'  '('  (tf_call  package_scope  _identifier)  •  ')'  …                  (precedence: 'tf_call', associativity: Right)
-    //   4:  'type'  '('  package_scope  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
+    // Didn't test but makes sense to leave the conflict to avoid errors
+    //
+    // 'type'  '('  package_scope  _identifier  •  ')'  …
+    // 1:  'type'  '('  (class_type  package_scope  _identifier)  •  ')'  …               (precedence: 'class_type')
+    // 2:  'type'  '('  (data_type  package_scope  _identifier)  •  ')'  …                (precedence: 'data_type')
+    // 3:  'type'  '('  (tf_call  package_scope  _identifier)  •  ')'  …                  (precedence: 'tf_call', associativity: Right)
+    // 4:  'type'  '('  package_scope  (hierarchical_identifier  _identifier)  •  ')'  …  (precedence: 'hierarchical_identifier')
     [$.data_type, $.class_type, $.tf_call, $.hierarchical_identifier],
 
 
-    // Class_type as data_type
-    [$.net_declaration, $.data_type, $.class_type],
-    [$.nettype_declaration, $.data_type, $.class_type],
-    [$.net_declaration, $.data_type, $.class_type, $.module_instantiation],
-    [$.interface_port_header, $.data_type, $.class_type, $.net_port_type], // INFO: This one seems a true one (checked somehow)
-    [$.data_type, $.class_type, $.net_port_type],
-    [$.class_type, $.module_instantiation],
-    [$.data_type, $.class_type, $.tf_port_item],
+    // Probably should be fixed by using numeric precedences for the $.expression_or_dist, but seems too much effort for the price
+    //
+    // 'randomize'  'with'  '{'  expression  '->'  expression  •  ';'  …
+    // 1:  'randomize'  'with'  '{'  (expression  expression  '->'  expression)  •  ';'  …          (precedence: 22, associativity: Left)
+    // 2:  'randomize'  'with'  '{'  expression  '->'  (expression_or_dist  expression)  •  ';'  …  (precedence: 'expression_or_dist')
+    [$.expression_or_dist, $.expression],
 
 
-    // Constant function call (13.4.3)
-    [$.constant_function_call, $.primary],
-    [$._simple_type, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$._simple_type, $.tf_call, $.constant_primary, $.hierarchical_identifier], // TODO: Checking last conflict in precedences
-    [$._simple_type, $.tf_call, $.constant_primary],
-    [$.concatenation, $.stream_expression],
-    [$._simple_type, $.pattern, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary],
-
-
-    // Inout/ref/interface ports
-    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation],
-    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type],
-
-
-    // INFO: Added to fix issue with expressions inside bit_select
+    // Support expressions inside bit_select
     [$.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.tf_call, $.constant_primary],
     [$.data_type, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
@@ -5955,7 +5889,7 @@ module.exports = grammar({
     [$.class_scope, $._method_call_root],
 
 
-    // Fix error with method call with bit_select
+    // Support method call with bit_select
     [$.class_qualifier, $.select],
     [$.select, $.hierarchical_identifier],
     [$.constant_select, $.hierarchical_identifier],
@@ -5964,28 +5898,49 @@ module.exports = grammar({
     [$._method_call_root, $.primary, $.class_qualifier],
 
 
-    // TODO: sequences/properties/assertions
-    [$.expression_or_dist, $.mintypmax_expression],
-    [$.property_expr, $.sequence_expr],
-    [$.cover_sequence_statement, $.sequence_expr],
+    // Method calls inside indexes
+    [$.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.class_type, $.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
+    [$.class_type, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
+    [$.interface_port_declaration, $.class_type, $.tf_call, $.hierarchical_identifier],
+    [$.interface_port_declaration, $.hierarchical_identifier],
 
 
-    // TODO: Fixing the local:: class_qualifier
+    // Class_type as data_type
+    [$.class_type, $.module_instantiation],
+    [$.data_type, $.class_type, $.net_port_type],
+    [$.data_type, $.class_type, $.tf_port_item],
+    [$.interface_port_header, $.data_type, $.class_type, $.net_port_type],
+    [$.net_declaration, $.data_type, $.class_type, $.module_instantiation],
+    [$.net_declaration, $.data_type, $.class_type],
+    [$.nettype_declaration, $.data_type, $.class_type],
+
+
+    // local:: class_qualifier
     [$._simple_type, $._assignment_pattern_expression_type, $.class_qualifier],
 
 
-    // TODO: After adding nested static class access on LHS
+    // Add nested static class access on LHS
     [$._assignment_pattern_expression_type, $.class_qualifier],
 
 
-    // TODO: After adding checkers
-    [$.data_type, $.class_type, $.checker_instantiation],
-    [$.named_port_connection, $.named_checker_port_connection],
-    [$.expression_or_dist, $.ordered_port_connection, $.event_expression],
-    [$.expression_or_dist, $.named_port_connection, $.event_expression],
+    // Inout/ref/interface ports
+    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation],
+    [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type],
 
 
-    // TODO: After adding the class_new branch in blocking_assignment
+    // Constant function call
+    [$.constant_function_call, $.primary],
+    [$._simple_type, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._simple_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._simple_type, $.tf_call, $.constant_primary],
+    [$.concatenation, $.stream_expression],
+    [$._simple_type, $.pattern, $._structure_pattern_key, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$._assignment_pattern_expression_type, $.tf_call, $.constant_primary],
+
+
+    //  $.class_new branch in $.blocking_assignment
     [$.blocking_assignment, $.class_qualifier],
     [$.blocking_assignment, $._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.blocking_assignment, $.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
@@ -5994,38 +5949,36 @@ module.exports = grammar({
     [$.blocking_assignment, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
-    // TODO: After reviewing/inlining many identifiers
-    [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.class_qualifier],
-    [$.clocking_event, $.hierarchical_identifier],
-    [$.property_instance, $.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.property_instance, $.sequence_instance, $.tf_call, $.hierarchical_identifier],
-    [$.sequence_instance, $.tf_call, $.hierarchical_identifier],
-    [$.select, $.constant_select],
-    [$._constant_part_select_range, $._part_select_range],
-    [$.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.property_instance, $.sequence_instance, $.tf_call],
-    [$.sequence_instance, $.tf_call],
-    [$.property_list_of_arguments, $.sequence_list_of_arguments, $.list_of_arguments],
-    [$._property_actual_arg, $.sequence_list_of_arguments],
-    [$.expression_or_dist, $.event_expression, $.list_of_arguments],
-    [$.sequence_list_of_arguments, $.list_of_arguments],
-    [$._simple_type, $._structure_pattern_key],
-
-
-    [$.expression_or_dist, $.expression],
-
-
-    // INFO: After removing constant_primary from casting_type to fix issue with concatenation on RHS
-    [$.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    // After removing $.constant_primary from $.casting_type to fix issue with concatenation on RHS
     [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.class_qualifier],
+    [$.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
-    // TODO: Adding primitives -> Fixed partially with named precedences
-    // The only one left is the $.net_lvalue / $.variable_lvalue that exists above on purpose
+    // Sequences/Properties/Assertions
+    // Attempting to set named priorities on the ones below gave errors on some assertion tests
+    [$.expression_or_dist, $.mintypmax_expression],
+    [$.property_expr, $.sequence_expr],
+    [$.cover_sequence_statement, $.sequence_expr],
+
+
+    // Checkers
+    [$.data_type, $.class_type, $.checker_instantiation],
+    [$.named_port_connection, $.named_checker_port_connection],
+    [$.expression_or_dist, $.ordered_port_connection, $.event_expression],
+    [$.expression_or_dist, $.named_port_connection, $.event_expression],
+
+
+    // Primitives (fixed partially with named precedences)
+    // -  The only one left is the $.net_lvalue / $.variable_lvalue that exists above on purpose
     [$.tf_call, $.primary, $.net_lvalue, $.variable_lvalue],
 
 
-    // TODO: After adding udp instantiation
+    // UDP declaration
+    [$.combinational_entry, $._seq_input_list], // Could have the same syntax for $.sequential_body and $.combinational_body
+    [$.list_of_udp_port_identifiers],
+
+
+    // UDP instantiation
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.checker_instantiation, $.udp_instantiation],
     [$.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.udp_instantiation],
     [$.interface_port_declaration, $.net_declaration, $.data_type, $.class_type, $.module_instantiation, $.udp_instantiation],
@@ -6033,22 +5986,18 @@ module.exports = grammar({
     [$.delay2, $.param_expression],
     [$.delay2, $.delay_control, $.param_expression],
 
-    // TODO: After adding udp declaration
-    [$.combinational_entry, $._seq_input_list], // This one is legit, could have the same syntax for $.sequential_body and $.combinational_body
-    [$.list_of_udp_port_identifiers], // No idea about this one, I was very asleep
 
-
-    // TODO: Giving higher prioriy to module_instantiation than to udp_instantiation
-    [$.net_lvalue, $.hierarchical_identifier],
-    [$.tf_call, $.primary, $.net_lvalue],
-    [$.tf_call, $.net_lvalue, $.hierarchical_identifier],
-    [$.property_instance, $.sequence_instance, $.tf_call, $.primary, $.net_lvalue],
-    [$.property_instance, $.sequence_instance, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
-    [$.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
+    // Give higher prioriy dynamically to $.module_instantiation than to $.udp_instantiation
     [$.constant_primary, $.net_lvalue],
+    [$.net_lvalue, $.hierarchical_identifier],
+    [$.property_instance, $.sequence_instance, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
+    [$.property_instance, $.sequence_instance, $.tf_call, $.primary, $.net_lvalue],
+    [$.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
+    [$.tf_call, $.net_lvalue, $.hierarchical_identifier],
+    [$.tf_call, $.primary, $.net_lvalue],
 
 
-    // TODO: Specify conflicts
+    // Specify
     [$.parallel_path_description, $.parallel_edge_sensitive_path_description, $.list_of_path_inputs],
     [$.parallel_edge_sensitive_path_description, $.list_of_path_inputs],
     [$.tf_call, $.module_path_primary, $.hierarchical_identifier],
@@ -6066,14 +6015,20 @@ module.exports = grammar({
     [$.constant_function_call, $.module_path_primary],
 
 
-    // TODO: Fixing last error of method calls inside indexes
-    [$.interface_port_declaration, $.class_type, $.tf_call, $.hierarchical_identifier],
-    [$.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.interface_port_declaration, $.hierarchical_identifier],
-    [$.class_type, $.tf_call, $.net_lvalue, $.hierarchical_identifier],
-    [$.class_type, $.tf_call, $.constant_primary, $.net_lvalue, $.hierarchical_identifier],
+    // After inlining of identifiers
+    [$._property_actual_arg, $.sequence_list_of_arguments],
+    [$._simple_type, $._assignment_pattern_expression_type, $.constant_primary, $.class_qualifier],
+    [$._simple_type, $._structure_pattern_key],
+    [$.clocking_event, $.hierarchical_identifier],
+    [$.expression_or_dist, $.event_expression, $.list_of_arguments],
+    [$.property_instance, $.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.property_instance, $.sequence_instance, $.tf_call, $.hierarchical_identifier],
+    [$.property_instance, $.sequence_instance, $.tf_call],
+    [$.property_list_of_arguments, $.sequence_list_of_arguments, $.list_of_arguments],
+    [$.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
+    [$.sequence_instance, $.tf_call, $.hierarchical_identifier],
+    [$.sequence_instance, $.tf_call],
   ],
 
 });
-
 
