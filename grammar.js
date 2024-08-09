@@ -2361,7 +2361,7 @@ const rules = {
 
 // *** A.4.1.4 Checker instantiation
   checker_instantiation: $ => prec('checker_instantiation', seq(
-    $.ps_checker_identifier,
+    field('instance_type', $.ps_checker_identifier),
     $.name_of_instance,
     '(', optional($.list_of_checker_port_connections), ')',
     ';'
@@ -2578,6 +2578,7 @@ const rules = {
 
 // ** A.5.4 UDP instantiation
   udp_instantiation: $ => seq(
+    // field('instance_type', $.udp_identifier), // TODO: For some reason results in parse errors with tree-sitter 0.22.6, in core/instantiation/user_defined_primitives
     $.udp_identifier,
     optional($.drive_strength),
     optional($.delay2),
