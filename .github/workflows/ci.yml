@@ -7,13 +7,24 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest] # windows-latest still not supported by tree-sitter/setup-action@v1
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: tree-sitter/setup-action@v1
-      - run: tree-sitter generate
-      - run: tree-sitter test
+      - name: Clone tree-sitter-systemverilog
+        uses: actions/checkout@v4
+
+      - name: Setup tree-sitter
+        uses: tree-sitter/setup-action@v1
+
+      - name: Generate parser
+        run: |
+          tree-sitter generate
+
+      - name: Run tests
+        run: |
+          tree-sitter test
 
