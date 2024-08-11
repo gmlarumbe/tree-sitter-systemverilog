@@ -4531,7 +4531,11 @@ const rules = {
 
   list_of_actual_arguments: $ => list_of_args($, 'list_of_arguments', $.actual_argument),
 
-  actual_argument: $ => $.param_expression, // Out of LRM, needed to support parameterized data types as macro args (common in the UVM)
+  actual_argument: $ => choice(
+    // Out of LRM, needed to support parameterized data types and constraints as macro args (common in the UVM)
+    $.param_expression, // e.g: `uvm_component_utils_param
+    $.constraint_block  // e.g: `uvm_do_with
+  ),
 
   undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
 
@@ -6029,6 +6033,11 @@ module.exports = grammar({
     [$.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.sequence_instance, $.tf_call, $.hierarchical_identifier],
     [$.sequence_instance, $.tf_call],
+
+
+    // Allow constraint blocks on text_macro_usage
+    [$.constraint_block, $.empty_unpacked_array_concatenation],
+
   ],
 
 });
