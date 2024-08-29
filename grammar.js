@@ -2741,7 +2741,8 @@ const rules = {
     '#',
     choice(
       $.delay_value,
-      seq('(', $.mintypmax_expression, ')')
+      seq('(', $.mintypmax_expression, ')'),
+      $.text_macro_usage, // Out of LRM
     )
   ),
 
