@@ -1605,8 +1605,8 @@ const rules = {
     choice(
       // A.10.28: In a tf_port_item, it shall be illegal to omit the explicit
       // port_identifier except within a function_prototype or task_prototype.
-      seq($.data_type_or_implicit, optional($.port_identifier)),
-      $.port_identifier,
+      seq($.data_type_or_implicit, optional(field('name', $.port_identifier))),
+      field('name', $.port_identifier),
     ),
     repeat($._variable_dimension),
     optseq('=', $.expression)
