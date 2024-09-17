@@ -8,7 +8,7 @@ Full SystemVerilog IEEE 1800-2023 grammar for [tree-sitter](https://github.com/t
 
 ## Pros ##
 - Full implementation of the latest SystemVerilog standard (IEEE 1800-2023)
-- Robust and reliable
+- Robust and reliable: [sv-tests results](https://chipsalliance.github.io/sv-tests-results/)
 - Actively maintained
 - Thoroughly tested (~2000 tests, including the whole UVM 2.0 and some open source projects)
 - Implements node fields
