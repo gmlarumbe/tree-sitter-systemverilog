@@ -4240,6 +4240,8 @@ const rules = {
     '"""',
     repeat(choice(
       $._triple_quoted_string_item,
+      token(prec(1, seq('"', /[^"]/))),
+      token(prec(1, seq('""', /[^"]/))),
       $._string_escape_seq
     )),
     '"""'
@@ -4247,7 +4249,7 @@ const rules = {
 
   _quoted_string_item: $ => token.immediate(prec(1, /[^\\"\n]+/)), // any_ASCII_character except \ or newline or "
 
-  _triple_quoted_string_item: $ => token.immediate(prec(1, /[^\\]+/)), //  any_ASCII_character except \
+  _triple_quoted_string_item: $ => token.immediate(prec(1, /[^\\"]+/)), //  any_ASCII_character except \
 
   _string_escape_seq: $ => token(prec(1, seq(
     '\\',
