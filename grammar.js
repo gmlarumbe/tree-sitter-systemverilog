@@ -3087,7 +3087,7 @@ const rules = {
     seq('input', optional($.clocking_skew)),
     seq('output', optional($.clocking_skew)),
     seq('input', optional($.clocking_skew), 'output', optional($.clocking_skew)),
-    seq('inout')
+    'inout'
   ),
 
   list_of_clocking_decl_assign: $ => commaSep1($.clocking_decl_assign),
