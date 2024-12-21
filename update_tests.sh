@@ -145,7 +145,7 @@ echo ""
 
 if [[ -n "$TREE_SITTER_TEST" ]]; then
     echo "Running tree-sitter tests..."
-    tree-sitter test -f "$PATTERN" > test.log
+    tree-sitter test -i "$PATTERN" > test.log
     RC=$?
     if [[ $RC != 0 ]]; then
         echo "Some tests failed!!"
