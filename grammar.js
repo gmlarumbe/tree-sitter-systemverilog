@@ -488,6 +488,7 @@ const rules = {
   list_of_port_declarations: $ => seq(
     '(',
     commaSep(seq(
+      optional($.conditional_compilation_directive), // New option, Out of LRM
       repeat($.attribute_instance),
       $.ansi_port_declaration)
     ),
