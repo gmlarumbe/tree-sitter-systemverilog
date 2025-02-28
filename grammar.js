@@ -4234,8 +4234,8 @@ const rules = {
   quoted_string: $ => seq(
     '"',
     repeat(choice(
-      $._quoted_string_item,
-      $._string_escape_seq
+      $.quoted_string_item,
+      $.string_escape_seq
     )),
     '"'
   ),
@@ -4243,19 +4243,19 @@ const rules = {
   triple_quoted_string: $ => seq(
     '"""',
     repeat(choice(
-      $._triple_quoted_string_item,
+      $.triple_quoted_string_item,
       token(prec(1, seq('"', /[^"]/))),
       token(prec(1, seq('""', /[^"]/))),
-      $._string_escape_seq
+      $.string_escape_seq
     )),
     '"""'
   ),
 
-  _quoted_string_item: $ => token.immediate(prec(1, /[^\\"\n]+/)), // any_ASCII_character except \ or newline or "
+  quoted_string_item: $ => token.immediate(prec(1, /[^\\"\n]+/)), // any_ASCII_character except \ or newline or "
 
-  _triple_quoted_string_item: $ => token.immediate(prec(1, /[^\\"]+/)), //  any_ASCII_character except \
+  triple_quoted_string_item: $ => token.immediate(prec(1, /[^\\"]+/)), //  any_ASCII_character except \
 
-  _string_escape_seq: $ => token(prec(1, seq(
+  string_escape_seq: $ => token(prec(1, seq(
     '\\',
     choice(
       /[^x0-7]/,           // \any_ASCII_character (exclude 'x' and '0-7' since those would be matched by following cases)
@@ -4643,7 +4643,7 @@ const rules = {
   line_compiler_directive: $ => seq(
     directive('line'),
     $.unsigned_number,
-    alias($.quoted_string, $.filename),
+    $.quoted_string,
     alias(token(/[0-2]/), $.level),
     token.immediate(/\r?\n/),
   ),
