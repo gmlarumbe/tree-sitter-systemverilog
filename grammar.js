@@ -253,7 +253,7 @@ const rules = {
 
   include_statement: $ => seq('include', $.file_path_spec, ';'),
 
-  file_path_spec: $ => /[^ ;\n]+/, // Do not allow whitespaces on filenames
+  file_path_spec: $ => /[^ ;\n]+/, // Do not allow whitespaces on library filenames
 
 
 // ** A.1.2 SystemVerilog source text
@@ -832,7 +832,7 @@ const rules = {
       repeat($.class_item_qualifier),
       $.data_type,
       $.const_identifier,
-      optseq('=', $.constant_expression),
+      optseq('=', choice($.constant_expression, $.class_new)), // $.class_new out of LRM but added to be consistent with non-const data declarations
       ';'
     )
   )),
@@ -1474,11 +1474,8 @@ const rules = {
   ),
 
   class_new: $ => choice(
-    // TODO: Removing dynamic precedences results in detection of other rules where new is
-    // not treated as a kewyord but as a hierarchical identifier. This could probably be
-    // solved better after fixing some conflicts with precedences
-    prec.dynamic(1, seq(optional($.class_scope), 'new', optseq('(', optional($.list_of_arguments), ')'))),
-    prec.dynamic(0, seq('new', $.expression))
+    seq(optional($.class_scope), 'new', optseq('(', optional($.list_of_arguments), ')')),
+    seq('new', $.expression)
   ),
 
   dynamic_array_new: $ => seq('new', '[', $.expression, ']', optseq('(', $.expression, ')')),
@@ -3698,6 +3695,7 @@ const rules = {
   _built_in_method_call: $ => choice(
     $.array_manipulation_call,
     $.randomize_call,
+    $.new_method_call,                       // Out of LRM, mostly for super.new()
     $.string_method_call,                    // Out of LRM
     $.enum_method_call,                      // Out of LRM
     $.associative_array_method_call,         // Out of LRM
@@ -3705,6 +3703,11 @@ const rules = {
     $.enum_or_associative_array_method_call, // Out of LRM
     $.array_or_queue_method_call,            // Out of LRM
   ),
+
+  new_method_call: $ => prec.right(seq(
+    'new',
+    optseq('(', optional($.list_of_arguments), ')'),
+  )),
 
   array_manipulation_call: $ => prec.right(seq(
     $.array_method_name,
@@ -4630,7 +4633,10 @@ const rules = {
     $._identifier,
   ),
 
-  pragma_keyword: $ => $.simple_identifier,
+  pragma_keyword: $ => choice(
+    $.simple_identifier,
+    'end' // Out of LRM, needed for 'pragma protect end' since end is a reserved keyword
+  ),
 
 
 // ** 22-12 `line

@@ -1,2 +1,2 @@
-include rtlLib *.v;
-include gateLib ./\*.vg;
+include *.v;
+include ./\*.vg;

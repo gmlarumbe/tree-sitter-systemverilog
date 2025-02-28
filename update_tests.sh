@@ -26,6 +26,7 @@ FILES_SV=( $( cd $TEST_DIR && find * -type f -name "*.sv" -o -name "*.svh" -o -n
 EXPECTED_FAIL_FILELIST=(core/subroutines/call_method_cond_expr_rhs_assignment_ERROR.sv
                         core/subroutines/randomize_cond_expr_rhs_assignment_ERROR.sv
                         sv-tests/chapter-5/5.6--wrong-identifiers.sv
+                        sv-tests/chapter-5/5.6.4--compiler-directives-begin-keywords.sv
                         sv-tests/chapter-5/5.7.1--integers-signed-illegal.sv
                         sv-tests/chapter-5/5.7.1--integers-unsized-illegal.sv
                         sv-tests/chapter-5/5.7.2-real-constants-illegal.sv
@@ -45,6 +46,7 @@ EXPECTED_FAIL_FILELIST=(core/subroutines/call_method_cond_expr_rhs_assignment_ER
                         sv-tests/sanity.sv
                         doulos/69.2_name.sv
                         doulos/73.3_number.sv
+                        doulos/116.1_begin_keywords.sv
                        )
 
 # Excluded tests
@@ -63,8 +65,8 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    # reg_field has an embedded text_macro_usage inside a $.hex_number
                    uvm/1800.2-2020-2.0/src/reg/uvm_reg_field.svh
                    # Doulos reference examples
-                   doulos/117.1_\`define.sv
-                   doulos/117.2_\`define.sv
+                   doulos/117.1_define.sv
+                   doulos/117.2_define.sv
                    doulos/11.1_bind_\(operator_overload\).sv # Deprecated in 1800-2017
                    doulos/135.5_sequence.sv                  # Multiclock assertion with syntax errors
                    doulos/135.5_sequence.sv                  # Multiclock assertion with syntax errors
@@ -124,7 +126,7 @@ process_file(){
             # Remove last file line before formatting
             sed -i '$ d' $DEST_FILE
             # Set new last file line without statistics
-            LAST_FILE_LINE=$(echo $LAST_FILE_LINE | cut -d " " -f 6-)
+            LAST_FILE_LINE=$(echo $LAST_FILE_LINE | cut -d " " -f 7-)
             echo "" >> $DEST_FILE
             echo "$LAST_FILE_LINE" >> $DEST_FILE
         fi

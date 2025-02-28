@@ -3,7 +3,7 @@
 logic [7:0] Byte7_to_0;
 logic [0:7] Byte0_to_7;
 
-module foo;
+module foo (shift, operand, result);
 input [4:0] shift;
 input [31:0] operand;
 output [7:0] result;
