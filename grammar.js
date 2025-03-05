@@ -3957,7 +3957,7 @@ const rules = {
 
   primary: $ => prec('primary', choice(
     $.primary_literal,
-    choice(
+    prec.dynamic(1, choice(
       seq(
         optchoice($.class_qualifier, $.package_scope),
         $.hierarchical_identifier,
@@ -3968,11 +3968,11 @@ const rules = {
       // the option below fixes things and seems to work well (at the expense of maybe
       // some more complexity in the parser)
       seq($.implicit_class_handle, optional($.select)), // Out of LRM, but used as a workaround
-    ),
+    )),
     $.empty_unpacked_array_concatenation,
     seq($.concatenation, optseq('[', $.range_expression, ']')),
     seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
-    prec.dynamic(-99, $.function_subroutine_call), // Avoid giving precedence to nested method_call instead of to hierarchical_identifier
+    prec.dynamic(-1, $.function_subroutine_call), // Avoid giving precedence to nested method_call instead of to hierarchical_identifier
     // $.let_expression,  // No need to add since its syntax is the same as a tf_call/subroutine_call (true ambiguity that adds conflicts)
     seq('(', $.mintypmax_expression, ')'),
     $.cast,
