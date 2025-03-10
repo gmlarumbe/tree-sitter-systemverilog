@@ -1,0 +1,172 @@
+============================================
+core/cast/static_5
+============================================
+
+initial begin
+    typedef struct {
+        bit isfloat;
+        union { int i; shortreal f; } n; // anonymous type
+    } tagged_st;                         // named structure
+
+    typedef bit [$bits(tagged_st) - 1 : 0] tagbits; // tagged_st defined above
+
+    tagged_st a [7:0]; // unpacked array of structures
+
+    tagbits t = tagbits'(a[3]); // convert structure to array of bits
+    a[4] = tagged_st'(t); // convert array of bits back to structure
+end
+
+----
+
+(source_file
+  (initial_construct
+    (statement_or_null
+      (statement
+        (statement_item
+          (seq_block
+            (block_item_declaration
+              (data_declaration
+                (type_declaration
+                  (data_type
+                    (struct_union)
+                    (struct_union_member
+                      (data_type_or_void
+                        (data_type
+                          (integer_vector_type)))
+                      (list_of_variable_decl_assignments
+                        (variable_decl_assignment
+                          name: (simple_identifier))))
+                    (struct_union_member
+                      (data_type_or_void
+                        (data_type
+                          (struct_union)
+                          (struct_union_member
+                            (data_type_or_void
+                              (data_type
+                                (integer_atom_type)))
+                            (list_of_variable_decl_assignments
+                              (variable_decl_assignment
+                                name: (simple_identifier))))
+                          (struct_union_member
+                            (data_type_or_void
+                              (data_type
+                                (non_integer_type)))
+                            (list_of_variable_decl_assignments
+                              (variable_decl_assignment
+                                name: (simple_identifier))))))
+                      (list_of_variable_decl_assignments
+                        (variable_decl_assignment
+                          name: (simple_identifier))))
+                    (comment))
+                  type_name: (simple_identifier))))
+            (comment)
+            (block_item_declaration
+              (data_declaration
+                (type_declaration
+                  (data_type
+                    (integer_vector_type)
+                    (packed_dimension
+                      (constant_range
+                        (constant_expression
+                          left: (constant_expression
+                            (constant_primary
+                              (constant_function_call
+                                (function_subroutine_call
+                                  (subroutine_call
+                                    (system_tf_call
+                                      (system_tf_identifier)
+                                      (list_of_arguments
+                                        (expression
+                                          (primary
+                                            (hierarchical_identifier
+                                              (simple_identifier)))))))))))
+                          right: (constant_expression
+                            (constant_primary
+                              (primary_literal
+                                (integral_number
+                                  (decimal_number
+                                    (unsigned_number)))))))
+                        (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))))
+                  type_name: (simple_identifier))))
+            (comment)
+            (block_item_declaration
+              (data_declaration
+                (data_type_or_implicit
+                  (data_type
+                    (simple_identifier)))
+                (list_of_variable_decl_assignments
+                  (variable_decl_assignment
+                    name: (simple_identifier)
+                    (unpacked_dimension
+                      (constant_range
+                        (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number))))))
+                        (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number))))))))))))
+            (comment)
+            (block_item_declaration
+              (data_declaration
+                (data_type_or_implicit
+                  (data_type
+                    (simple_identifier)))
+                (list_of_variable_decl_assignments
+                  (variable_decl_assignment
+                    name: (simple_identifier)
+                    (expression
+                      (primary
+                        (cast
+                          (casting_type
+                            (simple_identifier))
+                          (expression
+                            (primary
+                              (hierarchical_identifier
+                                (simple_identifier))
+                              (select
+                                (bit_select
+                                  (expression
+                                    (primary
+                                      (primary_literal
+                                        (integral_number
+                                          (decimal_number
+                                            (unsigned_number)))))))))))))))))
+            (comment)
+            (statement_or_null
+              (statement
+                (statement_item
+                  (blocking_assignment
+                    (operator_assignment
+                      (variable_lvalue
+                        (hierarchical_identifier
+                          (simple_identifier))
+                        (select
+                          (bit_select
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (decimal_number
+                                      (unsigned_number)))))))))
+                      (assignment_operator)
+                      (expression
+                        (primary
+                          (cast
+                            (casting_type
+                              (simple_identifier))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))
+            (comment)))))))

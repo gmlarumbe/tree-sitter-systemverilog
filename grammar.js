@@ -1164,11 +1164,12 @@ const rules = {
 
 // ** A.2.2 Declaration data types
 // *** A.2.2.1 Net and variable types
-  // $.constant_mintypmax_expression and $.type_reference replace the $.constant_primary
+  // $.integral_number, $.constant_mintypmax_expression and $.type_reference replace the $.constant_primary
   // branch, as these are the only possible options of $.constant_primary in a static cast.
   // A.10.45: It shall be legal to use a type_reference constant_primary as the casting_type in a static cast.
   casting_type: $ => choice(
     $._simple_type,
+    $.integral_number,                              // $.constant_primary branch
     seq('(', $.constant_mintypmax_expression, ')'), // $.constant_primary branch
     $.type_reference,                               // $.constant_primary branch
     $._signing,
