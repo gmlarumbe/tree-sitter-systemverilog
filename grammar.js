@@ -3668,7 +3668,7 @@ const rules = {
   )),
 
   subroutine_call: $ => choice(
-    prec.dynamic(-1, $.tf_call), // Give $.method_call higher priority
+    prec.dynamic(-2, $.tf_call), // Give $.method_call higher priority
     $.system_tf_call,
     $.method_call,
     seq(optseq('std', '::'), $.randomize_call),
@@ -3929,11 +3929,11 @@ const rules = {
   // could match the same $._identifier
   constant_primary: $ => prec('constant_primary', choice(
     $.primary_literal,
-    seq($.ps_parameter_identifier, optional($.constant_select)),
+    prec.dynamic(-2, seq($.ps_parameter_identifier, optional($.constant_select))),
     // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')), // TODO:
-    $.genvar_identifier,
-    seq($.formal_port_identifier, optional($.constant_select)),
-    seq(optchoice($.package_scope, $.class_scope), $.enum_identifier),
+    // $.genvar_identifier,
+    // seq($.formal_port_identifier, optional($.constant_select)),
+    // seq(optchoice($.package_scope, $.class_scope), $.enum_identifier),
     $.empty_unpacked_array_concatenation,
     seq($.constant_concatenation, optseq('[', $._constant_range_expression, ']')),
     seq($.constant_multiple_concatenation, optseq('[', $._constant_range_expression, ']')),
@@ -3958,7 +3958,7 @@ const rules = {
 
   primary: $ => prec('primary', choice(
     $.primary_literal,
-    prec.dynamic(1, choice(
+    choice(
       seq(
         optchoice($.class_qualifier, $.package_scope),
         $.hierarchical_identifier,
@@ -3969,11 +3969,11 @@ const rules = {
       // the option below fixes things and seems to work well (at the expense of maybe
       // some more complexity in the parser)
       seq($.implicit_class_handle, optional($.select)), // Out of LRM, but used as a workaround
-    )),
+    ),
     $.empty_unpacked_array_concatenation,
     seq($.concatenation, optseq('[', $.range_expression, ']')),
     seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
-    prec.dynamic(-1, $.function_subroutine_call), // Avoid giving precedence to nested method_call instead of to hierarchical_identifier
+    $.function_subroutine_call,
     // $.let_expression,  // No need to add since its syntax is the same as a tf_call/subroutine_call (true ambiguity that adds conflicts)
     seq('(', $.mintypmax_expression, ')'),
     $.cast,
