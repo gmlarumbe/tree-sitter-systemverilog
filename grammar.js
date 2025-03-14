@@ -4097,7 +4097,8 @@ const rules = {
     ),
     seq('{', commaSep1($.variable_lvalue), '}'),
     seq(optional($._assignment_pattern_expression_type), $.assignment_pattern_variable_lvalue),
-    $.streaming_concatenation
+    $.streaming_concatenation,
+    $.text_macro_usage // Out of LRM
   )),
 
   nonrange_variable_lvalue: $ => seq(
@@ -6108,6 +6109,11 @@ module.exports = grammar({
     // Allow constraint blocks on text_macro_usage
     [$.constraint_block, $.empty_unpacked_array_concatenation],
 
+
+    // Allow text_macro_usage on LHS of blocking and non-blocking assignments (on $.variable_lvalue)
+    [$.variable_lvalue, $._directives],
+    [$.expression, $.variable_lvalue],
+    [$.constant_expression, $.expression, $.variable_lvalue],
   ],
 
 });
