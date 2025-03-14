@@ -1454,7 +1454,12 @@ const rules = {
 
   type_assignment: $ => seq(
     field('name', $.type_identifier),
-    optseq('=', field('value', $._data_type_or_incomplete_class_scoped_type))
+    optseq('=',
+      field('value', choice(
+        $._data_type_or_incomplete_class_scoped_type,
+        $.text_macro_usage, // Out of LRM
+      ))
+    )
   ),
 
   variable_decl_assignment: $ => choice(
