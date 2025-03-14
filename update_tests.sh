@@ -47,6 +47,7 @@ EXPECTED_FAIL_FILELIST=(core/subroutines/call_method_cond_expr_rhs_assignment_ER
                         doulos/69.2_name.sv
                         doulos/73.3_number.sv
                         doulos/116.1_begin_keywords.sv
+
                        )
 
 # Excluded tests
@@ -83,6 +84,53 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    doulos/61.2_let.sv # Complex let construct, macro-like (come back if integrating $.let_expression with dynamic precedence)
                    # Attribute
                    doulos/8.3_attribute.sv # TODO: This one should actually work but it doesn't for some reason (doesn't detect it as a tf_call)
+                   # Conditional directives
+                   cv6/SyncDpRam.sv
+                   cv6/SyncSpRam.sv
+                   cv6/SyncSpRamBeNx32.sv
+                   cv6/SyncSpRamBeNx64.sv
+                   cv6/SyncTpRam.sv
+                   cv6/ariane_xilinx.sv
+                   cv6/riscv_core_setting.sv
+                   # Include file for enum elements
+                   cv6/riscv_custom_instr_enum.sv
+                   # Usage of keyword as function arg
+                   cv6/cva6_tb_wrapper.sv
+                   cv6/tb_dcache_pkg.sv
+                   # TODO:
+                   cv6/ariane.sv             # text_macro_usage on RHS of localparam type
+                   cv6/ariane_gate_tb.sv     # text_macro_usage on RHS of localparam type and text_macro_usage on LHS of Blocking Assignment
+                   cv6/ariane_regfile.sv     # Issue with nested indexes
+                   cv6/ariane_tb.sv          # text_macro_usage on RHS of localparam type Issue with nested indexes
+                   cv6/ariane_testharness.sv # text_macro_usage on RHS of localparam type
+                   cv6/csr_regfile.sv        # Static cast to class_type
+                   cv6/cva6.sv               # Same as previous ones?
+                   cv6/cva6_altera.sv        # text_macro_usage on RHS of localparam type
+                   cv6/cva6_icache_axi_wrapper.sv # Static cast to class_type
+                   cv6/cva6_instr_sequence.sv     # Colon on macro arg
+                   cv6/cva6_load_store_instr_lib.sv # Colon on macro arg
+                   cv6/cva6_mmu.sv                  # Static cast to class_type
+                   cv6/cva6_ptw.sv                  # Static cast to class_type
+                   cv6/cva6_reg_hazard_stream.sv    # if inside text_macro_arg
+                   cv6/cva6_rvfi.sv                 # static cast to class type, some issues with macros
+                   cv6/cva6_tlb.sv                  # Static cast class type
+                   cv6/issue_read_operands.sv       # Not sure, a bit complex
+                   cv6/load_store_unit.sv           # Static cast
+                   cv6/pmp_data_if.sv               # Static cast
+                   cv6/tb_div.sv                       # Void'(randomize(signal)) issue
+                   cv6/tb_rem.sv                       # Void'(randomize(signal)) issue
+                   cv6/tb_udiv.sv                       # Void'(randomize(signal)) issue
+                   cv6/tb_urem.sv                       # Void'(randomize(signal)) issue
+                   cv6/uvma_interrupt_seq.sv            # Various, use of automatic in external task, dot element for time delay
+                   cv6/uvme_cvxif_covg.sv               # text_macro_usage on coverage
+                   cv6/uvme_cvxif_vseq.sv               # Issue with indexes and parenthesis
+                   cv6/uvme_exception_covg.sv # ifdef/ifndef inside a covergroup? Or on an include file?
+                   cv6/uvme_isa_covg.sv          # coverage with cond compilation directives
+                   cv6/uvmt_cva6_tb.sv           # RHS parameter type text macro
+                   cv6/wt_axi_adapter.sv         # Static index plus indexes issues
+                   # TODO:
+                   cv6/sram.sv  # MISSING "always", but it's a generate!
+                   cv6/uvma_cva6_core_cntrl_cntxt.sv # MISSING "end" due to pragma protects wrong detection
                   )
 
 # Filter tests, if there was an argument provided
