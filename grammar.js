@@ -1174,7 +1174,8 @@ const rules = {
     $.type_reference,                               // $.constant_primary branch
     $._signing,
     'string',
-    'const'
+    'const',
+    $.hierarchical_identifier, // Out of LRM but supported by most tools
   ),
 
   data_type: $ => prec('data_type', choice(
@@ -5469,6 +5470,14 @@ module.exports = grammar({
     ['select_expression', 'constant_primary'],
     ['select_expression', 'hierarchical_identifier'],
     ['select_expression', 'tf_call'],
+
+
+    // Out of LRM support for hierarchical identifiers in static casting
+    //
+    //   _identifier  •  '''  …
+    //   1:  (_simple_type  _identifier)  •  '''  …             (precedence: '_simple_type')
+    //   2:  (hierarchical_identifier  _identifier)  •  '''  …  (precedence: 'hierarchical_identifier')
+    ['_simple_type', 'hierarchical_identifier'],
 
 
     // Leave these two standalone to avoid having to replicate code with function 'list_of_args'
