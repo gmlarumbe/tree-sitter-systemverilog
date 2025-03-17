@@ -1950,7 +1950,10 @@ const rules = {
     repeat($.attribute_instance),
     choice(
       $._coverage_spec,
-      seq($.coverage_option, ';')
+      seq($.coverage_option, ';'),
+      $.include_compiler_directive,        // Out of LRM
+      $.conditional_compilation_directive, // Out of LRM
+      $.text_macro_usage,                  // Out of LRM
     ),
   ),
 
