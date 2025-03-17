@@ -1,0 +1,765 @@
+============================================
+cva6/custom_uvm_macros
+============================================
+
+`ifndef __CUSTOM_UVM_MACROS_SV__
+`define __CUSTOM_UVM_MACROS_SV__
+
+
+`ifdef UVM_REPORT_DISABLE_FILE
+`define uvm_file ""
+`else
+`define uvm_file `__FILE__
+`endif
+
+`ifdef UVM_REPORT_DISABLE_LINE
+`define uvm_line 0
+`else
+`define uvm_line `__LINE__
+`endif
+
+typedef enum
+{
+      UVM_NONE   = 0,
+      UVM_LOW    = 100,
+      UVM_MEDIUM = 200,
+      UVM_HIGH   = 300,
+      UVM_FULL   = 400,
+      UVM_DEBUG  = 500
+} uvm_verbosity;
+
+`define uvm_info(TOP, MSG, LVL) \
+    begin \
+        uvm_report_info(TOP, MSG, LVL, `uvm_file, `uvm_line); \
+    end
+
+`define uvm_warning(TOP, MSG, LVL) \
+    begin \
+        uvm_report_warning(TOP, MSG, LVL, `uvm_file, `uvm_line); \
+    end
+
+`define uvm_error(TOP, MSG) \
+    begin \
+        uvm_report_error(TOP, MSG, UVM_NONE, `uvm_file, `uvm_line); \
+    end
+`define uvm_fatal(TOP, MSG) \
+    begin \
+        uvm_report_fatal(TOP, MSG, UVM_NONE, `uvm_file, `uvm_line); \
+    end
+
+static longint sim_errors = 0;
+parameter max_errors = 5;
+
+static uvm_verbosity current_verbosity_level = UVM_LOW;
+
+int string_to_verbosity_level [string] = '{
+    "UVM_NONE"   : 0,
+    "UVM_LOW"    : 100,
+    "UVM_MEDIUM" : 200,
+    "UVM_HIGH"   : 300,
+    "UVM_FULL"   : 400,
+    "UVM_DEBUG"  : 500 };
+
+function void uvm_set_verbosity_level(string verbosity);
+    $cast(current_verbosity_level,string_to_verbosity_level[verbosity]);
+
+endfunction
+
+function void uvm_report_info(string id,
+                  string message,
+                  int verbosity = UVM_MEDIUM,
+                  string filename = "",
+                  int line = 0);
+        if (verbosity <= current_verbosity_level)
+            $display($sformatf("UVM_INFO  @ %t ns : %s %s", $time, id, message));
+endfunction
+
+
+function void uvm_report_warning(string id,
+                                 string message,
+                                 int verbosity = UVM_MEDIUM,
+                                 string filename = "",
+                                 int line = 0);
+    $display($sformatf("UVM_WARNING @ %t ns : %s %s", $time, id , message));
+endfunction
+
+
+function void uvm_report_error(string id,
+                               string message,
+                               int verbosity = UVM_LOW,
+                   string filename = "",
+                   int line = 0);
+    $display($sformatf("UVM_ERROR @ %t ns : %s %s", $time, id , message));
+    sim_errors += 1;
+    if (sim_errors >= max_errors) begin
+        $fatal();
+    end
+
+endfunction
+
+function void uvm_report_fatal(string id,
+                           string message,
+                               int verbosity = UVM_NONE,
+                   string filename = "",
+                   int line = 0);
+    $display($sformatf("UVM_FATAL @ %t ns : %s %s", $time, id , message));
+    $fatal();
+endfunction
+
+`endif
+
+----
+
+(source_file
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier)))
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier))
+    (macro_text))
+  (conditional_compilation_directive)
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier))
+    (macro_text))
+  (conditional_compilation_directive)
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier))
+    (macro_text))
+  (conditional_compilation_directive)
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier))
+    (macro_text))
+  (conditional_compilation_directive)
+  (data_declaration
+    (type_declaration
+      (data_type
+        (enum_name_declaration
+          (simple_identifier)
+          (constant_expression
+            (constant_primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))
+        (enum_name_declaration
+          (simple_identifier)
+          (constant_expression
+            (constant_primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))
+        (enum_name_declaration
+          (simple_identifier)
+          (constant_expression
+            (constant_primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))
+        (enum_name_declaration
+          (simple_identifier)
+          (constant_expression
+            (constant_primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))
+        (enum_name_declaration
+          (simple_identifier)
+          (constant_expression
+            (constant_primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))
+        (enum_name_declaration
+          (simple_identifier)
+          (constant_expression
+            (constant_primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number))))))))
+      type_name: (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier)
+      (list_of_formal_arguments
+        (formal_argument
+          (simple_identifier))
+        (formal_argument
+          (simple_identifier))
+        (formal_argument
+          (simple_identifier))))
+    (macro_text))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier)
+      (list_of_formal_arguments
+        (formal_argument
+          (simple_identifier))
+        (formal_argument
+          (simple_identifier))
+        (formal_argument
+          (simple_identifier))))
+    (macro_text))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier)
+      (list_of_formal_arguments
+        (formal_argument
+          (simple_identifier))
+        (formal_argument
+          (simple_identifier))))
+    (macro_text))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier)
+      (list_of_formal_arguments
+        (formal_argument
+          (simple_identifier))
+        (formal_argument
+          (simple_identifier))))
+    (macro_text))
+  (data_declaration
+    (lifetime)
+    (data_type_or_implicit
+      (data_type
+        (integer_atom_type)))
+    (list_of_variable_decl_assignments
+      (variable_decl_assignment
+        name: (simple_identifier)
+        (expression
+          (primary
+            (primary_literal
+              (integral_number
+                (decimal_number
+                  (unsigned_number)))))))))
+  (parameter_declaration
+    (list_of_param_assignments
+      (param_assignment
+        (simple_identifier)
+        (constant_param_expression
+          (constant_mintypmax_expression
+            (constant_expression
+              (constant_primary
+                (primary_literal
+                  (integral_number
+                    (decimal_number
+                      (unsigned_number)))))))))))
+  (data_declaration
+    (lifetime)
+    (data_type_or_implicit
+      (data_type
+        (simple_identifier)))
+    (list_of_variable_decl_assignments
+      (variable_decl_assignment
+        name: (simple_identifier)
+        (expression
+          (primary
+            (hierarchical_identifier
+              (simple_identifier)))))))
+  (data_declaration
+    (data_type_or_implicit
+      (data_type
+        (integer_atom_type)))
+    (list_of_variable_decl_assignments
+      (variable_decl_assignment
+        name: (simple_identifier)
+        (associative_dimension
+          (data_type))
+        (expression
+          (primary
+            (assignment_pattern_expression
+              (assignment_pattern
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (string_literal
+                        (quoted_string
+                          (quoted_string_item))))))
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (string_literal
+                        (quoted_string
+                          (quoted_string_item))))))
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (string_literal
+                        (quoted_string
+                          (quoted_string_item))))))
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (string_literal
+                        (quoted_string
+                          (quoted_string_item))))))
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (string_literal
+                        (quoted_string
+                          (quoted_string_item))))))
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (string_literal
+                        (quoted_string
+                          (quoted_string_item))))))
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))))))))
+  (function_declaration
+    (function_body_declaration
+      (data_type_or_void)
+      name: (simple_identifier)
+      (tf_port_list
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier)))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (subroutine_call_statement
+                (subroutine_call
+                  (system_tf_call
+                    (system_tf_identifier)
+                    (list_of_arguments
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier))))
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier))
+                          (select
+                            (bit_select
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier))))))))))))))))))
+  (function_declaration
+    (function_body_declaration
+      (data_type_or_void)
+      name: (simple_identifier)
+      (tf_port_list
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type
+              (integer_atom_type)))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (string_literal
+                  (quoted_string))))))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type
+              (integer_atom_type)))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number))))))))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (conditional_statement
+                (cond_predicate
+                  (expression
+                    left: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))
+                    right: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))))
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (subroutine_call
+                          (system_tf_call
+                            (system_tf_identifier)
+                            (list_of_arguments
+                              (expression
+                                (primary
+                                  (function_subroutine_call
+                                    (subroutine_call
+                                      (system_tf_call
+                                        (system_tf_identifier)
+                                        (list_of_arguments
+                                          (expression
+                                            (primary
+                                              (primary_literal
+                                                (string_literal
+                                                  (quoted_string
+                                                    (quoted_string_item))))))
+                                          (expression
+                                            (primary
+                                              (function_subroutine_call
+                                                (subroutine_call
+                                                  (system_tf_call
+                                                    (system_tf_identifier))))))
+                                          (expression
+                                            (primary
+                                              (hierarchical_identifier
+                                                (simple_identifier))))
+                                          (expression
+                                            (primary
+                                              (hierarchical_identifier
+                                                (simple_identifier))))))))))))))))))))))))
+  (function_declaration
+    (function_body_declaration
+      (data_type_or_void)
+      name: (simple_identifier)
+      (tf_port_list
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type
+              (integer_atom_type)))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (string_literal
+                  (quoted_string))))))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type
+              (integer_atom_type)))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number))))))))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (subroutine_call_statement
+                (subroutine_call
+                  (system_tf_call
+                    (system_tf_identifier)
+                    (list_of_arguments
+                      (expression
+                        (primary
+                          (function_subroutine_call
+                            (subroutine_call
+                              (system_tf_call
+                                (system_tf_identifier)
+                                (list_of_arguments
+                                  (expression
+                                    (primary
+                                      (primary_literal
+                                        (string_literal
+                                          (quoted_string
+                                            (quoted_string_item))))))
+                                  (expression
+                                    (primary
+                                      (function_subroutine_call
+                                        (subroutine_call
+                                          (system_tf_call
+                                            (system_tf_identifier))))))
+                                  (expression
+                                    (primary
+                                      (hierarchical_identifier
+                                        (simple_identifier))))
+                                  (expression
+                                    (primary
+                                      (hierarchical_identifier
+                                        (simple_identifier))))))))))))))))))))
+  (function_declaration
+    (function_body_declaration
+      (data_type_or_void)
+      name: (simple_identifier)
+      (tf_port_list
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type
+              (integer_atom_type)))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (string_literal
+                  (quoted_string))))))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type
+              (integer_atom_type)))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number))))))))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (subroutine_call_statement
+                (subroutine_call
+                  (system_tf_call
+                    (system_tf_identifier)
+                    (list_of_arguments
+                      (expression
+                        (primary
+                          (function_subroutine_call
+                            (subroutine_call
+                              (system_tf_call
+                                (system_tf_identifier)
+                                (list_of_arguments
+                                  (expression
+                                    (primary
+                                      (primary_literal
+                                        (string_literal
+                                          (quoted_string
+                                            (quoted_string_item))))))
+                                  (expression
+                                    (primary
+                                      (function_subroutine_call
+                                        (subroutine_call
+                                          (system_tf_call
+                                            (system_tf_identifier))))))
+                                  (expression
+                                    (primary
+                                      (hierarchical_identifier
+                                        (simple_identifier))))
+                                  (expression
+                                    (primary
+                                      (hierarchical_identifier
+                                        (simple_identifier))))))))))))))))))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (blocking_assignment
+                (operator_assignment
+                  (variable_lvalue
+                    (hierarchical_identifier
+                      (simple_identifier)))
+                  (assignment_operator)
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number))))))))))))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (conditional_statement
+                (cond_predicate
+                  (expression
+                    left: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))
+                    right: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))))
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (seq_block
+                        (statement_or_null
+                          (statement
+                            (statement_item
+                              (subroutine_call_statement
+                                (severity_system_task))))))))))))))))
+  (function_declaration
+    (function_body_declaration
+      (data_type_or_void)
+      name: (simple_identifier)
+      (tf_port_list
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type
+              (integer_atom_type)))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (string_literal
+                  (quoted_string))))))
+        (tf_port_item
+          (data_type_or_implicit
+            (data_type
+              (integer_atom_type)))
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number))))))))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (subroutine_call_statement
+                (subroutine_call
+                  (system_tf_call
+                    (system_tf_identifier)
+                    (list_of_arguments
+                      (expression
+                        (primary
+                          (function_subroutine_call
+                            (subroutine_call
+                              (system_tf_call
+                                (system_tf_identifier)
+                                (list_of_arguments
+                                  (expression
+                                    (primary
+                                      (primary_literal
+                                        (string_literal
+                                          (quoted_string
+                                            (quoted_string_item))))))
+                                  (expression
+                                    (primary
+                                      (function_subroutine_call
+                                        (subroutine_call
+                                          (system_tf_call
+                                            (system_tf_identifier))))))
+                                  (expression
+                                    (primary
+                                      (hierarchical_identifier
+                                        (simple_identifier))))
+                                  (expression
+                                    (primary
+                                      (hierarchical_identifier
+                                        (simple_identifier))))))))))))))))))
+      (function_statement_or_null
+        (function_statement
+          (statement
+            (statement_item
+              (subroutine_call_statement
+                (severity_system_task))))))))
+  (conditional_compilation_directive))

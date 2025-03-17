@@ -83,6 +83,39 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    doulos/61.2_let.sv # Complex let construct, macro-like (come back if integrating $.let_expression with dynamic precedence)
                    # Attribute
                    doulos/8.3_attribute.sv # TODO: This one should actually work but it doesn't for some reason (doesn't detect it as a tf_call)
+                   # Conditional directives
+                   cva6/SyncDpRam.sv
+                   cva6/SyncSpRam.sv
+                   cva6/SyncSpRamBeNx32.sv
+                   cva6/SyncSpRamBeNx64.sv
+                   cva6/SyncTpRam.sv
+                   cva6/ariane_xilinx.sv
+                   cva6/riscv_core_setting.sv
+                   # Include file for enum elements
+                   cva6/riscv_custom_instr_enum.sv
+                   # Usage of keyword as function arg
+                   cva6/cva6_tb_wrapper.sv
+                   cva6/tb_dcache_pkg.sv
+                   # Complex macros (WITH, COMMA)
+                   cva6/cva6_rvfi.sv
+                   cva6/uvme_cvxif_covg.sv
+                   cva6/uvme_isa_covg.sv
+                   # TODO:
+                   cva6/tb_mem.sv # Issue with nested indexes (fixed in dev)
+                   cva6/ariane_regfile.sv # Issue with nested indexes
+                   cva6/issue_read_operands.sv # Not sure, a bit complex
+                   cva6/tb_div.sv  # for snippet detected as for generate
+                   cva6/tb_rem.sv  # for snippet detected as for generate
+                   cva6/tb_udiv.sv # for snippet detected as for generate
+                   cva6/tb_urem.sv # for snippet detected as for generate
+                   cva6/uvma_interrupt_seq.sv # Various, use of automatic in external task, dot element for time delay
+                   cva6/uvme_cvxif_vseq.sv    # Issue with indexes and parenthesis
+                   cva6/wt_axi_adapter.sv     # Indexes issues
+                   cva6/sram.sv                       # MISSING "always", but it's a generate!
+                   cva6/uvma_cva6_core_cntrl_cntxt.sv # MISSING "end" due to pragma protects wrong detection
+                   # TODO:
+                   github/issue_18.sv
+                   github/issue_18_b.sv
                   )
 
 # Filter tests, if there was an argument provided
