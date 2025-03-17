@@ -210,10 +210,6 @@ function paren_expr(expr) {
   ));
 }
 
-function directive(command) {
-  return alias(new RegExp('`' + command), 'directive_' + command);
-}
-
 
 /*
     Verilog parser grammar based on IEEE Std 1800-2023.
@@ -4492,7 +4488,7 @@ const rules = {
 
 
 // ** 22-3 `resetall
-  resetall_compiler_directive: $ => directive('resetall'),
+  resetall_compiler_directive: $ => alias('`resetall', 'directive_resetall'),
 
 
 // ** 22-4 `include
@@ -4503,7 +4499,7 @@ const rules = {
   )),
 
   include_compiler_directive: $ => seq(
-    directive('include'),
+    alias('`include', 'directive_include'),
     choice(
       $.quoted_string,
       $.system_lib_string,
@@ -4520,7 +4516,7 @@ const rules = {
   macro_text: $ => token(prec(-1, /(\\(.|\r?\n)|[^\\\n])*/)),
 
   text_macro_definition: $ => seq(
-    directive('define'),
+    alias('`define', 'directive_define'),
     $.text_macro_name,
     optional($.macro_text),
     token.immediate(/\r?\n/),
@@ -4534,15 +4530,15 @@ const rules = {
   list_of_formal_arguments: $ => commaSep1($.formal_argument),
 
   formal_argument: $ => seq(
-    reserved('macros', $.simple_identifier),
-    optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, reserved('macros', $.simple_identifier))),
+    reserved('macro_args', $.simple_identifier),
+    optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, reserved('macro_args', $.simple_identifier))),
   ),
 
   text_macro_identifier: $ => $._identifier,
 
   text_macro_usage: $ => prec.right(seq(
-    '`',
-    $.text_macro_identifier,
+    // Slightly out of LRM to ease support for reserved identifiers (other directives) on macro usage
+    alias(reserved('macro_identifier', token(/`[a-zA-Z_][a-zA-Z0-9_$]*/)), $.text_macro_usage_identifier),
     optseq('(', optional($.list_of_actual_arguments), ')')
   )),
 
@@ -4556,23 +4552,23 @@ const rules = {
     ';'
   ),
 
-  undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
+  undefine_compiler_directive: $ => seq(alias('`undef', 'directive_undef'), $.text_macro_identifier),
 
-  undefineall_compiler_directive: $ => directive('undefineall'),
+  undefineall_compiler_directive: $ => alias('`undefineall', 'directive_undefineall'),
 
 
 // ** 22.6 `ifdef, `else, `elsif, `endif, `ifndef
   // Modified with respect to LRM: do not parse preprocessed code
   conditional_compilation_directive: $ => choice(
     seq($._ifdef_or_ifndef, $.ifdef_condition),
-    seq(directive('elsif'), $.ifdef_condition),
-    directive('else'),
-    directive('endif')
+    seq(alias('`elsif', 'directive_elsif'), $.ifdef_condition),
+    alias('`else', 'directive_else'),
+    alias('`endif', 'directive_endif')
   ),
 
   _ifdef_or_ifndef: $ => choice(
-    directive('ifdef'),
-    directive('ifndef')
+    alias('`ifdef', 'directive_ifdef'),
+    alias('`ifndef', 'directive_ifndef')
   ),
 
   ifdef_condition: $ => choice(
@@ -4592,7 +4588,7 @@ const rules = {
 
 // ** 22-7 timescale
   timescale_compiler_directive: $ => seq(
-    directive('timescale'),
+    alias('`timescale', 'directive_timescale'),
     $.time_literal, // time_unit,
     '/',
     $.time_literal, // time_precision
@@ -4601,7 +4597,7 @@ const rules = {
 
 // ** 22-8 default_nettype
   default_nettype_compiler_directive: $ => seq(
-    directive('default_nettype'),
+    alias('`default_nettype', 'directive_default_nettype'),
     $.default_nettype_value,
     token.immediate(/\r?\n/),
   ),
@@ -4611,21 +4607,21 @@ const rules = {
 
 // ** 22-9
   unconnected_drive_compiler_directive: $ => seq(
-    directive('unconnected_drive'),
+    alias('`unconnected_drive', 'directive_unconnected_drive'),
     choice('pull0', 'pull1'),
     token.immediate(/\r?\n/),
   ),
 
 
 // ** 22.10 `celldefine and `endcelldefine
-  celldefine_compiler_directive: $ => directive('celldefine'),
+  celldefine_compiler_directive: $ => alias('`celldefine', 'directive_celldefine'),
 
-  endcelldefine_compiler_directive: $ => directive('endcelldefine'),
+  endcelldefine_compiler_directive: $ => alias('`endcelldefine', 'directive_endcelldefine'),
 
 
 // ** 22.11 `pragma
   pragma: $ => prec.right(seq(
-    directive('pragma'),
+    alias('`pragma', 'directive_pragma'),
     $.pragma_name,
     commaSep($.pragma_expression),
   )),
@@ -4653,7 +4649,7 @@ const rules = {
 
 // ** 22-12 `line
   line_compiler_directive: $ => seq(
-    directive('line'),
+    alias('`line', 'directive_line'),
     $.unsigned_number,
     $.quoted_string,
     alias(token(/[0-2]/), $.level),
@@ -4662,14 +4658,14 @@ const rules = {
 
 // ** 22.13 `__FILE__ and `__LINE__
   file_or_line_compiler_directive: $ => choice(
-    directive('__FILE__'),
-    directive('__LINE__'),
+    alias('`__FILE__', 'directive___FILE__', ),
+    alias('`__LINE__', 'directive___LINE__', ),
   ),
 
 
 // ** 22.14 `begin_keywords, `end_keywords
   keywords_directive: $ => seq(
-    directive('begin_keywords'),
+    alias('`begin_keywords', 'directive_begin_keywords'),
     '\"',
     $.version_specifier,
     '\"',
@@ -4687,9 +4683,10 @@ const rules = {
     '1364-1995',
   ),
 
-  endkeywords_directive: $ => directive('end_keywords'),
+  endkeywords_directive: $ => alias('`end_keywords', 'directive_end_keywords'),
 
 };
+
 
 
 // * Tree-sitter
@@ -4744,7 +4741,15 @@ module.exports = grammar({
       'xnor', 'xor',
     ],
 
-    macros: $ => [],
+    macro_args: $ => [],
+
+    macro_identifier: $ => [
+      '`__FILE__', '`__LINE__', '`begin_keywords', '`celldefine',
+      '`default_nettype', '`define', '`else', '`elsif', '`end_keywords',
+      '`endcelldefine', '`endif', '`ifdef', '`ifndef', '`include', '`line',
+      '`pragma', '`resetall', '`timescale', '`unconnected_drive', '`undef',
+      '`undefineall',
+    ],
   },
 
 // ** Inline
