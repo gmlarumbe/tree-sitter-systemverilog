@@ -13781,6 +13781,18 @@
                   "value": ";"
                 }
               ]
+            },
+            {
+              "type": "SYMBOL",
+              "name": "include_compiler_directive"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "conditional_compilation_directive"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "text_macro_usage"
             }
           ]
         }
@@ -34750,12 +34762,26 @@
       ]
     },
     "default_text": {
-      "type": "PATTERN",
-      "value": "\\w+"
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": -1,
+        "content": {
+          "type": "PATTERN",
+          "value": "[^,\\\\\\n\\)]+"
+        }
+      }
     },
     "macro_text": {
-      "type": "PATTERN",
-      "value": "(\\\\(.|\\r?\\n)|[^\\\\\\n])*"
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": -1,
+        "content": {
+          "type": "PATTERN",
+          "value": "(\\\\(.|\\r?\\n)|[^\\\\\\n])*"
+        }
+      }
     },
     "text_macro_definition": {
       "type": "SEQ",
@@ -34808,8 +34834,11 @@
               "type": "SEQ",
               "members": [
                 {
-                  "type": "STRING",
-                  "value": "("
+                  "type": "IMMEDIATE_TOKEN",
+                  "content": {
+                    "type": "STRING",
+                    "value": "("
+                  }
                 },
                 {
                   "type": "SYMBOL",
@@ -34857,8 +34886,12 @@
       "type": "SEQ",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "simple_identifier"
+          "type": "RESERVED",
+          "content": {
+            "type": "SYMBOL",
+            "name": "simple_identifier"
+          },
+          "context_name": "macros"
         },
         {
           "type": "CHOICE",
@@ -34871,8 +34904,41 @@
                   "value": "="
                 },
                 {
-                  "type": "SYMBOL",
-                  "name": "default_text"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "default_text"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "string_literal"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "tf_call"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "text_macro_usage"
+                        },
+                        {
+                          "type": "RESERVED",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "simple_identifier"
+                          },
+                          "context_name": "macros"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
                 }
               ]
             },
@@ -35274,6 +35340,34 @@
         {
           "type": "SYMBOL",
           "name": "constraint_block"
+        },
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "constraint_block_item"
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "STRING",
+                    "value": ";"
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ";"
         }
       ]
     },
@@ -36849,6 +36943,10 @@
       "constant_expression",
       "expression",
       "variable_lvalue"
+    ],
+    [
+      "_identifier",
+      "formal_argument"
     ]
   ],
   "precedences": [
@@ -38878,6 +38976,7 @@
         "type": "STRING",
         "value": "xor"
       }
-    ]
+    ],
+    "macros": []
   }
 }
