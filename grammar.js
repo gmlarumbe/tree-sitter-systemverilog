@@ -4551,7 +4551,9 @@ const rules = {
   actual_argument: $ => choice(
     // Out of LRM, needed to support parameterized data types and constraints as macro args (common in the UVM)
     $.param_expression, // e.g: `uvm_component_utils_param
-    $.constraint_block  // e.g: `uvm_do_with
+    $.constraint_block, // e.g: `uvm_do_with
+    repseq1($.constraint_block_item, optional(';')),
+    ';'
   ),
 
   undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
