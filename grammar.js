@@ -4513,9 +4513,11 @@ const rules = {
 
 
 // ** 22.5 `define, `undef, and `undefineall
-  default_text: $ => /\w+/,
+  // Slightly out of LRM to allow basic parsing of preprocessor defines (i.e. macro formal arguments)
 
-  macro_text: $ => /(\\(.|\r?\n)|[^\\\n])*/,
+  default_text: $ => token(prec(-1, /[^,\\\n\)]+/)),
+
+  macro_text: $ => token(prec(-1, /(\\(.|\r?\n)|[^\\\n])*/)),
 
   text_macro_definition: $ => seq(
     directive('define'),
@@ -4526,14 +4528,14 @@ const rules = {
 
   text_macro_name: $ => seq(
     $.text_macro_identifier,
-    optseq('(', $.list_of_formal_arguments, ')')
+    optseq(token.immediate('('), $.list_of_formal_arguments, ')')
   ),
 
   list_of_formal_arguments: $ => commaSep1($.formal_argument),
 
   formal_argument: $ => seq(
-    $.simple_identifier,
-    optseq('=', $.default_text)
+    reserved('macros', $.simple_identifier),
+    optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, reserved('macros', $.simple_identifier))),
   ),
 
   text_macro_identifier: $ => $._identifier,
@@ -4739,6 +4741,8 @@ module.exports = grammar({
       'weak0', 'weak1', 'while', 'wildcard', 'wire', 'with', 'within', 'wor',
       'xnor', 'xor',
     ],
+
+    macros: $ => [],
   },
 
 // ** Inline
@@ -6114,6 +6118,10 @@ module.exports = grammar({
     [$.variable_lvalue, $._directives],
     [$.expression, $.variable_lvalue],
     [$.constant_expression, $.expression, $.variable_lvalue],
+
+
+    // Fix macro arguments parsing
+    [$._identifier, $.formal_argument],
   ],
 
 });
