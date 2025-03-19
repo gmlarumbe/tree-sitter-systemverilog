@@ -1,8 +1,15 @@
+/**
+ * @file SystemVerilog 1800-2023 Parser
+ * @author Gonzalo M. Larumbe <gonzalomlarumbe@gmail.com>
+ * @license MIT
+ */
+
 /* eslint-disable arrow-parens */
 /* eslint-disable camelcase */
 /* eslint-disable-next-line spaced-comment */
 /* eslint-disable-no-undef */
 /* eslint-disable-no-unused-vars */
+
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
 
@@ -215,9 +222,11 @@ function directive(command) {
 }
 
 
-/*
-    Verilog parser grammar based on IEEE Std 1800-2023.
-*/
+/**
+ *
+ * SystemVerilog parser grammar based on IEEE Std 1800-2023.
+ *
+ */
 
 const rules = {
 
@@ -4698,7 +4707,7 @@ const rules = {
 // * Tree-sitter
 // ** Module exports
 module.exports = grammar({
-  name: 'verilog',
+  name: 'systemverilog',
   word: $ => $.simple_identifier,
   rules: rules,
   extras: $ => [/\s/, $.comment],
