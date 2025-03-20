@@ -4707,7 +4707,7 @@ const rules = {
 // * Tree-sitter
 // ** Module exports
 module.exports = grammar({
-  name: 'systemverilog',
+  name: 'verilog',
   word: $ => $.simple_identifier,
   rules: rules,
   extras: $ => [/\s/, $.comment],
