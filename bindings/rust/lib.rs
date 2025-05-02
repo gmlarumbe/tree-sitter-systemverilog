@@ -21,13 +21,13 @@
 use tree_sitter_language::LanguageFn;
 
 extern "C" {
-    fn tree_sitter_systemverilog() -> *const ();
+    fn tree_sitter_verilog() -> *const ();
 }
 
 /// The tree-sitter [`LanguageFn`][LanguageFn] for this grammar.
 ///
 /// [LanguageFn]: https://docs.rs/tree-sitter-language/*/tree_sitter_language/struct.LanguageFn.html
-pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_systemverilog) };
+pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_verilog) };
 
 /// The content of the [`node-types.json`][] file for this grammar.
 ///
