@@ -282,6 +282,7 @@ const rules = {
     $.module_keyword,
     optional($.lifetime),
     field('name', $.module_identifier),
+    repeat(choice($.conditional_compilation_directive, $.package_import_declaration)), // New option, Out of LRM
     repeat($.package_import_declaration),
     optional($.parameter_port_list)
   ),
@@ -6142,6 +6143,10 @@ module.exports = grammar({
 
     // Fix macro arguments parsing
     [$._identifier, $.formal_argument],
+
+
+    // Support for `ifdefs in module header package import section
+    [$._module_header],
   ],
 
 });
