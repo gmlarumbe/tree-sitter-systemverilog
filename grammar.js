@@ -486,7 +486,8 @@ const rules = {
   ),
 
   parameter_port_declaration: $ => choice(
-    $.any_parameter_declaration,
+    alias($._local_parameter_declaration_no_semicolon, $.local_parameter_declaration),
+    alias($._parameter_declaration_no_semicolon, $.parameter_declaration),
     seq($.data_type, $.list_of_param_assignments),
     $.type_parameter_declaration,
   ),
@@ -671,7 +672,7 @@ const rules = {
 // ** A.1.5 Configuration source text
   config_declaration: $ => seq(
     'config', field('name', $.config_identifier), ';',
-    repseq($.local_parameter_declaration, ';'),
+    repeat($.local_parameter_declaration),
     $.design_statement,
     repeat($.config_rule_statement),
     enclosing('endconfig', $.config_identifier)
@@ -829,7 +830,8 @@ const rules = {
       $.interface_class_declaration,
       $.covergroup_declaration,
     )),
-    seq($.any_parameter_declaration, ';'),
+    $.local_parameter_declaration,
+    $.parameter_declaration,
     ';',
     $._directives, // Out of LRM
   ),
@@ -880,7 +882,8 @@ const rules = {
   interface_class_item: $ => choice(
     $.type_declaration,
     seq(repeat($.attribute_instance), $.interface_class_method),
-    seq($.any_parameter_declaration, ';'),
+    $.local_parameter_declaration,
+    $.parameter_declaration,
     ';'
   ),
 
@@ -1012,7 +1015,8 @@ const rules = {
     $.class_declaration,
     $.interface_class_declaration,
     $.class_constructor_declaration,
-    seq($.any_parameter_declaration, ';'),
+    $.local_parameter_declaration,
+    $.parameter_declaration,
     $.covergroup_declaration,
     $._assertion_item_declaration,
     ';',
@@ -1036,23 +1040,25 @@ const rules = {
 // * A.2 Declarations
 // ** A.2.1 Declaration types
 // *** A.2.1.1 Module parameter declarations
-  local_parameter_declaration: $ => seq(
+  _local_parameter_declaration_no_semicolon: $ => seq(
     'localparam',
     choice(
       seq(optional($.data_type_or_implicit), $.list_of_param_assignments),
       $.type_parameter_declaration,
     )),
 
-  parameter_declaration: $ => seq(
+  _parameter_declaration_no_semicolon: $ => seq(
     'parameter',
     choice(
       seq(optional($.data_type_or_implicit), $.list_of_param_assignments),
       $.type_parameter_declaration,
     )),
 
-  type_parameter_declaration: $ => seq('type', optional($._forward_type), $.list_of_type_assignments),
+  local_parameter_declaration: $ => seq($._local_parameter_declaration_no_semicolon, ';'),
 
-  any_parameter_declaration: $ => choice($.local_parameter_declaration, $.parameter_declaration),
+  parameter_declaration: $ => seq($._parameter_declaration_no_semicolon, ';'),
+
+  type_parameter_declaration: $ => seq('type', optional($._forward_type), $.list_of_type_assignments),
 
   specparam_declaration: $ => seq('specparam', optional($.packed_dimension), $.list_of_specparam_assignments, ';'),
 
@@ -1663,7 +1669,8 @@ const rules = {
     repeat($.attribute_instance),
     choice(
       $.data_declaration,
-      seq($.any_parameter_declaration, ';'),
+      $.local_parameter_declaration,
+      $.parameter_declaration,
       $.let_declaration
     )
   ),
@@ -4764,7 +4771,6 @@ module.exports = grammar({
     $.snippets,
 
     $.var_data_type,
-    $.any_parameter_declaration,
     $.elaboration_severity_system_task,
     $.attr_name,
 
