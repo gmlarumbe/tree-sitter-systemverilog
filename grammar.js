@@ -3963,7 +3963,7 @@ const rules = {
     $.empty_unpacked_array_concatenation,
     seq($.constant_concatenation, optseq('[', $._constant_range_expression, ']')),
     seq($.constant_multiple_concatenation, optseq('[', $._constant_range_expression, ']')),
-    seq($.constant_function_call, optseq('[', $._constant_range_expression, ']')),
+    $.constant_function_call, // Out of LRM: original was 'seq($.constant_function_call, optseq('[', $._constant_range_expression, ']'))'
     // $._constant_let_expression, // No need to add since it's syntax is the same as a tf_call/constant_function_call (true ambiguity that adds conflicts)
     seq('(', $.constant_mintypmax_expression, ')'),
     $.constant_cast,
@@ -5979,7 +5979,6 @@ module.exports = grammar({
     [$.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.tf_call, $.constant_primary],
     [$.data_type, $.class_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
-    [$.data_type, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.data_type, $.class_type, $.tf_call, $.constant_primary],
 
 
@@ -6147,6 +6146,12 @@ module.exports = grammar({
 
     // Support for `ifdefs in module header package import section
     [$._module_header],
+
+
+    // Remove 'optseq('[', $._constant_range_expression, ']'))' from $.constant_function_call in $.constant_primary
+    [$.constant_primary, $.hierarchical_identifier],
+    [$.constant_primary, $.net_lvalue, $.hierarchical_identifier],
+    [$.data_type, $.constant_primary, $.hierarchical_identifier],
   ],
 
 });

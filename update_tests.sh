@@ -102,7 +102,7 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    cva6/uvme_isa_covg.sv
                    # TODO:
                    cva6/tb_mem.sv # Issue with nested indexes (fixed in dev)
-                   cva6/ariane_regfile.sv # Issue with nested indexes
+                   # cva6/ariane_regfile.sv # Issue with nested indexes
                    cva6/issue_read_operands.sv # Not sure, a bit complex
                    cva6/tb_div.sv  # for snippet detected as for generate
                    cva6/tb_rem.sv  # for snippet detected as for generate
@@ -111,11 +111,11 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    cva6/uvma_interrupt_seq.sv # Various, use of automatic in external task, dot element for time delay
                    cva6/uvme_cvxif_vseq.sv    # Issue with indexes and parenthesis
                    cva6/wt_axi_adapter.sv     # Indexes issues
+                   # TODO: No errors but missing something with tree-sitter parse/test
                    cva6/sram.sv                       # MISSING "always", but it's a generate!
                    cva6/uvma_cva6_core_cntrl_cntxt.sv # MISSING "end" due to pragma protects wrong detection
                    # TODO:
                    github/issue_18.sv
-                   github/issue_18_b.sv
                   )
 
 # Filter tests, if there was an argument provided
