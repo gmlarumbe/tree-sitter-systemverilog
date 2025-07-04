@@ -1,0 +1,76 @@
+name: CI-Bindings
+
+on:
+  push:
+  pull_request:
+    paths:
+      - grammar.js
+      - src/**
+      - test/**
+      - bindings/**
+      - binding.gyp
+
+concurrency:
+  group: ${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test bindings
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+          abi_version: [14, 15]
+
+    env:
+      TREE_SITTER_ABI_VERSION: ${{ matrix.abi_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up tree-sitter
+        uses: tree-sitter/setup-action/cli@v1
+
+      - name: Install dependencies
+        run: npm ci --omit dev --omit peer --omit optional
+
+      - name: Python binding
+        uses: tree-sitter/parser-test-action@v2
+        with:
+          test-python: true
+
+      - name: Other bindings
+        uses: tree-sitter/parser-test-action@v2
+        with:
+          test-rust: true
+          test-go: true
+          # INFO: With tree-sitter 0.25.6 Swift bindings did not work
+          # test-swift: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: npm
+          node-version: latest
+          cache-dependency-path: package-lock.json
+
+      - name: Build module
+        shell: sh
+        run: npm install
+
+      - name: list module
+        shell: sh
+        run: npm list
+
+      - name: Run tests
+        shell: sh
+        run: node --test bindings/node/*_test.js
+
+      - name: Generate parser
+        run: |
+          tree-sitter generate --abi=${{ matrix.abi_version }}
+          [[ ! -d node_modules ]] || rm -rf node_modules
