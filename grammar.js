@@ -3838,7 +3838,9 @@ const rules = {
     seq($.variable_lvalue, repeat($.attribute_instance), $.inc_or_dec_operator)
   )),
 
-  conditional_expression: $ => conditional_expr($, $.cond_predicate, $.expression),
+  // INFO: $.cond_predicate already includes $.expression as a choice, but right associativity
+  //       will not be preserved if there are intermediate nodes between $.expression
+  conditional_expression: $ => conditional_expr($, choice($.cond_predicate, $.expression), $.expression),
 
   constant_expression: $ => choice(
     $.constant_primary,
