@@ -3753,14 +3753,9 @@ const rules = {
 
   identifier_list: $ => commaSep1($._identifier),
 
-  // TODO: Modified with respect to LRM:
-  // The $.implicit_class_handle should be matched by $.primary second
-  // condition. However there must be some precedences that prevent this from
-  // being detected. This workaround might complicate a bit more the parser but
-  // seems to work well.
   _method_call_root: $ => choice(
     $.primary,
-    prec.dynamic(2, seq($.implicit_class_handle, optional($.select))), // optional($.select) out of LRM
+    $.implicit_class_handle,
     $.class_type,       // Out of LRM: Added to support calling parameterized static methods
     $.text_macro_usage, // Out of LRM, Added to fix parsing errors in UVM
   ),
