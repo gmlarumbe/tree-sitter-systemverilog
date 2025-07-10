@@ -3716,7 +3716,7 @@ const rules = {
       repeat($.attribute_instance),
       field('arguments', optseq('(', optional($.list_of_arguments), ')'))
     ),
-    $._built_in_method_call
+    prec.dynamic(1, $._built_in_method_call)
   )),
 
   _built_in_method_call: $ => choice(
