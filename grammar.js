@@ -3694,7 +3694,7 @@ const rules = {
   )),
 
   subroutine_call: $ => choice(
-    prec.dynamic(-1, $.tf_call), // Give $.method_call higher priority
+    $.tf_call,
     $.system_tf_call,
     $.method_call,
     seq(optseq('std', '::'), $.randomize_call),
