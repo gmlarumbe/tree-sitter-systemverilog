@@ -112,7 +112,7 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    cva6/uvma_cva6_core_cntrl_cntxt.sv # MISSING "end" due to pragma protects wrong detection
                    # TODO:
                    core/bit_select/complex_4.sv
-                   github/issue_32.sv
+                   github/issue_34.sv
                   )
 
 # Filter tests, if there was an argument provided

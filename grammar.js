@@ -3962,7 +3962,7 @@ const rules = {
     seq($.constant_multiple_concatenation, optseq('[', $._constant_range_expression, ']')),
     $.constant_function_call, // Out of LRM: original was 'seq($.constant_function_call, optseq('[', $._constant_range_expression, ']'))'
     // $._constant_let_expression, // No need to add since it's syntax is the same as a tf_call/constant_function_call (true ambiguity that adds conflicts)
-    seq('(', $.constant_mintypmax_expression, ')'),
+    paren_expr($.constant_mintypmax_expression),
     $.constant_cast,
     $._constant_assignment_pattern_expression,
     $.type_reference,
@@ -3998,7 +3998,7 @@ const rules = {
     seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
     $.function_subroutine_call,
     // $.let_expression,  // No need to add since its syntax is the same as a tf_call/subroutine_call (true ambiguity that adds conflicts)
-    seq('(', $.mintypmax_expression, ')'),
+    paren_expr($.mintypmax_expression),
     $.cast,
     $.assignment_pattern_expression,
     $.streaming_concatenation,
@@ -6105,7 +6105,6 @@ module.exports = grammar({
     [$.module_path_primary, $.primary_literal],
     [$.tf_call, $.constant_primary, $.module_path_primary, $.hierarchical_identifier],
     [$.module_path_primary, $.primary],
-    [$.casting_type, $.path_delay_expression, $.constant_primary],
     [$.full_path_description, $.full_edge_sensitive_path_description],
     [$.parallel_path_description, $.parallel_edge_sensitive_path_description],
     [$.scalar_timing_check_condition, $.mintypmax_expression],
