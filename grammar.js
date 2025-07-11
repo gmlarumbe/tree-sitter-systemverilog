@@ -2603,8 +2603,7 @@ const rules = {
 
 // ** A.5.4 UDP instantiation
   udp_instantiation: $ => seq(
-    // field('instance_type', $.udp_identifier), // TODO: For some reason results in parse errors with tree-sitter 0.22.6, in core/instantiation/user_defined_primitives
-    $.udp_identifier,
+    field('instance_type', $.udp_identifier),
     optional($.drive_strength),
     optional($.delay2),
     prec.dynamic(-1, commaSep1($.udp_instance)), // Give $.hierarchical_instance and $.module_instantiation higher priority
@@ -4002,7 +4001,7 @@ const rules = {
     $.cast,
     $.assignment_pattern_expression,
     $.streaming_concatenation,
-    // $.sequence_method_call, // TODO: Remove temporarily to narrow conflicts
+    // $.sequence_method_call, //  Remove to narrow conflicts
     'this',
     '$',
     'null',
