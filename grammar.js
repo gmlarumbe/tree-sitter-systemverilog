@@ -3694,7 +3694,7 @@ const rules = {
   )),
 
   subroutine_call: $ => choice(
-    prec.dynamic(-1, $.tf_call), // Give $.method_call higher priority
+    $.tf_call,
     $.system_tf_call,
     $.method_call,
     seq(optseq('std', '::'), $.randomize_call),
@@ -3716,7 +3716,7 @@ const rules = {
       repeat($.attribute_instance),
       field('arguments', optseq('(', optional($.list_of_arguments), ')'))
     ),
-    $._built_in_method_call
+    prec.dynamic(1, $._built_in_method_call)
   )),
 
   _built_in_method_call: $ => choice(
@@ -3753,14 +3753,9 @@ const rules = {
 
   identifier_list: $ => commaSep1($._identifier),
 
-  // TODO: Modified with respect to LRM:
-  // The $.implicit_class_handle should be matched by $.primary second
-  // condition. However there must be some precedences that prevent this from
-  // being detected. This workaround might complicate a bit more the parser but
-  // seems to work well.
   _method_call_root: $ => choice(
     $.primary,
-    prec.dynamic(2, seq($.implicit_class_handle, optional($.select))), // optional($.select) out of LRM
+    $.implicit_class_handle,
     $.class_type,       // Out of LRM: Added to support calling parameterized static methods
     $.text_macro_usage, // Out of LRM, Added to fix parsing errors in UVM
   ),
@@ -3958,16 +3953,16 @@ const rules = {
   constant_primary: $ => prec('constant_primary', choice(
     $.primary_literal,
     seq($.ps_parameter_identifier, optional($.constant_select)),
-    // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')), // TODO:
-    $.genvar_identifier,
-    seq($.formal_port_identifier, optional($.constant_select)),
-    seq(optchoice($.package_scope, $.class_scope), $.enum_identifier),
+    // seq($.specparam_identifier, optseq('[', $._constant_range_expression, ']')),
+    // $.genvar_identifier,
+    // seq($.formal_port_identifier, optional($.constant_select)),
+    // seq(optchoice($.package_scope, $.class_scope), $.enum_identifier),
     $.empty_unpacked_array_concatenation,
     seq($.constant_concatenation, optseq('[', $._constant_range_expression, ']')),
     seq($.constant_multiple_concatenation, optseq('[', $._constant_range_expression, ']')),
     $.constant_function_call, // Out of LRM: original was 'seq($.constant_function_call, optseq('[', $._constant_range_expression, ']'))'
     // $._constant_let_expression, // No need to add since it's syntax is the same as a tf_call/constant_function_call (true ambiguity that adds conflicts)
-    seq('(', $.constant_mintypmax_expression, ')'),
+    paren_expr($.constant_mintypmax_expression),
     $.constant_cast,
     $._constant_assignment_pattern_expression,
     $.type_reference,
@@ -3986,7 +3981,7 @@ const rules = {
 
   primary: $ => prec('primary', choice(
     $.primary_literal,
-    prec.dynamic(1, choice(
+    choice(
       seq(
         optchoice($.class_qualifier, $.package_scope),
         $.hierarchical_identifier,
@@ -3997,13 +3992,13 @@ const rules = {
       // the option below fixes things and seems to work well (at the expense of maybe
       // some more complexity in the parser)
       seq($.implicit_class_handle, optional($.select)), // Out of LRM, but used as a workaround
-    )),
+    ),
     $.empty_unpacked_array_concatenation,
     seq($.concatenation, optseq('[', $.range_expression, ']')),
     seq($.multiple_concatenation, optseq('[', $.range_expression, ']')),
-    prec.dynamic(-1, $.function_subroutine_call), // Avoid giving precedence to nested method_call instead of to hierarchical_identifier
+    $.function_subroutine_call,
     // $.let_expression,  // No need to add since its syntax is the same as a tf_call/subroutine_call (true ambiguity that adds conflicts)
-    seq('(', $.mintypmax_expression, ')'),
+    paren_expr($.mintypmax_expression),
     $.cast,
     $.assignment_pattern_expression,
     $.streaming_concatenation,
@@ -6110,7 +6105,6 @@ module.exports = grammar({
     [$.module_path_primary, $.primary_literal],
     [$.tf_call, $.constant_primary, $.module_path_primary, $.hierarchical_identifier],
     [$.module_path_primary, $.primary],
-    [$.casting_type, $.path_delay_expression, $.constant_primary],
     [$.full_path_description, $.full_edge_sensitive_path_description],
     [$.parallel_path_description, $.parallel_edge_sensitive_path_description],
     [$.scalar_timing_check_condition, $.mintypmax_expression],
