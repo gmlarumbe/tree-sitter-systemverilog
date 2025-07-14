@@ -3754,7 +3754,7 @@ const rules = {
 
   _method_call_root: $ => choice(
     $.primary,
-    $.implicit_class_handle,
+    prec.dynamic(1, $.implicit_class_handle), // 'this' also belongs to $.primary. Setting this prec allows detecting 'this' as something different as a regular identifier
     $.class_type,       // Out of LRM: Added to support calling parameterized static methods
     $.text_macro_usage, // Out of LRM, Added to fix parsing errors in UVM
   ),
