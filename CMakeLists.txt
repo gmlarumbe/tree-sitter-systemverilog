@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
 project(tree-sitter-systemverilog
-        VERSION "0.1.1"
+        VERSION "0.2.0"
         DESCRIPTION "SystemVerilog 1800-2023 Parser"
         HOMEPAGE_URL "https://github.com/gmlarumbe/tree-sitter-systemverilog"
         LANGUAGES C)
