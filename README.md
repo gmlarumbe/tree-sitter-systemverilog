@@ -1,4 +1,5 @@
 [![CI](https://github.com/gmlarumbe/tree-sitter-systemverilog/actions/workflows/ci.yml/badge.svg)](https://github.com/gmlarumbe/tree-sitter-systemverilog/actions/workflows/ci.yml)
+[![CI-Bindings](https://github.com/gmlarumbe/tree-sitter-systemverilog/actions/workflows/ci_bind.yml/badge.svg)](https://github.com/gmlarumbe/tree-sitter-systemverilog/actions/workflows/ci_bind.yml)
 
 # tree-sitter-systemverilog
 
