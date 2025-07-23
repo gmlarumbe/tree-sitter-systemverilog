@@ -2829,8 +2829,8 @@ const rules = {
 // ** A.6.6 Conditional statements
   conditional_statement: $ => prec.right(seq(
     optional($.unique_priority),
-    'if', '(', $.cond_predicate, ')', $.statement_or_null,
-    repseq('else', 'if', '(', $.cond_predicate, ')', $.statement_or_null),
+    'if', '(', $.cond_predicate, ')', $.statement_or_null, optional($.conditional_compilation_directive),                 // $.conditional_compilation_directive out of LRM
+    repseq('else', 'if', '(', $.cond_predicate, ')', $.statement_or_null, optional($.conditional_compilation_directive)), // $.conditional_compilation_directive out of LRM
     optseq('else', $.statement_or_null)
   )),
 
@@ -2874,7 +2874,8 @@ const rules = {
 
   case_item: $ => choice(
     seq(commaSep1($.case_item_expression), ':', $.statement_or_null),
-    seq('default', optional(':'), $.statement_or_null)
+    seq('default', optional(':'), $.statement_or_null),
+    $.conditional_compilation_directive, // Out of LRM
   ),
 
   case_pattern_item: $ => choice(
