@@ -11,15 +11,23 @@ Full SystemVerilog IEEE 1800-2023 grammar for [tree-sitter](https://github.com/t
 - Full implementation of the latest SystemVerilog standard (IEEE 1800-2023)
 - Robust and reliable: [sv-tests results](https://chipsalliance.github.io/sv-tests-results/)
 - Actively maintained
-- Thoroughly tested (~2000 tests, including the whole UVM 2.0 and some open source projects)
 - Implements node fields
 - Supports parsing of code snippets (e.g., always block outside of a module)
 - Basic preprocessing capabilities
-- Currently used on Emacs `verilog-ts-mode` and `nvim systemverilog` plugin
+- Thoroughly tested (2300+ tests) including:
+  - [UVM 2.0](https://www.accellera.org/downloads/standards/uvm)
+  - [sv-tests](https://github.com/chipsalliance/sv-tests)
+  - [cva6](https://github.com/openhwgroup/cva6)
+  - [pulp_axi](https://github.com/pulp-platform/axi)
+  - [ucontroller](https://github.com/gmlarumbe/ucontroller)
+- Currently used by:
+  - Emacs [`verilog-ts-mode`](https://github.com/gmlarumbe/verilog-ts-mode)
+  - [`nvim systemverilog`](https://github.com/nvim-treesitter/nvim-treesitter) plugin
+  - [mergiraf](https://mergiraf.org/)
 
 ## Cons
-- Generated parser is double the size
-  - Generation of the compiled grammar takes longer (this only needs to be done once)
+- Generated parser size is larger (~60MB vs ~45MB)
+  - Generation of the compiled grammar takes longer (only needs to be done once)
 
 ## References
 
