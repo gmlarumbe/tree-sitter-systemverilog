@@ -4305,17 +4305,15 @@ const rules = {
   // block_comment: $ => /* comment_text */
   // comment_text: $ => { Any_ASCII_character }
 
+  one_line_comment: $ => token(seq('//', /.*/)),
+
   // http://stackoverflow.com/questions/13014947/regex-to-match-a-c-style-multiline-comment/36328890#36328890
   // from: https://github.com/tree-sitter/tree-sitter-c/blob/master/grammar.js
-  comment: $ => token(choice(
-    seq('//', /.*/), // $._one_line_comment -> seq('//', $.comment_text)
-    seq(             // $._block_comment
-      '/*',
-      /[^*]*\*+([^/*][^*]*\*+)*/,
-      '/'
-    )
+  block_comment: $ => token(seq(
+    '/*',
+    /[^*]*\*+([^/*][^*]*\*+)*/,
+    '/'
   )),
-
 
 // ** A.9.3 Identifiers
   array_identifier: $ => $._identifier, // Seems unused
@@ -4715,7 +4713,7 @@ module.exports = grammar({
   name: 'systemverilog',
   word: $ => $.simple_identifier,
   rules: rules,
-  extras: $ => [/\s/, $.comment],
+  extras: $ => [/\s/, $.one_line_comment, $.block_comment],
 
   // Annex B
   reserved: {
@@ -6151,4 +6149,3 @@ module.exports = grammar({
   ],
 
 });
-
