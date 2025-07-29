@@ -14,11 +14,12 @@ Full SystemVerilog IEEE 1800-2023 grammar for [tree-sitter](https://github.com/t
 - Implements node fields
 - Supports parsing of code snippets (e.g., always block outside of a module)
 - Basic preprocessing capabilities
-- Thoroughly tested (2300+ tests) including:
+- Thoroughly tested (~3000 tests) including:
   - [UVM 2.0](https://www.accellera.org/downloads/standards/uvm)
   - [sv-tests](https://github.com/chipsalliance/sv-tests)
   - [cva6](https://github.com/openhwgroup/cva6)
   - [pulp_axi](https://github.com/pulp-platform/axi)
+  - [basejump_stl](https://github.com/bespoke-silicon-group/basejump_stl)
   - [ucontroller](https://github.com/gmlarumbe/ucontroller)
 - Currently used by:
   - Emacs [`verilog-ts-mode`](https://github.com/gmlarumbe/verilog-ts-mode)

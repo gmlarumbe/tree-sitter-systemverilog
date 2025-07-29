@@ -1,0 +1,287 @@
+============================================
+basejump_stl/bsg_tag/bsg_tag_bitbang
+============================================
+
+
+`include "bsg_defines.sv"
+
+/*
+ * This module takes 1 bit of data and sends it out along with a clock pulse.
+ *
+ * When this module receives a bit, tag_clk_r_o becomes low and the
+ *   received data is put on tag_data_r_o on the current cycle. On next cycle,
+ *   tag_clk_r_o will become high and generate a positive clock edge. The clock
+ *   signal will remain high until the next data comes in.
+ *
+ *                -----+
+ * v_i:                |
+ *                     +-----------------------------
+ *
+ *                     +-----+     +-----+     +-----
+ * clk_i:              |     |     |     |     |
+ *                -----+     +-----+     +-----+
+ *
+ *                -----+           +-----------------
+ * tag_clk_r_o:        |           |
+ *                     +-----------+
+ *
+ *                     +-----------------------+
+ * tag_data_r_o:       |                       |
+ *                -----+                       +-----
+ *
+ * One use case is to write sequence of data from software through bsg_tag_bitbang
+ *   to bsg tag master. This eliminates the need of dedicated hardware, like a ROM
+ *   and a tag trace replay module.
+ *
+ */                                        
+
+module bsg_tag_bitbang(
+    input clk_i
+  , input reset_i
+  , input data_i
+  , input v_i
+  , output logic ready_and_o // throughput: clk_i / 2
+
+  // tag clock is a synchronously generated variable frequency clock that toggles
+  //   once for every data bit that is transmitted.
+  , output logic tag_clk_r_o
+  , output logic tag_data_r_o
+);
+
+  logic tag_clk_r;
+  logic tag_data_r;
+  // Lower tag clock for one cycle upon a successful handshake
+  wire tag_clk_n = ~(ready_and_o & v_i);
+
+  bsg_dff_reset #(
+     .width_p(1)
+    ,.reset_val_p(1)
+  ) tag_clk_reg (
+     .clk_i(clk_i)
+    ,.reset_i(reset_i)
+    ,.data_i(tag_clk_n)
+    ,.data_o(tag_clk_r)
+  );
+
+  bsg_dff_en #(.width_p(1)
+  ) tag_data_reg (
+     .clk_i(clk_i)
+    ,.data_i(data_i)
+    ,.en_i(~tag_clk_n)
+    ,.data_o(tag_data_r)
+  );
+
+  assign tag_data_r_o = tag_data_r;
+  assign tag_clk_r_o = tag_clk_r;
+  assign ready_and_o = tag_clk_r;
+
+endmodule
+
+
+----
+
+(source_file
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (block_comment)
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (integer_vector_type))))
+          port_name: (simple_identifier))
+        (one_line_comment)
+        (one_line_comment)
+        (one_line_comment)
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (integer_vector_type))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (integer_vector_type))))
+          port_name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (one_line_comment)
+    (net_declaration
+      (net_type)
+      (list_of_net_decl_assignments
+        (net_decl_assignment
+          (simple_identifier)
+          (expression
+            operator: (unary_operator)
+            argument: (primary
+              (mintypmax_expression
+                (expression
+                  left: (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier))))
+                  right: (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))))))
+    (module_instantiation
+      instance_type: (simple_identifier)
+      (parameter_value_assignment
+        (list_of_parameter_value_assignments
+          (named_parameter_assignment
+            (simple_identifier)
+            (param_expression
+              (mintypmax_expression
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))))
+          (named_parameter_assignment
+            (simple_identifier)
+            (param_expression
+              (mintypmax_expression
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))))))
+      (hierarchical_instance
+        (name_of_instance
+          instance_name: (simple_identifier))
+        (list_of_port_connections
+          (named_port_connection
+            port_name: (simple_identifier)
+            connection: (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier)))))
+          (named_port_connection
+            port_name: (simple_identifier)
+            connection: (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier)))))
+          (named_port_connection
+            port_name: (simple_identifier)
+            connection: (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier)))))
+          (named_port_connection
+            port_name: (simple_identifier)
+            connection: (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))
+    (module_instantiation
+      instance_type: (simple_identifier)
+      (parameter_value_assignment
+        (list_of_parameter_value_assignments
+          (named_parameter_assignment
+            (simple_identifier)
+            (param_expression
+              (mintypmax_expression
+                (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))))))
+      (hierarchical_instance
+        (name_of_instance
+          instance_name: (simple_identifier))
+        (list_of_port_connections
+          (named_port_connection
+            port_name: (simple_identifier)
+            connection: (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier)))))
+          (named_port_connection
+            port_name: (simple_identifier)
+            connection: (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier)))))
+          (named_port_connection
+            port_name: (simple_identifier)
+            connection: (expression
+              operator: (unary_operator)
+              argument: (primary
+                (hierarchical_identifier
+                  (simple_identifier)))))
+          (named_port_connection
+            port_name: (simple_identifier)
+            connection: (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (simple_identifier))
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (simple_identifier))
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (simple_identifier))
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))))

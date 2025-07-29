@@ -1,0 +1,228 @@
+============================================
+basejump_stl/bsg_test/test_bsg_clock_params
+============================================
+
+`ifndef CORE_0_PERIOD
+`define CORE_0_PERIOD 20
+`endif
+
+`ifndef IO_MASTER_0_PERIOD
+`define IO_MASTER_0_PERIOD 14
+`endif
+
+`ifndef IO_MASTER_1_PERIOD
+`define IO_MASTER_1_PERIOD 2
+`endif
+
+
+`ifndef CORE_1_PERIOD
+`define CORE_1_PERIOD 2
+`endif
+
+
+
+  // three separate clocks: I/O, and the two cores communicating with each other
+   localparam core_0_period_lp      = `CORE_0_PERIOD;
+   localparam core_1_period_lp      = `CORE_1_PERIOD;
+
+   localparam io_master_0_period_lp =  `IO_MASTER_0_PERIOD;  // 1
+   localparam io_master_1_period_lp =  `IO_MASTER_1_PERIOD;  // 1000;
+
+
+   localparam slowest_period_lp
+     = (core_1_period_lp > core_0_period_lp)
+       ? ((io_master_1_period_lp > core_1_period_lp)
+          ?  io_master_1_period_lp
+          :  core_1_period_lp
+          )
+       : ((io_master_1_period_lp > core_0_period_lp)
+          ?  io_master_1_period_lp
+          :  core_0_period_lp
+          );
+
+   localparam master_to_slave_speedup_lp
+     =  (slowest_period_lp + io_master_0_period_lp - 1)
+       / io_master_0_period_lp;
+
+ initial begin
+      $vcdpluson;
+      $vcdplusmemon;
+      end
+
+----
+
+(source_file
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier))
+    (macro_text))
+  (conditional_compilation_directive)
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier))
+    (macro_text))
+  (conditional_compilation_directive)
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier))
+    (macro_text))
+  (conditional_compilation_directive)
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier))
+    (macro_text))
+  (conditional_compilation_directive)
+  (one_line_comment)
+  (local_parameter_declaration
+    (list_of_param_assignments
+      (param_assignment
+        (simple_identifier)
+        (constant_param_expression
+          (constant_mintypmax_expression
+            (constant_expression
+              (text_macro_usage
+                (simple_identifier))))))))
+  (local_parameter_declaration
+    (list_of_param_assignments
+      (param_assignment
+        (simple_identifier)
+        (constant_param_expression
+          (constant_mintypmax_expression
+            (constant_expression
+              (text_macro_usage
+                (simple_identifier))))))))
+  (local_parameter_declaration
+    (list_of_param_assignments
+      (param_assignment
+        (simple_identifier)
+        (constant_param_expression
+          (constant_mintypmax_expression
+            (constant_expression
+              (text_macro_usage
+                (simple_identifier))))))))
+  (one_line_comment)
+  (local_parameter_declaration
+    (list_of_param_assignments
+      (param_assignment
+        (simple_identifier)
+        (constant_param_expression
+          (constant_mintypmax_expression
+            (constant_expression
+              (text_macro_usage
+                (simple_identifier))))))))
+  (one_line_comment)
+  (local_parameter_declaration
+    (list_of_param_assignments
+      (param_assignment
+        (simple_identifier)
+        (constant_param_expression
+          (constant_mintypmax_expression
+            (constant_expression
+              (constant_expression
+                (constant_primary
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      left: (constant_expression
+                        (constant_primary
+                          (simple_identifier)))
+                      right: (constant_expression
+                        (constant_primary
+                          (simple_identifier)))))))
+              (constant_expression
+                (constant_primary
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      (constant_expression
+                        (constant_primary
+                          (constant_mintypmax_expression
+                            (constant_expression
+                              left: (constant_expression
+                                (constant_primary
+                                  (simple_identifier)))
+                              right: (constant_expression
+                                (constant_primary
+                                  (simple_identifier)))))))
+                      (constant_expression
+                        (constant_primary
+                          (simple_identifier)))
+                      (constant_expression
+                        (constant_primary
+                          (simple_identifier)))))))
+              (constant_expression
+                (constant_primary
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      (constant_expression
+                        (constant_primary
+                          (constant_mintypmax_expression
+                            (constant_expression
+                              left: (constant_expression
+                                (constant_primary
+                                  (simple_identifier)))
+                              right: (constant_expression
+                                (constant_primary
+                                  (simple_identifier)))))))
+                      (constant_expression
+                        (constant_primary
+                          (simple_identifier)))
+                      (constant_expression
+                        (constant_primary
+                          (simple_identifier)))))))))))))
+  (local_parameter_declaration
+    (list_of_param_assignments
+      (param_assignment
+        (simple_identifier)
+        (constant_param_expression
+          (constant_mintypmax_expression
+            (constant_expression
+              left: (constant_expression
+                (constant_primary
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      left: (constant_expression
+                        left: (constant_expression
+                          (constant_primary
+                            (simple_identifier)))
+                        right: (constant_expression
+                          (constant_primary
+                            (simple_identifier))))
+                      right: (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))
+              right: (constant_expression
+                (constant_primary
+                  (simple_identifier)))))))))
+  (initial_construct
+    (statement_or_null
+      (statement
+        (statement_item
+          (seq_block
+            (statement_or_null
+              (statement
+                (statement_item
+                  (subroutine_call_statement
+                    (subroutine_call
+                      (system_tf_call
+                        (system_tf_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (subroutine_call_statement
+                    (subroutine_call
+                      (system_tf_call
+                        (system_tf_identifier)))))))))))))

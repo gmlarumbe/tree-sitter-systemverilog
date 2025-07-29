@@ -1,0 +1,1619 @@
+============================================
+basejump_stl/bsg_legacy/bsg_tag/config_net/sim/config_snooper_bind
+============================================
+
+`include "bsg_defines.sv"
+
+`include "config_defs.v"
+
+module config_snooper_bind
+   (input clk, // this reflects the destiniation domain clock
+
+    input [data_max_bits_lp - 1 : 0] id_o,
+    input [data_max_bits_lp - 1 : 0] data_o);
+
+  logic [data_max_bits_lp - 1 : 0] id_o_r, id_o_n;
+  logic [data_max_bits_lp - 1 : 0] data_o_r, data_o_n;
+
+  logic [id_width_lp - 1 : 0] id_o_ref;
+  logic [data_max_bits_lp - 1 : 0] data_o_ref;
+
+  integer test_file;
+  integer rt, ch;
+  integer has_reset = 0;
+  integer node_id = -1;
+  integer test_sets = -1;
+  integer node_id_found = 0;
+  integer restart_pos; // start position of valid references
+
+  integer errors = 0;
+
+  initial
+  begin: initial_open_file
+
+    if ($test$plusargs("config-snooper-bind")) begin
+      test_file = $fopen("config_test.in", "r"); // open config_probe.in file to read
+    end else begin
+      test_file = 0;
+    end
+    if (!test_file) begin
+      disable initial_open_file;
+    end
+
+    id_o_ref = '0;
+    data_o_ref = '0; // need initialization to get rid of Lint warning about never assigning variables
+
+    ch = $fgetc(test_file);
+    while(ch != -1) begin // end of file
+      if ( (ch == "#") || (ch == " ") ) begin // comments, and white spaces are skipped
+        rt = $ungetc(ch, test_file);
+        while ( (ch != "\n") && (ch != -1) ) begin // dump chars until the end of this line
+          ch = $fgetc(test_file);
+        end
+      end else if (ch == "\n") begin // empty newlines are also skipped
+        ch = $fgetc(test_file);
+        continue;
+      end else begin
+        rt = $ungetc(ch, test_file);
+        restart_pos = $ftell(test_file); // bookmark the test_file position
+        rt = $fscanf(test_file, "%d\t\t%b\n", id_o_ref, data_o_ref);
+        break; // to be continued from here
+      end
+      ch = $fgetc(test_file);
+    end
+  end
+
+  assign id_o_n = id_o;
+  assign data_o_n = data_o;
+  always @ (posedge clk) begin
+    id_o_r <= id_o_n;
+    data_o_r <= data_o_n;
+  end
+
+  // Since the design is synchronized to posedge of clk, using negedge clk
+  // here is to allow all flip-flops become stable in the register connected
+  // to data_o. This might guarantee simulation correct even at gate level,
+  // when all flip-flops don't necessarily change at the same time.
+
+  always @ (negedge clk)
+  begin: always_check_change
+    if (test_file) begin
+      if (has_reset == 0) begin // reset value check
+        if (data_o === '0) begin
+          $display("\n  @time %0d: \t snooper node data_o     reset to %b", $time, data_o);
+          has_reset = 1;
+        end
+      end else begin
+        if ( (id_o !== id_o_r) || (data_o !== data_o_r) ) begin
+          $display("\n  @time %0d: \t snooped id, tag, and data changed to %d, %b, %b", $time, id_o[0 +: id_width_lp], id_o[id_width_lp +: id_tag_bits_lp], data_o);
+          if (data_o !== data_o_ref) begin
+            $display("\n  @time %0d: \t ERROR snooped data_o = %b <-> expected = %b", $time, data_o, data_o_ref);
+            errors += 1;
+          end
+          if (id_o[0 +: id_width_lp] !== id_o_ref) begin
+            $display("\n  @time %0d: \t ERROR snooped id_o = %d <-> expected = %d", $time, id_o[0 +: id_width_lp], id_o_ref);
+            errors += 1;
+          end
+          ch = $fgetc(test_file);
+          if (ch == -1) begin // end of file
+            if ($test$plusargs("cyclic-test")) begin
+              rt = $fseek(test_file, restart_pos, 0); // circulate
+              rt = $fscanf(test_file, "%d\t\t%b\n", id_o_ref, data_o_ref);
+              has_reset = 0;
+            end
+          end else begin
+            rt = $ungetc(ch, test_file);
+            rt = $fscanf(test_file, "%d\t\t%b\n", id_o_ref, data_o_ref);
+          end
+        end
+      end
+    end else begin
+      disable always_check_change;
+    end
+  end
+
+  final
+  begin: final_statistics
+    if (test_file) begin
+      if (has_reset == 0) begin
+        $display("### FAILED:  Snooper node      has not reset properly!\n");
+      end else begin
+        if (errors != 0) begin
+          $display("### FAILED:  Snooper node      has detected at least %0d wrong packet(s)!\n", errors);
+        end else begin
+          $display("### PASSED:  Snooper node      is probably working properly.\n");
+        end
+      end
+      $fclose(test_file);
+    end else begin
+      disable final_statistics;
+    end
+  end
+
+endmodule
+
+----
+
+(source_file
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (one_line_comment)
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction)
+            (net_port_type
+              (data_type_or_implicit
+                (implicit_data_type
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        left: (constant_expression
+                          (constant_primary
+                            (simple_identifier)))
+                        right: (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction)
+            (net_port_type
+              (data_type_or_implicit
+                (implicit_data_type
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        left: (constant_expression
+                          (constant_primary
+                            (simple_identifier)))
+                        right: (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))))
+          port_name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)
+          (packed_dimension
+            (constant_range
+              (constant_expression
+                left: (constant_expression
+                  (constant_primary
+                    (simple_identifier)))
+                right: (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)
+          (packed_dimension
+            (constant_range
+              (constant_expression
+                left: (constant_expression
+                  (constant_primary
+                    (simple_identifier)))
+                right: (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)
+          (packed_dimension
+            (constant_range
+              (constant_expression
+                left: (constant_expression
+                  (constant_primary
+                    (simple_identifier)))
+                right: (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)
+          (packed_dimension
+            (constant_range
+              (constant_expression
+                left: (constant_expression
+                  (constant_primary
+                    (simple_identifier)))
+                right: (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier)
+          (expression
+            operator: (unary_operator)
+            argument: (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier)
+          (expression
+            operator: (unary_operator)
+            argument: (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (one_line_comment)
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_atom_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier)
+          (expression
+            (primary
+              (primary_literal
+                (integral_number
+                  (decimal_number
+                    (unsigned_number)))))))))
+    (initial_construct
+      (statement_or_null
+        (statement
+          (statement_item
+            (seq_block
+              (simple_identifier)
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (conditional_statement
+                      (cond_predicate
+                        (expression
+                          (primary
+                            (function_subroutine_call
+                              (subroutine_call
+                                (system_tf_call
+                                  (system_tf_identifier)
+                                  (list_of_arguments
+                                    (expression
+                                      (primary
+                                        (primary_literal
+                                          (string_literal
+                                            (quoted_string
+                                              (quoted_string_item)))))))))))))
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (seq_block
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (blocking_assignment
+                                      (operator_assignment
+                                        (variable_lvalue
+                                          (hierarchical_identifier
+                                            (simple_identifier)))
+                                        (assignment_operator)
+                                        (expression
+                                          (primary
+                                            (function_subroutine_call
+                                              (subroutine_call
+                                                (system_tf_call
+                                                  (system_tf_identifier)
+                                                  (list_of_arguments
+                                                    (expression
+                                                      (primary
+                                                        (primary_literal
+                                                          (string_literal
+                                                            (quoted_string
+                                                              (quoted_string_item))))))
+                                                    (expression
+                                                      (primary
+                                                        (primary_literal
+                                                          (string_literal
+                                                            (quoted_string
+                                                              (quoted_string_item)))))))))))))))))
+                              (one_line_comment)))))
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (seq_block
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (blocking_assignment
+                                      (operator_assignment
+                                        (variable_lvalue
+                                          (hierarchical_identifier
+                                            (simple_identifier)))
+                                        (assignment_operator)
+                                        (expression
+                                          (primary
+                                            (primary_literal
+                                              (integral_number
+                                                (decimal_number
+                                                  (unsigned_number)))))))))))))))))))
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (conditional_statement
+                      (cond_predicate
+                        (expression
+                          operator: (unary_operator)
+                          argument: (primary
+                            (hierarchical_identifier
+                              (simple_identifier)))))
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (seq_block
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (disable_statement
+                                      (hierarchical_identifier
+                                        (simple_identifier))))))))))))))
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (blocking_assignment
+                      (operator_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)))
+                        (assignment_operator)
+                        (expression
+                          (primary
+                            (primary_literal
+                              (unbased_unsized_literal)))))))))
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (blocking_assignment
+                      (operator_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)))
+                        (assignment_operator)
+                        (expression
+                          (primary
+                            (primary_literal
+                              (unbased_unsized_literal)))))))))
+              (one_line_comment)
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (blocking_assignment
+                      (operator_assignment
+                        (variable_lvalue
+                          (hierarchical_identifier
+                            (simple_identifier)))
+                        (assignment_operator)
+                        (expression
+                          (primary
+                            (function_subroutine_call
+                              (subroutine_call
+                                (system_tf_call
+                                  (system_tf_identifier)
+                                  (list_of_arguments
+                                    (expression
+                                      (primary
+                                        (hierarchical_identifier
+                                          (simple_identifier)))))))))))))))
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (loop_statement
+                      (expression
+                        left: (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier))))
+                        right: (expression
+                          operator: (unary_operator)
+                          argument: (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (seq_block
+                              (one_line_comment)
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (conditional_statement
+                                      (cond_predicate
+                                        (expression
+                                          left: (expression
+                                            (primary
+                                              (mintypmax_expression
+                                                (expression
+                                                  left: (expression
+                                                    (primary
+                                                      (hierarchical_identifier
+                                                        (simple_identifier))))
+                                                  right: (expression
+                                                    (primary
+                                                      (primary_literal
+                                                        (string_literal
+                                                          (quoted_string
+                                                            (quoted_string_item))))))))))
+                                          right: (expression
+                                            (primary
+                                              (mintypmax_expression
+                                                (expression
+                                                  left: (expression
+                                                    (primary
+                                                      (hierarchical_identifier
+                                                        (simple_identifier))))
+                                                  right: (expression
+                                                    (primary
+                                                      (primary_literal
+                                                        (string_literal
+                                                          (quoted_string
+                                                            (quoted_string_item))))))))))))
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (seq_block
+                                              (one_line_comment)
+                                              (statement_or_null
+                                                (statement
+                                                  (statement_item
+                                                    (blocking_assignment
+                                                      (operator_assignment
+                                                        (variable_lvalue
+                                                          (hierarchical_identifier
+                                                            (simple_identifier)))
+                                                        (assignment_operator)
+                                                        (expression
+                                                          (primary
+                                                            (function_subroutine_call
+                                                              (subroutine_call
+                                                                (system_tf_call
+                                                                  (system_tf_identifier)
+                                                                  (list_of_arguments
+                                                                    (expression
+                                                                      (primary
+                                                                        (hierarchical_identifier
+                                                                          (simple_identifier))))
+                                                                    (expression
+                                                                      (primary
+                                                                        (hierarchical_identifier
+                                                                          (simple_identifier)))))))))))))))
+                                              (statement_or_null
+                                                (statement
+                                                  (statement_item
+                                                    (loop_statement
+                                                      (expression
+                                                        left: (expression
+                                                          (primary
+                                                            (mintypmax_expression
+                                                              (expression
+                                                                left: (expression
+                                                                  (primary
+                                                                    (hierarchical_identifier
+                                                                      (simple_identifier))))
+                                                                right: (expression
+                                                                  (primary
+                                                                    (primary_literal
+                                                                      (string_literal
+                                                                        (quoted_string
+                                                                          (string_escape_seq))))))))))
+                                                        right: (expression
+                                                          (primary
+                                                            (mintypmax_expression
+                                                              (expression
+                                                                left: (expression
+                                                                  (primary
+                                                                    (hierarchical_identifier
+                                                                      (simple_identifier))))
+                                                                right: (expression
+                                                                  operator: (unary_operator)
+                                                                  argument: (primary
+                                                                    (primary_literal
+                                                                      (integral_number
+                                                                        (decimal_number
+                                                                          (unsigned_number)))))))))))
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (seq_block
+                                                              (one_line_comment)
+                                                              (statement_or_null
+                                                                (statement
+                                                                  (statement_item
+                                                                    (blocking_assignment
+                                                                      (operator_assignment
+                                                                        (variable_lvalue
+                                                                          (hierarchical_identifier
+                                                                            (simple_identifier)))
+                                                                        (assignment_operator)
+                                                                        (expression
+                                                                          (primary
+                                                                            (function_subroutine_call
+                                                                              (subroutine_call
+                                                                                (system_tf_call
+                                                                                  (system_tf_identifier)
+                                                                                  (list_of_arguments
+                                                                                    (expression
+                                                                                      (primary
+                                                                                        (hierarchical_identifier
+                                                                                          (simple_identifier)))))))))))))))))))))))))))
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (conditional_statement
+                                              (cond_predicate
+                                                (expression
+                                                  left: (expression
+                                                    (primary
+                                                      (hierarchical_identifier
+                                                        (simple_identifier))))
+                                                  right: (expression
+                                                    (primary
+                                                      (primary_literal
+                                                        (string_literal
+                                                          (quoted_string
+                                                            (string_escape_seq))))))))
+                                              (statement_or_null
+                                                (statement
+                                                  (statement_item
+                                                    (seq_block
+                                                      (one_line_comment)
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (blocking_assignment
+                                                              (operator_assignment
+                                                                (variable_lvalue
+                                                                  (hierarchical_identifier
+                                                                    (simple_identifier)))
+                                                                (assignment_operator)
+                                                                (expression
+                                                                  (primary
+                                                                    (function_subroutine_call
+                                                                      (subroutine_call
+                                                                        (system_tf_call
+                                                                          (system_tf_identifier)
+                                                                          (list_of_arguments
+                                                                            (expression
+                                                                              (primary
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier)))))))))))))))
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (jump_statement))))))))
+                                              (statement_or_null
+                                                (statement
+                                                  (statement_item
+                                                    (seq_block
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (blocking_assignment
+                                                              (operator_assignment
+                                                                (variable_lvalue
+                                                                  (hierarchical_identifier
+                                                                    (simple_identifier)))
+                                                                (assignment_operator)
+                                                                (expression
+                                                                  (primary
+                                                                    (function_subroutine_call
+                                                                      (subroutine_call
+                                                                        (system_tf_call
+                                                                          (system_tf_identifier)
+                                                                          (list_of_arguments
+                                                                            (expression
+                                                                              (primary
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier))))
+                                                                            (expression
+                                                                              (primary
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier)))))))))))))))
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (blocking_assignment
+                                                              (operator_assignment
+                                                                (variable_lvalue
+                                                                  (hierarchical_identifier
+                                                                    (simple_identifier)))
+                                                                (assignment_operator)
+                                                                (expression
+                                                                  (primary
+                                                                    (function_subroutine_call
+                                                                      (subroutine_call
+                                                                        (system_tf_call
+                                                                          (system_tf_identifier)
+                                                                          (list_of_arguments
+                                                                            (expression
+                                                                              (primary
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier)))))))))))))))
+                                                      (one_line_comment)
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (blocking_assignment
+                                                              (operator_assignment
+                                                                (variable_lvalue
+                                                                  (hierarchical_identifier
+                                                                    (simple_identifier)))
+                                                                (assignment_operator)
+                                                                (expression
+                                                                  (primary
+                                                                    (function_subroutine_call
+                                                                      (subroutine_call
+                                                                        (system_tf_call
+                                                                          (system_tf_identifier)
+                                                                          (list_of_arguments
+                                                                            (expression
+                                                                              (primary
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier))))
+                                                                            (expression
+                                                                              (primary
+                                                                                (primary_literal
+                                                                                  (string_literal
+                                                                                    (quoted_string
+                                                                                      (quoted_string_item)
+                                                                                      (string_escape_seq)
+                                                                                      (string_escape_seq)
+                                                                                      (quoted_string_item)
+                                                                                      (string_escape_seq))))))
+                                                                            (expression
+                                                                              (primary
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier))))
+                                                                            (expression
+                                                                              (primary
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier)))))))))))))))
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (jump_statement))))
+                                                      (one_line_comment)))))))))))))
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (blocking_assignment
+                                      (operator_assignment
+                                        (variable_lvalue
+                                          (hierarchical_identifier
+                                            (simple_identifier)))
+                                        (assignment_operator)
+                                        (expression
+                                          (primary
+                                            (function_subroutine_call
+                                              (subroutine_call
+                                                (system_tf_call
+                                                  (system_tf_identifier)
+                                                  (list_of_arguments
+                                                    (expression
+                                                      (primary
+                                                        (hierarchical_identifier
+                                                          (simple_identifier))))))))))))))))))))))))))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (simple_identifier))
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (simple_identifier))
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (seq_block
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))))))
+    (one_line_comment)
+    (one_line_comment)
+    (one_line_comment)
+    (one_line_comment)
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (seq_block
+                    (simple_identifier)
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (conditional_statement
+                            (cond_predicate
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier)))))
+                            (statement_or_null
+                              (statement
+                                (statement_item
+                                  (seq_block
+                                    (statement_or_null
+                                      (statement
+                                        (statement_item
+                                          (conditional_statement
+                                            (cond_predicate
+                                              (expression
+                                                left: (expression
+                                                  (primary
+                                                    (hierarchical_identifier
+                                                      (simple_identifier))))
+                                                right: (expression
+                                                  (primary
+                                                    (primary_literal
+                                                      (integral_number
+                                                        (decimal_number
+                                                          (unsigned_number))))))))
+                                            (statement_or_null
+                                              (statement
+                                                (statement_item
+                                                  (seq_block
+                                                    (one_line_comment)
+                                                    (statement_or_null
+                                                      (statement
+                                                        (statement_item
+                                                          (conditional_statement
+                                                            (cond_predicate
+                                                              (expression
+                                                                left: (expression
+                                                                  (primary
+                                                                    (hierarchical_identifier
+                                                                      (simple_identifier))))
+                                                                right: (expression
+                                                                  (primary
+                                                                    (primary_literal
+                                                                      (unbased_unsized_literal))))))
+                                                            (statement_or_null
+                                                              (statement
+                                                                (statement_item
+                                                                  (seq_block
+                                                                    (statement_or_null
+                                                                      (statement
+                                                                        (statement_item
+                                                                          (subroutine_call_statement
+                                                                            (subroutine_call
+                                                                              (system_tf_call
+                                                                                (system_tf_identifier)
+                                                                                (list_of_arguments
+                                                                                  (expression
+                                                                                    (primary
+                                                                                      (primary_literal
+                                                                                        (string_literal
+                                                                                          (quoted_string
+                                                                                            (string_escape_seq)
+                                                                                            (quoted_string_item)
+                                                                                            (string_escape_seq)
+                                                                                            (quoted_string_item))))))
+                                                                                  (expression
+                                                                                    (primary
+                                                                                      (function_subroutine_call
+                                                                                        (subroutine_call
+                                                                                          (system_tf_call
+                                                                                            (system_tf_identifier))))))
+                                                                                  (expression
+                                                                                    (primary
+                                                                                      (hierarchical_identifier
+                                                                                        (simple_identifier)))))))))))
+                                                                    (statement_or_null
+                                                                      (statement
+                                                                        (statement_item
+                                                                          (blocking_assignment
+                                                                            (operator_assignment
+                                                                              (variable_lvalue
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier)))
+                                                                              (assignment_operator)
+                                                                              (expression
+                                                                                (primary
+                                                                                  (primary_literal
+                                                                                    (integral_number
+                                                                                      (decimal_number
+                                                                                        (unsigned_number)))))))))))))))))))))))
+                                            (statement_or_null
+                                              (statement
+                                                (statement_item
+                                                  (seq_block
+                                                    (statement_or_null
+                                                      (statement
+                                                        (statement_item
+                                                          (conditional_statement
+                                                            (cond_predicate
+                                                              (expression
+                                                                left: (expression
+                                                                  (primary
+                                                                    (mintypmax_expression
+                                                                      (expression
+                                                                        left: (expression
+                                                                          (primary
+                                                                            (hierarchical_identifier
+                                                                              (simple_identifier))))
+                                                                        right: (expression
+                                                                          (primary
+                                                                            (hierarchical_identifier
+                                                                              (simple_identifier))))))))
+                                                                right: (expression
+                                                                  (primary
+                                                                    (mintypmax_expression
+                                                                      (expression
+                                                                        left: (expression
+                                                                          (primary
+                                                                            (hierarchical_identifier
+                                                                              (simple_identifier))))
+                                                                        right: (expression
+                                                                          (primary
+                                                                            (hierarchical_identifier
+                                                                              (simple_identifier))))))))))
+                                                            (statement_or_null
+                                                              (statement
+                                                                (statement_item
+                                                                  (seq_block
+                                                                    (statement_or_null
+                                                                      (statement
+                                                                        (statement_item
+                                                                          (subroutine_call_statement
+                                                                            (subroutine_call
+                                                                              (system_tf_call
+                                                                                (system_tf_identifier)
+                                                                                (list_of_arguments
+                                                                                  (expression
+                                                                                    (primary
+                                                                                      (primary_literal
+                                                                                        (string_literal
+                                                                                          (quoted_string
+                                                                                            (string_escape_seq)
+                                                                                            (quoted_string_item)
+                                                                                            (string_escape_seq)
+                                                                                            (quoted_string_item))))))
+                                                                                  (expression
+                                                                                    (primary
+                                                                                      (function_subroutine_call
+                                                                                        (subroutine_call
+                                                                                          (system_tf_call
+                                                                                            (system_tf_identifier))))))
+                                                                                  (expression
+                                                                                    (primary
+                                                                                      (hierarchical_identifier
+                                                                                        (simple_identifier))
+                                                                                      (select
+                                                                                        (indexed_range
+                                                                                          (expression
+                                                                                            (primary
+                                                                                              (primary_literal
+                                                                                                (integral_number
+                                                                                                  (decimal_number
+                                                                                                    (unsigned_number))))))
+                                                                                          (constant_expression
+                                                                                            (constant_primary
+                                                                                              (simple_identifier)))))))
+                                                                                  (expression
+                                                                                    (primary
+                                                                                      (hierarchical_identifier
+                                                                                        (simple_identifier))
+                                                                                      (select
+                                                                                        (indexed_range
+                                                                                          (expression
+                                                                                            (primary
+                                                                                              (hierarchical_identifier
+                                                                                                (simple_identifier))))
+                                                                                          (constant_expression
+                                                                                            (constant_primary
+                                                                                              (simple_identifier)))))))
+                                                                                  (expression
+                                                                                    (primary
+                                                                                      (hierarchical_identifier
+                                                                                        (simple_identifier)))))))))))
+                                                                    (statement_or_null
+                                                                      (statement
+                                                                        (statement_item
+                                                                          (conditional_statement
+                                                                            (cond_predicate
+                                                                              (expression
+                                                                                left: (expression
+                                                                                  (primary
+                                                                                    (hierarchical_identifier
+                                                                                      (simple_identifier))))
+                                                                                right: (expression
+                                                                                  (primary
+                                                                                    (hierarchical_identifier
+                                                                                      (simple_identifier))))))
+                                                                            (statement_or_null
+                                                                              (statement
+                                                                                (statement_item
+                                                                                  (seq_block
+                                                                                    (statement_or_null
+                                                                                      (statement
+                                                                                        (statement_item
+                                                                                          (subroutine_call_statement
+                                                                                            (subroutine_call
+                                                                                              (system_tf_call
+                                                                                                (system_tf_identifier)
+                                                                                                (list_of_arguments
+                                                                                                  (expression
+                                                                                                    (primary
+                                                                                                      (primary_literal
+                                                                                                        (string_literal
+                                                                                                          (quoted_string
+                                                                                                            (string_escape_seq)
+                                                                                                            (quoted_string_item)
+                                                                                                            (string_escape_seq)
+                                                                                                            (quoted_string_item))))))
+                                                                                                  (expression
+                                                                                                    (primary
+                                                                                                      (function_subroutine_call
+                                                                                                        (subroutine_call
+                                                                                                          (system_tf_call
+                                                                                                            (system_tf_identifier))))))
+                                                                                                  (expression
+                                                                                                    (primary
+                                                                                                      (hierarchical_identifier
+                                                                                                        (simple_identifier))))
+                                                                                                  (expression
+                                                                                                    (primary
+                                                                                                      (hierarchical_identifier
+                                                                                                        (simple_identifier)))))))))))
+                                                                                    (statement_or_null
+                                                                                      (statement
+                                                                                        (statement_item
+                                                                                          (blocking_assignment
+                                                                                            (operator_assignment
+                                                                                              (variable_lvalue
+                                                                                                (hierarchical_identifier
+                                                                                                  (simple_identifier)))
+                                                                                              (assignment_operator)
+                                                                                              (expression
+                                                                                                (primary
+                                                                                                  (primary_literal
+                                                                                                    (integral_number
+                                                                                                      (decimal_number
+                                                                                                        (unsigned_number)))))))))))))))))))
+                                                                    (statement_or_null
+                                                                      (statement
+                                                                        (statement_item
+                                                                          (conditional_statement
+                                                                            (cond_predicate
+                                                                              (expression
+                                                                                left: (expression
+                                                                                  (primary
+                                                                                    (hierarchical_identifier
+                                                                                      (simple_identifier))
+                                                                                    (select
+                                                                                      (indexed_range
+                                                                                        (expression
+                                                                                          (primary
+                                                                                            (primary_literal
+                                                                                              (integral_number
+                                                                                                (decimal_number
+                                                                                                  (unsigned_number))))))
+                                                                                        (constant_expression
+                                                                                          (constant_primary
+                                                                                            (simple_identifier)))))))
+                                                                                right: (expression
+                                                                                  (primary
+                                                                                    (hierarchical_identifier
+                                                                                      (simple_identifier))))))
+                                                                            (statement_or_null
+                                                                              (statement
+                                                                                (statement_item
+                                                                                  (seq_block
+                                                                                    (statement_or_null
+                                                                                      (statement
+                                                                                        (statement_item
+                                                                                          (subroutine_call_statement
+                                                                                            (subroutine_call
+                                                                                              (system_tf_call
+                                                                                                (system_tf_identifier)
+                                                                                                (list_of_arguments
+                                                                                                  (expression
+                                                                                                    (primary
+                                                                                                      (primary_literal
+                                                                                                        (string_literal
+                                                                                                          (quoted_string
+                                                                                                            (string_escape_seq)
+                                                                                                            (quoted_string_item)
+                                                                                                            (string_escape_seq)
+                                                                                                            (quoted_string_item))))))
+                                                                                                  (expression
+                                                                                                    (primary
+                                                                                                      (function_subroutine_call
+                                                                                                        (subroutine_call
+                                                                                                          (system_tf_call
+                                                                                                            (system_tf_identifier))))))
+                                                                                                  (expression
+                                                                                                    (primary
+                                                                                                      (hierarchical_identifier
+                                                                                                        (simple_identifier))
+                                                                                                      (select
+                                                                                                        (indexed_range
+                                                                                                          (expression
+                                                                                                            (primary
+                                                                                                              (primary_literal
+                                                                                                                (integral_number
+                                                                                                                  (decimal_number
+                                                                                                                    (unsigned_number))))))
+                                                                                                          (constant_expression
+                                                                                                            (constant_primary
+                                                                                                              (simple_identifier)))))))
+                                                                                                  (expression
+                                                                                                    (primary
+                                                                                                      (hierarchical_identifier
+                                                                                                        (simple_identifier)))))))))))
+                                                                                    (statement_or_null
+                                                                                      (statement
+                                                                                        (statement_item
+                                                                                          (blocking_assignment
+                                                                                            (operator_assignment
+                                                                                              (variable_lvalue
+                                                                                                (hierarchical_identifier
+                                                                                                  (simple_identifier)))
+                                                                                              (assignment_operator)
+                                                                                              (expression
+                                                                                                (primary
+                                                                                                  (primary_literal
+                                                                                                    (integral_number
+                                                                                                      (decimal_number
+                                                                                                        (unsigned_number)))))))))))))))))))
+                                                                    (statement_or_null
+                                                                      (statement
+                                                                        (statement_item
+                                                                          (blocking_assignment
+                                                                            (operator_assignment
+                                                                              (variable_lvalue
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier)))
+                                                                              (assignment_operator)
+                                                                              (expression
+                                                                                (primary
+                                                                                  (function_subroutine_call
+                                                                                    (subroutine_call
+                                                                                      (system_tf_call
+                                                                                        (system_tf_identifier)
+                                                                                        (list_of_arguments
+                                                                                          (expression
+                                                                                            (primary
+                                                                                              (hierarchical_identifier
+                                                                                                (simple_identifier)))))))))))))))
+                                                                    (statement_or_null
+                                                                      (statement
+                                                                        (statement_item
+                                                                          (conditional_statement
+                                                                            (cond_predicate
+                                                                              (expression
+                                                                                left: (expression
+                                                                                  (primary
+                                                                                    (hierarchical_identifier
+                                                                                      (simple_identifier))))
+                                                                                right: (expression
+                                                                                  operator: (unary_operator)
+                                                                                  argument: (primary
+                                                                                    (primary_literal
+                                                                                      (integral_number
+                                                                                        (decimal_number
+                                                                                          (unsigned_number))))))))
+                                                                            (statement_or_null
+                                                                              (statement
+                                                                                (statement_item
+                                                                                  (seq_block
+                                                                                    (one_line_comment)
+                                                                                    (statement_or_null
+                                                                                      (statement
+                                                                                        (statement_item
+                                                                                          (conditional_statement
+                                                                                            (cond_predicate
+                                                                                              (expression
+                                                                                                (primary
+                                                                                                  (function_subroutine_call
+                                                                                                    (subroutine_call
+                                                                                                      (system_tf_call
+                                                                                                        (system_tf_identifier)
+                                                                                                        (list_of_arguments
+                                                                                                          (expression
+                                                                                                            (primary
+                                                                                                              (primary_literal
+                                                                                                                (string_literal
+                                                                                                                  (quoted_string
+                                                                                                                    (quoted_string_item)))))))))))))
+                                                                                            (statement_or_null
+                                                                                              (statement
+                                                                                                (statement_item
+                                                                                                  (seq_block
+                                                                                                    (statement_or_null
+                                                                                                      (statement
+                                                                                                        (statement_item
+                                                                                                          (blocking_assignment
+                                                                                                            (operator_assignment
+                                                                                                              (variable_lvalue
+                                                                                                                (hierarchical_identifier
+                                                                                                                  (simple_identifier)))
+                                                                                                              (assignment_operator)
+                                                                                                              (expression
+                                                                                                                (primary
+                                                                                                                  (function_subroutine_call
+                                                                                                                    (subroutine_call
+                                                                                                                      (system_tf_call
+                                                                                                                        (system_tf_identifier)
+                                                                                                                        (list_of_arguments
+                                                                                                                          (expression
+                                                                                                                            (primary
+                                                                                                                              (hierarchical_identifier
+                                                                                                                                (simple_identifier))))
+                                                                                                                          (expression
+                                                                                                                            (primary
+                                                                                                                              (hierarchical_identifier
+                                                                                                                                (simple_identifier))))
+                                                                                                                          (expression
+                                                                                                                            (primary
+                                                                                                                              (primary_literal
+                                                                                                                                (integral_number
+                                                                                                                                  (decimal_number
+                                                                                                                                    (unsigned_number)))))))))))))))))
+                                                                                                    (one_line_comment)
+                                                                                                    (statement_or_null
+                                                                                                      (statement
+                                                                                                        (statement_item
+                                                                                                          (blocking_assignment
+                                                                                                            (operator_assignment
+                                                                                                              (variable_lvalue
+                                                                                                                (hierarchical_identifier
+                                                                                                                  (simple_identifier)))
+                                                                                                              (assignment_operator)
+                                                                                                              (expression
+                                                                                                                (primary
+                                                                                                                  (function_subroutine_call
+                                                                                                                    (subroutine_call
+                                                                                                                      (system_tf_call
+                                                                                                                        (system_tf_identifier)
+                                                                                                                        (list_of_arguments
+                                                                                                                          (expression
+                                                                                                                            (primary
+                                                                                                                              (hierarchical_identifier
+                                                                                                                                (simple_identifier))))
+                                                                                                                          (expression
+                                                                                                                            (primary
+                                                                                                                              (primary_literal
+                                                                                                                                (string_literal
+                                                                                                                                  (quoted_string
+                                                                                                                                    (quoted_string_item)
+                                                                                                                                    (string_escape_seq)
+                                                                                                                                    (string_escape_seq)
+                                                                                                                                    (quoted_string_item)
+                                                                                                                                    (string_escape_seq))))))
+                                                                                                                          (expression
+                                                                                                                            (primary
+                                                                                                                              (hierarchical_identifier
+                                                                                                                                (simple_identifier))))
+                                                                                                                          (expression
+                                                                                                                            (primary
+                                                                                                                              (hierarchical_identifier
+                                                                                                                                (simple_identifier)))))))))))))))
+                                                                                                    (statement_or_null
+                                                                                                      (statement
+                                                                                                        (statement_item
+                                                                                                          (blocking_assignment
+                                                                                                            (operator_assignment
+                                                                                                              (variable_lvalue
+                                                                                                                (hierarchical_identifier
+                                                                                                                  (simple_identifier)))
+                                                                                                              (assignment_operator)
+                                                                                                              (expression
+                                                                                                                (primary
+                                                                                                                  (primary_literal
+                                                                                                                    (integral_number
+                                                                                                                      (decimal_number
+                                                                                                                        (unsigned_number)))))))))))))))))))))))
+                                                                            (statement_or_null
+                                                                              (statement
+                                                                                (statement_item
+                                                                                  (seq_block
+                                                                                    (statement_or_null
+                                                                                      (statement
+                                                                                        (statement_item
+                                                                                          (blocking_assignment
+                                                                                            (operator_assignment
+                                                                                              (variable_lvalue
+                                                                                                (hierarchical_identifier
+                                                                                                  (simple_identifier)))
+                                                                                              (assignment_operator)
+                                                                                              (expression
+                                                                                                (primary
+                                                                                                  (function_subroutine_call
+                                                                                                    (subroutine_call
+                                                                                                      (system_tf_call
+                                                                                                        (system_tf_identifier)
+                                                                                                        (list_of_arguments
+                                                                                                          (expression
+                                                                                                            (primary
+                                                                                                              (hierarchical_identifier
+                                                                                                                (simple_identifier))))
+                                                                                                          (expression
+                                                                                                            (primary
+                                                                                                              (hierarchical_identifier
+                                                                                                                (simple_identifier)))))))))))))))
+                                                                                    (statement_or_null
+                                                                                      (statement
+                                                                                        (statement_item
+                                                                                          (blocking_assignment
+                                                                                            (operator_assignment
+                                                                                              (variable_lvalue
+                                                                                                (hierarchical_identifier
+                                                                                                  (simple_identifier)))
+                                                                                              (assignment_operator)
+                                                                                              (expression
+                                                                                                (primary
+                                                                                                  (function_subroutine_call
+                                                                                                    (subroutine_call
+                                                                                                      (system_tf_call
+                                                                                                        (system_tf_identifier)
+                                                                                                        (list_of_arguments
+                                                                                                          (expression
+                                                                                                            (primary
+                                                                                                              (hierarchical_identifier
+                                                                                                                (simple_identifier))))
+                                                                                                          (expression
+                                                                                                            (primary
+                                                                                                              (primary_literal
+                                                                                                                (string_literal
+                                                                                                                  (quoted_string
+                                                                                                                    (quoted_string_item)
+                                                                                                                    (string_escape_seq)
+                                                                                                                    (string_escape_seq)
+                                                                                                                    (quoted_string_item)
+                                                                                                                    (string_escape_seq))))))
+                                                                                                          (expression
+                                                                                                            (primary
+                                                                                                              (hierarchical_identifier
+                                                                                                                (simple_identifier))))
+                                                                                                          (expression
+                                                                                                            (primary
+                                                                                                              (hierarchical_identifier
+                                                                                                                (simple_identifier)))))))))))))))))))))))))))))))))))))))))))
+                            (statement_or_null
+                              (statement
+                                (statement_item
+                                  (seq_block
+                                    (statement_or_null
+                                      (statement
+                                        (statement_item
+                                          (disable_statement
+                                            (hierarchical_identifier
+                                              (simple_identifier))))))))))))))))))))))
+    (final_construct
+      (function_statement
+        (statement
+          (statement_item
+            (seq_block
+              (simple_identifier)
+              (statement_or_null
+                (statement
+                  (statement_item
+                    (conditional_statement
+                      (cond_predicate
+                        (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier)))))
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (seq_block
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (conditional_statement
+                                      (cond_predicate
+                                        (expression
+                                          left: (expression
+                                            (primary
+                                              (hierarchical_identifier
+                                                (simple_identifier))))
+                                          right: (expression
+                                            (primary
+                                              (primary_literal
+                                                (integral_number
+                                                  (decimal_number
+                                                    (unsigned_number))))))))
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (seq_block
+                                              (statement_or_null
+                                                (statement
+                                                  (statement_item
+                                                    (subroutine_call_statement
+                                                      (subroutine_call
+                                                        (system_tf_call
+                                                          (system_tf_identifier)
+                                                          (list_of_arguments
+                                                            (expression
+                                                              (primary
+                                                                (primary_literal
+                                                                  (string_literal
+                                                                    (quoted_string
+                                                                      (quoted_string_item)
+                                                                      (string_escape_seq)))))))))))))))))
+                                      (statement_or_null
+                                        (statement
+                                          (statement_item
+                                            (seq_block
+                                              (statement_or_null
+                                                (statement
+                                                  (statement_item
+                                                    (conditional_statement
+                                                      (cond_predicate
+                                                        (expression
+                                                          left: (expression
+                                                            (primary
+                                                              (hierarchical_identifier
+                                                                (simple_identifier))))
+                                                          right: (expression
+                                                            (primary
+                                                              (primary_literal
+                                                                (integral_number
+                                                                  (decimal_number
+                                                                    (unsigned_number))))))))
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (seq_block
+                                                              (statement_or_null
+                                                                (statement
+                                                                  (statement_item
+                                                                    (subroutine_call_statement
+                                                                      (subroutine_call
+                                                                        (system_tf_call
+                                                                          (system_tf_identifier)
+                                                                          (list_of_arguments
+                                                                            (expression
+                                                                              (primary
+                                                                                (primary_literal
+                                                                                  (string_literal
+                                                                                    (quoted_string
+                                                                                      (quoted_string_item)
+                                                                                      (string_escape_seq))))))
+                                                                            (expression
+                                                                              (primary
+                                                                                (hierarchical_identifier
+                                                                                  (simple_identifier)))))))))))))))
+                                                      (statement_or_null
+                                                        (statement
+                                                          (statement_item
+                                                            (seq_block
+                                                              (statement_or_null
+                                                                (statement
+                                                                  (statement_item
+                                                                    (subroutine_call_statement
+                                                                      (subroutine_call
+                                                                        (system_tf_call
+                                                                          (system_tf_identifier)
+                                                                          (list_of_arguments
+                                                                            (expression
+                                                                              (primary
+                                                                                (primary_literal
+                                                                                  (string_literal
+                                                                                    (quoted_string
+                                                                                      (quoted_string_item)
+                                                                                      (string_escape_seq)))))))))))))))))))))))))))))
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (subroutine_call_statement
+                                      (subroutine_call
+                                        (system_tf_call
+                                          (system_tf_identifier)
+                                          (list_of_arguments
+                                            (expression
+                                              (primary
+                                                (hierarchical_identifier
+                                                  (simple_identifier)))))))))))))))
+                      (statement_or_null
+                        (statement
+                          (statement_item
+                            (seq_block
+                              (statement_or_null
+                                (statement
+                                  (statement_item
+                                    (disable_statement
+                                      (hierarchical_identifier
+                                        (simple_identifier)))))))))))))))))))))

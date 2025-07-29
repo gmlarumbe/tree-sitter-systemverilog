@@ -1,0 +1,403 @@
+============================================
+basejump_stl/bsg_dataflow/bsg_flow_counter
+============================================
+
+// bsg_flow_counter, would be attached to a module or set of
+// modules which have ready-and-valid or ready-then-valid
+// (base on the ready_THEN_valid_p parameter) input protocol
+// and valid-then-yumi protocol for the output. Based on the 
+// count_free_p it will count the number of free elements or
+// number of existing elements in the connected module.
+
+`include "bsg_defines.sv"
+
+module bsg_flow_counter #(parameter `BSG_INV_PARAM(els_p              )
+                        , parameter count_free_p       = 0
+                        , parameter ready_THEN_valid_p = 0
+                        
+                        //localpara
+                        , parameter ptr_width_lp = 
+                          `BSG_WIDTH(els_p)
+                         )
+    
+    ( input                     clk_i
+    , input                     reset_i
+
+    , input                     v_i
+    , input                     ready_param_i
+    , input                     yumi_i
+
+    , output [ptr_width_lp-1:0] count_o
+    );
+
+// internal signals
+logic enque;
+
+// In valid-ready protocol both ends assert their signal at the 
+// beginning of the cycle, and if the sender end finds that receiver
+// was not ready it would send it again. So in the receiver side
+// valid means enque if it could accept it
+if (ready_THEN_valid_p) begin: gen_blk_protocol_select
+  assign enque = v_i;
+end else begin: gen_blk_protocol_select
+  assign enque = v_i & ready_param_i;
+end
+
+generate
+  if (count_free_p) begin: gen_blk_0
+    // An up-down counter is used for counting free slots.
+    // it starts with number of elements and that is also 
+    // the max value it can reach. 
+    bsg_counter_up_down #( .max_val_p(els_p)  
+                         , .init_val_p(els_p) 
+                         , .max_step_p(1)
+                         ) counter
+    
+        ( .clk_i(clk_i)
+        , .reset_i(reset_i)
+    
+        , .up_i(yumi_i)
+        , .down_i(enque)
+    
+        , .count_o(count_o)
+        );
+   end else begin: gen_blk_0
+    bsg_counter_up_down #( .max_val_p(els_p)  
+                         , .init_val_p(0) 
+                         , .max_step_p(1)
+                         ) counter
+    
+        ( .clk_i(clk_i)
+        , .reset_i(reset_i)
+    
+        , .up_i(enque)
+        , .down_i(yumi_i)
+    
+        , .count_o(count_o)
+        );
+  end
+endgenerate
+
+endmodule
+
+`BSG_ABSTRACT_MODULE(bsg_flow_counter)
+
+----
+
+(source_file
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (parameter_port_list
+        (parameter_port_declaration
+          (parameter_declaration
+            (list_of_param_assignments
+              (param_assignment
+                (text_macro_usage
+                  (simple_identifier)
+                  (list_of_actual_arguments
+                    (actual_argument
+                      (param_expression
+                        (mintypmax_expression
+                          (expression
+                            (primary
+                              (hierarchical_identifier
+                                (simple_identifier)))))))))))))
+        (parameter_port_declaration
+          (parameter_declaration
+            (list_of_param_assignments
+              (param_assignment
+                (simple_identifier)
+                (constant_param_expression
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number))))))))))))
+        (parameter_port_declaration
+          (parameter_declaration
+            (list_of_param_assignments
+              (param_assignment
+                (simple_identifier)
+                (constant_param_expression
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number))))))))))))
+        (one_line_comment)
+        (parameter_port_declaration
+          (parameter_declaration
+            (list_of_param_assignments
+              (param_assignment
+                (simple_identifier)
+                (constant_param_expression
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      (text_macro_usage
+                        (simple_identifier)
+                        (list_of_actual_arguments
+                          (actual_argument
+                            (param_expression
+                              (mintypmax_expression
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier)))))))))))))))))
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction)
+            (net_port_type
+              (data_type_or_implicit
+                (implicit_data_type
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        left: (constant_expression
+                          (constant_primary
+                            (simple_identifier)))
+                        right: (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))))
+          port_name: (simple_identifier))))
+    (one_line_comment)
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (one_line_comment)
+    (one_line_comment)
+    (one_line_comment)
+    (one_line_comment)
+    (conditional_generate_construct
+      (if_generate_construct
+        (constant_expression
+          (constant_primary
+            (simple_identifier)))
+        (generate_block
+          name: (simple_identifier)
+          (continuous_assign
+            (list_of_net_assignments
+              (net_assignment
+                (net_lvalue
+                  (simple_identifier))
+                (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier))))))))
+        (generate_block
+          name: (simple_identifier)
+          (continuous_assign
+            (list_of_net_assignments
+              (net_assignment
+                (net_lvalue
+                  (simple_identifier))
+                (expression
+                  left: (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier))))
+                  right: (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))))))
+    (generate_region
+      (conditional_generate_construct
+        (if_generate_construct
+          (constant_expression
+            (constant_primary
+              (simple_identifier)))
+          (generate_block
+            name: (simple_identifier)
+            (one_line_comment)
+            (one_line_comment)
+            (one_line_comment)
+            (module_instantiation
+              instance_type: (simple_identifier)
+              (parameter_value_assignment
+                (list_of_parameter_value_assignments
+                  (named_parameter_assignment
+                    (simple_identifier)
+                    (param_expression
+                      (mintypmax_expression
+                        (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier)))))))
+                  (named_parameter_assignment
+                    (simple_identifier)
+                    (param_expression
+                      (mintypmax_expression
+                        (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier)))))))
+                  (named_parameter_assignment
+                    (simple_identifier)
+                    (param_expression
+                      (mintypmax_expression
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))))))
+              (hierarchical_instance
+                (name_of_instance
+                  instance_name: (simple_identifier))
+                (list_of_port_connections
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))))))
+          (generate_block
+            name: (simple_identifier)
+            (module_instantiation
+              instance_type: (simple_identifier)
+              (parameter_value_assignment
+                (list_of_parameter_value_assignments
+                  (named_parameter_assignment
+                    (simple_identifier)
+                    (param_expression
+                      (mintypmax_expression
+                        (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier)))))))
+                  (named_parameter_assignment
+                    (simple_identifier)
+                    (param_expression
+                      (mintypmax_expression
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))))
+                  (named_parameter_assignment
+                    (simple_identifier)
+                    (param_expression
+                      (mintypmax_expression
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))))))
+              (hierarchical_instance
+                (name_of_instance
+                  instance_name: (simple_identifier))
+                (list_of_port_connections
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))
+                  (named_port_connection
+                    port_name: (simple_identifier)
+                    connection: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier)))))))))))))
+  (text_macro_usage
+    (simple_identifier)
+    (list_of_actual_arguments
+      (actual_argument
+        (param_expression
+          (mintypmax_expression
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))))

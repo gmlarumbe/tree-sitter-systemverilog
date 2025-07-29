@@ -1,0 +1,113 @@
+============================================
+basejump_stl/bsg_misc/bsg_icg_neg
+============================================
+
+/**
+ *    bsg_icg_neg.sv
+ *  
+ *    negative-phase integrated clock gating cell
+ *  
+ *    For simulation-purpose only. Don't synthesize this module.
+ *    Instead use a hardened version of this module for synthesis.
+ */
+
+`include "bsg_defines.sv"
+
+`BSG_SYNTH_MUST_HARDEN
+
+module bsg_icg_neg
+  (
+    input clk_i
+    , input en_i
+    , output clk_o
+  );
+
+  logic clk_en_r;
+
+  always_latch
+    if (clk_i == 1'b1)
+      clk_en_r <= en_i;
+
+  assign clk_o = ~clk_en_r | clk_i;
+
+
+endmodule
+
+----
+
+(source_file
+  (block_comment)
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (text_macro_usage
+    (simple_identifier))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (conditional_statement
+            (cond_predicate
+              (expression
+                left: (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier))))
+                right: (expression
+                  (primary
+                    (primary_literal
+                      (integral_number
+                        (binary_number
+                          size: (unsigned_number)
+                          base: (binary_base)
+                          value: (binary_value))))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (nonblocking_assignment
+                    (variable_lvalue
+                      (hierarchical_identifier
+                        (simple_identifier)))
+                    (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))))))))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (simple_identifier))
+          (expression
+            left: (expression
+              operator: (unary_operator)
+              argument: (primary
+                (hierarchical_identifier
+                  (simple_identifier))))
+            right: (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))))

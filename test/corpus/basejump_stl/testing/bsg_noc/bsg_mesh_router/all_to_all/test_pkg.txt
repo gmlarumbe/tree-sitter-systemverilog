@@ -1,0 +1,82 @@
+============================================
+basejump_stl/testing/bsg_noc/bsg_mesh_router/all_to_all/test_pkg
+============================================
+
+
+package test_pkg;
+
+
+  
+  `include "bsg_noc_links.svh"
+
+
+  `define test_packet_width(data_width_mp,x_cord_width_mp,y_cord_width_mp) \
+      (data_width_mp+x_cord_width_mp+y_cord_width_mp)
+
+  `define test_link_sif_width(data_width_mp,x_cord_width_mp,y_cord_width_mp) \
+      `bsg_ready_and_link_sif_width(`test_packet_width(data_width_mp,x_cord_width_mp,y_cord_width_mp))
+
+
+  `define declare_test_link_sif_s(data_width_mp,x_cord_width_mp,y_cord_width_mp) \
+    typedef struct packed {                                   \
+      logic [data_width_mp-1:0] data;                          \
+      logic [y_cord_width_mp-1:0] y_cord;                      \
+      logic [x_cord_width_mp-1:0] x_cord;                      \
+    } test_packet_s;                                          \
+                                                                                \
+    `declare_bsg_ready_and_link_sif_s(`test_packet_width(data_width_mp,x_cord_width_mp,y_cord_width_mp), test_link_sif_s)
+
+
+
+
+
+endpackage
+
+
+
+
+----
+
+(source_file
+  (package_declaration
+    name: (simple_identifier)
+    (package_item
+      (include_compiler_directive
+        (quoted_string
+          (quoted_string_item))))
+    (package_item
+      (text_macro_definition
+        (text_macro_name
+          (simple_identifier)
+          (list_of_formal_arguments
+            (formal_argument
+              (simple_identifier))
+            (formal_argument
+              (simple_identifier))
+            (formal_argument
+              (simple_identifier))))
+        (macro_text)))
+    (package_item
+      (text_macro_definition
+        (text_macro_name
+          (simple_identifier)
+          (list_of_formal_arguments
+            (formal_argument
+              (simple_identifier))
+            (formal_argument
+              (simple_identifier))
+            (formal_argument
+              (simple_identifier))))
+        (macro_text)))
+    (package_item
+      (text_macro_definition
+        (text_macro_name
+          (simple_identifier)
+          (list_of_formal_arguments
+            (formal_argument
+              (simple_identifier))
+            (formal_argument
+              (simple_identifier))
+            (formal_argument
+              (simple_identifier))))
+        (macro_text)))))

@@ -1,0 +1,554 @@
+============================================
+basejump_stl/bsg_misc/bsg_lru_pseudo_tree_decode
+============================================
+
+/**
+ *  Name:
+ *    bsg_lru_pseudo_tree_decode.sv
+ *
+ *  Description:
+ *    Pseudo-Tree-LRU decode unit.
+ *    Given input referred way_id, generates data and mask that updates
+ *    the pseudo-LRU tree. Data and mask are chosen in a way that referred way_id is
+ *    no longer the LRU way. The mask and data signals can be given to a 
+ *    bitmaskable memory to update the corresponding LRU bits.
+ */
+
+`include "bsg_defines.sv"
+
+module bsg_lru_pseudo_tree_decode
+  #(parameter `BSG_INV_PARAM(ways_p)
+    ,localparam lg_ways_lp = `BSG_SAFE_CLOG2(ways_p)
+  )
+  (input [lg_ways_lp-1:0]      way_id_i
+   , output logic [`BSG_SAFE_MINUS(ways_p, 2):0] data_o
+   , output logic [`BSG_SAFE_MINUS(ways_p, 2):0] mask_o
+  );
+
+  genvar i;
+  generate
+    if (ways_p == 1) begin: no_lru
+      assign mask_o[0] = 1'b1;
+      assign data_o[0] = 1'b0;
+    end
+    else begin: lru
+    for(i=0; i<ways_p-1; i++) begin: rof
+      // Mask generation
+	  if(i == 0) begin: fi
+	    assign mask_o[i] = 1'b1;
+	  end
+	  else if(i%2 == 1) begin: fi
+	    assign mask_o[i] = mask_o[(i-1)/2] & ~way_id_i[lg_ways_lp-`BSG_SAFE_CLOG2(i+2)+1];
+	  end
+	  else begin: fi
+	    assign mask_o[i] = mask_o[(i-2)/2] & way_id_i[lg_ways_lp-`BSG_SAFE_CLOG2(i+2)+1];
+	  end
+	  
+	  // Data generation
+	  assign data_o[i] = mask_o[i] & ~way_id_i[lg_ways_lp-`BSG_SAFE_CLOG2(i+2)];
+    end
+    end
+  endgenerate
+
+endmodule
+
+`BSG_ABSTRACT_MODULE(bsg_lru_pseudo_tree_decode)
+
+----
+
+(source_file
+  (block_comment)
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (parameter_port_list
+        (parameter_port_declaration
+          (parameter_declaration
+            (list_of_param_assignments
+              (param_assignment
+                (text_macro_usage
+                  (simple_identifier)
+                  (list_of_actual_arguments
+                    (actual_argument
+                      (param_expression
+                        (mintypmax_expression
+                          (expression
+                            (primary
+                              (hierarchical_identifier
+                                (simple_identifier)))))))))))))
+        (parameter_port_declaration
+          (local_parameter_declaration
+            (list_of_param_assignments
+              (param_assignment
+                (simple_identifier)
+                (constant_param_expression
+                  (constant_mintypmax_expression
+                    (constant_expression
+                      (text_macro_usage
+                        (simple_identifier)
+                        (list_of_actual_arguments
+                          (actual_argument
+                            (param_expression
+                              (mintypmax_expression
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier)))))))))))))))))
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction)
+            (net_port_type
+              (data_type_or_implicit
+                (implicit_data_type
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        left: (constant_expression
+                          (constant_primary
+                            (simple_identifier)))
+                        right: (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (integer_vector_type)
+                (packed_dimension
+                  (constant_range
+                    (constant_expression
+                      (text_macro_usage
+                        (simple_identifier)
+                        (list_of_actual_arguments
+                          (actual_argument
+                            (param_expression
+                              (mintypmax_expression
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier)))))))
+                          (actual_argument
+                            (param_expression
+                              (mintypmax_expression
+                                (expression
+                                  (primary
+                                    (primary_literal
+                                      (integral_number
+                                        (decimal_number
+                                          (unsigned_number))))))))))))
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number)))))))))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (integer_vector_type)
+                (packed_dimension
+                  (constant_range
+                    (constant_expression
+                      (text_macro_usage
+                        (simple_identifier)
+                        (list_of_actual_arguments
+                          (actual_argument
+                            (param_expression
+                              (mintypmax_expression
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier)))))))
+                          (actual_argument
+                            (param_expression
+                              (mintypmax_expression
+                                (expression
+                                  (primary
+                                    (primary_literal
+                                      (integral_number
+                                        (decimal_number
+                                          (unsigned_number))))))))))))
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number)))))))))))
+          port_name: (simple_identifier))))
+    (genvar_declaration
+      (list_of_genvar_identifiers
+        (simple_identifier)))
+    (generate_region
+      (conditional_generate_construct
+        (if_generate_construct
+          (constant_expression
+            left: (constant_expression
+              (constant_primary
+                (simple_identifier)))
+            right: (constant_expression
+              (constant_primary
+                (primary_literal
+                  (integral_number
+                    (decimal_number
+                      (unsigned_number)))))))
+          (generate_block
+            name: (simple_identifier)
+            (continuous_assign
+              (list_of_net_assignments
+                (net_assignment
+                  (net_lvalue
+                    (simple_identifier)
+                    (constant_select
+                      (constant_bit_select
+                        (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))))
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (binary_number
+                            size: (unsigned_number)
+                            base: (binary_base)
+                            value: (binary_value)))))))))
+            (continuous_assign
+              (list_of_net_assignments
+                (net_assignment
+                  (net_lvalue
+                    (simple_identifier)
+                    (constant_select
+                      (constant_bit_select
+                        (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))))
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (binary_number
+                            size: (unsigned_number)
+                            base: (binary_base)
+                            value: (binary_value))))))))))
+          (generate_block
+            name: (simple_identifier)
+            (loop_generate_construct
+              (genvar_initialization
+                (simple_identifier)
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))
+              (constant_expression
+                left: (constant_expression
+                  (constant_primary
+                    (simple_identifier)))
+                right: (constant_expression
+                  left: (constant_expression
+                    (constant_primary
+                      (simple_identifier)))
+                  right: (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number))))))))
+              (genvar_iteration
+                (simple_identifier)
+                (inc_or_dec_operator))
+              (generate_block
+                name: (simple_identifier)
+                (one_line_comment)
+                (conditional_generate_construct
+                  (if_generate_construct
+                    (constant_expression
+                      left: (constant_expression
+                        (constant_primary
+                          (simple_identifier)))
+                      right: (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number)))))))
+                    (generate_block
+                      name: (simple_identifier)
+                      (continuous_assign
+                        (list_of_net_assignments
+                          (net_assignment
+                            (net_lvalue
+                              (simple_identifier)
+                              (constant_select
+                                (constant_bit_select
+                                  (constant_expression
+                                    (constant_primary
+                                      (simple_identifier))))))
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (generate_block
+                      (conditional_generate_construct
+                        (if_generate_construct
+                          (constant_expression
+                            left: (constant_expression
+                              left: (constant_expression
+                                (constant_primary
+                                  (simple_identifier)))
+                              right: (constant_expression
+                                (constant_primary
+                                  (primary_literal
+                                    (integral_number
+                                      (decimal_number
+                                        (unsigned_number)))))))
+                            right: (constant_expression
+                              (constant_primary
+                                (primary_literal
+                                  (integral_number
+                                    (decimal_number
+                                      (unsigned_number)))))))
+                          (generate_block
+                            name: (simple_identifier)
+                            (continuous_assign
+                              (list_of_net_assignments
+                                (net_assignment
+                                  (net_lvalue
+                                    (simple_identifier)
+                                    (constant_select
+                                      (constant_bit_select
+                                        (constant_expression
+                                          (constant_primary
+                                            (simple_identifier))))))
+                                  (expression
+                                    left: (expression
+                                      (primary
+                                        (hierarchical_identifier
+                                          (simple_identifier))
+                                        (select
+                                          (bit_select
+                                            (expression
+                                              left: (expression
+                                                (primary
+                                                  (mintypmax_expression
+                                                    (expression
+                                                      left: (expression
+                                                        (primary
+                                                          (hierarchical_identifier
+                                                            (simple_identifier))))
+                                                      right: (expression
+                                                        (primary
+                                                          (primary_literal
+                                                            (integral_number
+                                                              (decimal_number
+                                                                (unsigned_number))))))))))
+                                              right: (expression
+                                                (primary
+                                                  (primary_literal
+                                                    (integral_number
+                                                      (decimal_number
+                                                        (unsigned_number)))))))))))
+                                    right: (expression
+                                      operator: (unary_operator)
+                                      argument: (primary
+                                        (hierarchical_identifier
+                                          (simple_identifier))
+                                        (select
+                                          (bit_select
+                                            (expression
+                                              left: (expression
+                                                left: (expression
+                                                  (primary
+                                                    (hierarchical_identifier
+                                                      (simple_identifier))))
+                                                right: (expression
+                                                  (text_macro_usage
+                                                    (simple_identifier)
+                                                    (list_of_actual_arguments
+                                                      (actual_argument
+                                                        (param_expression
+                                                          (mintypmax_expression
+                                                            (expression
+                                                              left: (expression
+                                                                (primary
+                                                                  (hierarchical_identifier
+                                                                    (simple_identifier))))
+                                                              right: (expression
+                                                                (primary
+                                                                  (primary_literal
+                                                                    (integral_number
+                                                                      (decimal_number
+                                                                        (unsigned_number))))))))))))))
+                                              right: (expression
+                                                (primary
+                                                  (primary_literal
+                                                    (integral_number
+                                                      (decimal_number
+                                                        (unsigned_number))))))))))))))))
+                          (generate_block
+                            name: (simple_identifier)
+                            (continuous_assign
+                              (list_of_net_assignments
+                                (net_assignment
+                                  (net_lvalue
+                                    (simple_identifier)
+                                    (constant_select
+                                      (constant_bit_select
+                                        (constant_expression
+                                          (constant_primary
+                                            (simple_identifier))))))
+                                  (expression
+                                    left: (expression
+                                      (primary
+                                        (hierarchical_identifier
+                                          (simple_identifier))
+                                        (select
+                                          (bit_select
+                                            (expression
+                                              left: (expression
+                                                (primary
+                                                  (mintypmax_expression
+                                                    (expression
+                                                      left: (expression
+                                                        (primary
+                                                          (hierarchical_identifier
+                                                            (simple_identifier))))
+                                                      right: (expression
+                                                        (primary
+                                                          (primary_literal
+                                                            (integral_number
+                                                              (decimal_number
+                                                                (unsigned_number))))))))))
+                                              right: (expression
+                                                (primary
+                                                  (primary_literal
+                                                    (integral_number
+                                                      (decimal_number
+                                                        (unsigned_number)))))))))))
+                                    right: (expression
+                                      (primary
+                                        (hierarchical_identifier
+                                          (simple_identifier))
+                                        (select
+                                          (bit_select
+                                            (expression
+                                              left: (expression
+                                                left: (expression
+                                                  (primary
+                                                    (hierarchical_identifier
+                                                      (simple_identifier))))
+                                                right: (expression
+                                                  (text_macro_usage
+                                                    (simple_identifier)
+                                                    (list_of_actual_arguments
+                                                      (actual_argument
+                                                        (param_expression
+                                                          (mintypmax_expression
+                                                            (expression
+                                                              left: (expression
+                                                                (primary
+                                                                  (hierarchical_identifier
+                                                                    (simple_identifier))))
+                                                              right: (expression
+                                                                (primary
+                                                                  (primary_literal
+                                                                    (integral_number
+                                                                      (decimal_number
+                                                                        (unsigned_number))))))))))))))
+                                              right: (expression
+                                                (primary
+                                                  (primary_literal
+                                                    (integral_number
+                                                      (decimal_number
+                                                        (unsigned_number)))))))))))))))))))))
+                (one_line_comment)
+                (continuous_assign
+                  (list_of_net_assignments
+                    (net_assignment
+                      (net_lvalue
+                        (simple_identifier)
+                        (constant_select
+                          (constant_bit_select
+                            (constant_expression
+                              (constant_primary
+                                (simple_identifier))))))
+                      (expression
+                        left: (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier))
+                            (select
+                              (bit_select
+                                (expression
+                                  (primary
+                                    (hierarchical_identifier
+                                      (simple_identifier))))))))
+                        right: (expression
+                          operator: (unary_operator)
+                          argument: (primary
+                            (hierarchical_identifier
+                              (simple_identifier))
+                            (select
+                              (bit_select
+                                (expression
+                                  left: (expression
+                                    (primary
+                                      (hierarchical_identifier
+                                        (simple_identifier))))
+                                  right: (expression
+                                    (text_macro_usage
+                                      (simple_identifier)
+                                      (list_of_actual_arguments
+                                        (actual_argument
+                                          (param_expression
+                                            (mintypmax_expression
+                                              (expression
+                                                left: (expression
+                                                  (primary
+                                                    (hierarchical_identifier
+                                                      (simple_identifier))))
+                                                right: (expression
+                                                  (primary
+                                                    (primary_literal
+                                                      (integral_number
+                                                        (decimal_number
+                                                          (unsigned_number)))))))))))))))))))))))))))))
+  (text_macro_usage
+    (simple_identifier)
+    (list_of_actual_arguments
+      (actual_argument
+        (param_expression
+          (mintypmax_expression
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))))

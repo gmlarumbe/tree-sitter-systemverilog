@@ -1,0 +1,165 @@
+============================================
+basejump_stl/hard/gf_14/bsg_misc/bsg_tiehi
+============================================
+
+`include "bsg_defines.sv"
+
+module bsg_tiehi
+
+#(width_p="inv", harden_p=1)
+
+(output [width_p-1:0] o
+);
+
+  if (harden_p)
+    begin: hard
+      for (genvar i = 0; i < width_p; i++)
+        begin: w
+          SC7P5T_TIEHIX2_SSC16R
+            BSG_DONT_TOUCH_TIE_HI
+              (.Z(o));
+        end: w
+    end: hard
+  else
+    begin: syn
+      assign o = { width_p {1'b1} };
+    end: syn
+   
+endmodule
+
+`BSG_ABSTRACT_MODULE(bsg_tiehi)
+
+----
+
+(source_file
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (parameter_port_list
+        (list_of_param_assignments
+          (param_assignment
+            (simple_identifier)
+            (constant_param_expression
+              (constant_mintypmax_expression
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (string_literal
+                        (quoted_string
+                          (quoted_string_item)))))))))
+          (param_assignment
+            (simple_identifier)
+            (constant_param_expression
+              (constant_mintypmax_expression
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))))))
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction)
+            (net_port_type
+              (data_type_or_implicit
+                (implicit_data_type
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        left: (constant_expression
+                          (constant_primary
+                            (simple_identifier)))
+                        right: (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))))
+          port_name: (simple_identifier))))
+    (conditional_generate_construct
+      (if_generate_construct
+        (constant_expression
+          (constant_primary
+            (simple_identifier)))
+        (generate_block
+          name: (simple_identifier)
+          (loop_generate_construct
+            (genvar_initialization
+              (simple_identifier)
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number)))))))
+            (constant_expression
+              left: (constant_expression
+                (constant_primary
+                  (simple_identifier)))
+              right: (constant_expression
+                (constant_primary
+                  (simple_identifier))))
+            (genvar_iteration
+              (simple_identifier)
+              (inc_or_dec_operator))
+            (generate_block
+              name: (simple_identifier)
+              (module_instantiation
+                instance_type: (simple_identifier)
+                (hierarchical_instance
+                  (name_of_instance
+                    instance_name: (simple_identifier))
+                  (list_of_port_connections
+                    (named_port_connection
+                      port_name: (simple_identifier)
+                      connection: (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier))))))))
+              name: (simple_identifier)))
+          name: (simple_identifier))
+        (generate_block
+          name: (simple_identifier)
+          (continuous_assign
+            (list_of_net_assignments
+              (net_assignment
+                (net_lvalue
+                  (simple_identifier))
+                (expression
+                  (primary
+                    (multiple_concatenation
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier))))
+                      (concatenation
+                        (expression
+                          (primary
+                            (primary_literal
+                              (integral_number
+                                (binary_number
+                                  size: (unsigned_number)
+                                  base: (binary_base)
+                                  value: (binary_value)))))))))))))
+          name: (simple_identifier)))))
+  (text_macro_usage
+    (simple_identifier)
+    (list_of_actual_arguments
+      (actual_argument
+        (param_expression
+          (mintypmax_expression
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))))

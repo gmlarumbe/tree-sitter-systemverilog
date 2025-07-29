@@ -1,0 +1,378 @@
+============================================
+basejump_stl/bsg_legacy/bsg_fsb/bsg_fsb_pkg
+============================================
+
+`ifndef BSG_FSB_PKG_VH
+`define BSG_FSB_PKG_VH
+
+`ifndef FSB_LEGACY 
+`define declare_bsg_fsb_pkt_s( fsb_width_lp,id_width_p )                      \
+  typedef enum logic [6:0] {RNDISABLE_CMD       = 'd1                           \
+                           ,RNENABLE_CMD        = 'd2                           \
+                           ,RNDOWN_CMD          = 'd3                           \
+                           ,RNUP_CMD            = 'd4                           \
+                           ,RNRESET_ENABLE_CMD  = 'd5                           \
+                           ,RNRESET_DISABLE_CMD = 'd6} bsg_fsb_opcode_s;        \
+                                                                                \
+                                                                                \
+  localparam    fsb_pkt_data_width_lp =                                         \
+                        fsb_width_lp - 2* id_width_p - $bits(bsg_fsb_opcode_s) -1; \
+  typedef struct packed {                                                       \
+    logic [id_width_p-1:0]      destid;                                         \
+    logic [0:0]      cmd;                                                       \
+                                                                                \
+    bsg_fsb_opcode_s opcode;                                                    \
+    logic [id_width_p-1:0]      srcid;                                          \
+    logic [fsb_pkt_data_width_lp-1:0]     data;                                \
+  } bsg_fsb_pkt_s;                                                              \
+                                                                                \
+   typedef logic [fsb_width_lp - id_width_p-1 -1:0] bsg_fsb_pkt_client_data_t;  \
+                                                                                \
+  typedef struct packed{                                                        \
+    logic [id_width_p-1:0]      destid;                                         \
+    logic [0:0]      cmd;                                                       \
+    bsg_fsb_pkt_client_data_t data;                                             \
+  } bsg_fsb_pkt_client_s;                                                       \
+        
+`else
+//  ______ _____ ____   _      ______ _____          _______     __ 
+// |  ____/ ____|  _ \ | |    |  ____/ ____|   /\   / ____\ \   / / 
+// | |__ | (___ | |_) || |    | |__ | |  __   /  \ | |     \ \_/ /  
+// |  __| \___ \|  _ < | |    |  __|| | |_ | / /\ \| |      \   /   
+// | |    ____) | |_) || |____| |___| |__| |/ ____ \ |____   | |    
+// |_|   |_____/|____/ |______|______\_____/_/    \_\_____|  |_|    
+//                 ______                                           
+//                |______|   
+
+package bsg_fsb_pkg;
+
+  typedef enum logic [6:0] {RNDISABLE_CMD       = 'd1
+                           ,RNENABLE_CMD        = 'd2
+                           ,RNDOWN_CMD          = 'd3
+                           ,RNUP_CMD            = 'd4
+                           ,RNRESET_ENABLE_CMD  = 'd5
+                           ,RNRESET_DISABLE_CMD = 'd6} bsg_fsb_opcode_s;
+
+// the top 5 bits are not re-purposable.
+//
+
+  typedef struct packed {
+    // these bits are reserved and needed for this network
+    logic [3:0]      destid; // 4 bits
+    logic [0:0]      cmd;    // 1 bits (1 for switch, 0 for node)
+
+    // for cmd=0, these 75 bits are free for general use; they can be repurposed
+    bsg_fsb_opcode_s opcode; // 7 bits - only looked at by switch
+    logic [3:0]      srcid;  // 4 bits
+    logic [63:0]     data;   // 64 bits
+  } bsg_fsb_pkt_s;
+
+   typedef logic [74:0] bsg_fsb_pkt_client_data_t;
+
+   // for client nodes; note destid and cmd must line up with bsg_fsb_pkt_s above
+  typedef struct packed {
+    // these bits are reserved and needed for this network
+    logic [3:0]      destid; // 4 bits
+    logic [0:0]      cmd;    // == 0
+    bsg_fsb_pkt_client_data_t data;    // this is the payload
+  } bsg_fsb_pkt_client_s;
+
+endpackage
+`endif
+`endif
+
+----
+
+(source_file
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier)))
+  (conditional_compilation_directive
+    (ifdef_condition
+      (simple_identifier)))
+  (text_macro_definition
+    (text_macro_name
+      (simple_identifier)
+      (list_of_formal_arguments
+        (formal_argument
+          (simple_identifier))
+        (formal_argument
+          (simple_identifier))))
+    (macro_text))
+  (conditional_compilation_directive)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (package_declaration
+    name: (simple_identifier)
+    (package_item
+      (data_declaration
+        (type_declaration
+          (data_type
+            (enum_base_type
+              (integer_vector_type)
+              (packed_dimension
+                (constant_range
+                  (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number))))))
+                  (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))))
+            (enum_name_declaration
+              (simple_identifier)
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        base: (decimal_base)
+                        value: (unsigned_number)))))))
+            (enum_name_declaration
+              (simple_identifier)
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        base: (decimal_base)
+                        value: (unsigned_number)))))))
+            (enum_name_declaration
+              (simple_identifier)
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        base: (decimal_base)
+                        value: (unsigned_number)))))))
+            (enum_name_declaration
+              (simple_identifier)
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        base: (decimal_base)
+                        value: (unsigned_number)))))))
+            (enum_name_declaration
+              (simple_identifier)
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        base: (decimal_base)
+                        value: (unsigned_number)))))))
+            (enum_name_declaration
+              (simple_identifier)
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        base: (decimal_base)
+                        value: (unsigned_number))))))))
+          type_name: (simple_identifier))))
+    (one_line_comment)
+    (one_line_comment)
+    (package_item
+      (data_declaration
+        (type_declaration
+          (data_type
+            (struct_union)
+            (one_line_comment)
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (integer_vector_type)
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  name: (simple_identifier))))
+            (one_line_comment)
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (integer_vector_type)
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  name: (simple_identifier))))
+            (one_line_comment)
+            (one_line_comment)
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (simple_identifier)))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  name: (simple_identifier))))
+            (one_line_comment)
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (integer_vector_type)
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  name: (simple_identifier))))
+            (one_line_comment)
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (integer_vector_type)
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  name: (simple_identifier))))
+            (one_line_comment))
+          type_name: (simple_identifier))))
+    (package_item
+      (data_declaration
+        (type_declaration
+          (data_type
+            (integer_vector_type)
+            (packed_dimension
+              (constant_range
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))))
+          type_name: (simple_identifier))))
+    (one_line_comment)
+    (package_item
+      (data_declaration
+        (type_declaration
+          (data_type
+            (struct_union)
+            (one_line_comment)
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (integer_vector_type)
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  name: (simple_identifier))))
+            (one_line_comment)
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (integer_vector_type)
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  name: (simple_identifier))))
+            (one_line_comment)
+            (struct_union_member
+              (data_type_or_void
+                (data_type
+                  (simple_identifier)))
+              (list_of_variable_decl_assignments
+                (variable_decl_assignment
+                  name: (simple_identifier))))
+            (one_line_comment))
+          type_name: (simple_identifier)))))
+  (conditional_compilation_directive)
+  (conditional_compilation_directive))

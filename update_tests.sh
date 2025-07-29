@@ -97,6 +97,125 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    cva6/uvma_interrupt_seq.sv         # Various, use of automatic in external task, dot element for time delay
                    cva6/sram.sv                       # MISSING "always", but it's a generate!
                    cva6/uvma_cva6_core_cntrl_cntxt.sv # MISSING "end" due to pragma protects wrong detection
+                   # basejump_stl/
+                   basejump_stl/bsg_async/bsg_launch_sync_sync.sv                                   # Keyword in macro, else in macro
+                   basejump_stl/bsg_async/bsg_sync_sync.sv                                          # else in macro
+                   basejump_stl/bsg_comm_link/test_bsg_comm_link_checker.sv                         # Macro with complex prefix with space
+                   basejump_stl/bsg_comm_link/tests/test_bsg_assembler/test_bsg_assembler.sv        # Static cast with system_tf $clog2(num_channels_lp)'
+                   basejump_stl/bsg_comm_link/tests/test_bsg_comm_link/test_bsg_comm_link.sv        # Use of checker keyword as instance name
+                   basejump_stl/bsg_dmc/bsg_dmc_phy.sv                                              # Macro usage with arg with spaces
+                   basejump_stl/bsg_dmc/bsg_dmc_xilinx_ui_trace_replay.sv                           # Macro usage for static cast
+                   basejump_stl/bsg_legacy/bsg_chip/bsg_nonsynth_mixin_motherboard.v                # Macro usage for module names
+                   basejump_stl/bsg_legacy/bsg_chip/bsg_rocket/bsg_chip_rocket.v                    # Syntax errors in code
+                   basejump_stl/bsg_legacy/bsg_chip/bsg_rocket/bsg_nonsynth_chipset_rocket_fsb.v    # Syntax errors in code
+                   basejump_stl/bsg_legacy/bsg_chip/bsg_rocket/bsg_rocket_core_fsb.v                # Missing name of instance for bsg_fsb_to_htif_connector
+                   basejump_stl/bsg_legacy/bsg_tag/config_net/sim/send_config_tag.v                 # Include missing ""
+                   basejump_stl/bsg_mem/bsg_mem_multiport_latch_write_banked_bypassing.sv           # Extra end
+                   basejump_stl/bsg_misc/bsg_encode_one_hot.sv                                      # Time as macro arg
+                   basejump_stl/bsg_misc/bsg_round_robin_arb.sv                                     # Macro with ~ before usage
+                   basejump_stl/bsg_misc/bsg_scan.sv                                                # Time as macro arg
+                   basejump_stl/bsg_test/bsg_nonsynth_dpi_clock_gen.sv                              # Data type as macro arg
+                   basejump_stl/bsg_test/bsg_nonsynth_dramsim3_map.sv                               # Macro usage as static cast type
+                   basejump_stl/bsg_test/bsg_nonsynth_profiler.sv                                   # Parameter RHS is empty array '{}
+                   basejump_stl/bsg_test/bsg_nonsynth_dramsim3.sv                                   # Macro with data type as arg
+                   basejump_stl/experimental/bsg_dataflow/bsg_fifo_reorder_sync.sv                  # Macro usage with ! (!`BSG_IS_POW2(els_p))
+                   basejump_stl/experimental/bsg_dataflow/bsg_fifo_reorder_sync_variable.sv         #  Macro usage with ! (!`BSG_IS_POW2(els_p))
+                   basejump_stl/hard/gf_14/bsg_async/bsg_launch_sync_sync.sv                        # Keyword in macro, else in macro
+                   basejump_stl/hard/gf_14/bsg_async/bsg_sync_sync.sv                               # else in macro
+                   basejump_stl/hard/pickle_40/bsg_mem/bsg_mem_1rw_sync.sv                          # else in macro
+                   basejump_stl/hard/pickle_40/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.sv           # else in macro
+                   basejump_stl/hard/pickle_40/bsg_mem/bsg_mem_1rw_sync_mask_write_byte.sv          # else in macro
+                   basejump_stl/hard/pickle_40/bsg_mem/bsg_mem_2r1w_sync.sv                         # else in macro
+                   basejump_stl/hard/saed_90/bsg_mem/bsg_mem_1r1w.sv                                # else in macro
+                   basejump_stl/hard/saed_90/bsg_mem/bsg_mem_1r1w_sync.sv                           # else in macro
+                   basejump_stl/hard/saed_90/bsg_mem/bsg_mem_1rw_sync.sv                            # else in macro
+                   basejump_stl/hard/saed_90/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.sv             # else in macro
+                   basejump_stl/hard/saed_90/bsg_mem/bsg_mem_1rw_sync_mask_write_byte.sv            # else in macro
+                   basejump_stl/hard/tsmc_16/bsg_async/bsg_launch_sync_sync.sv                      # Keyword in macro, else in macro
+                   basejump_stl/hard/tsmc_16/bsg_async/bsg_sync_sync.sv                             # else in macro
+                   basejump_stl/hard/tsmc_16/bsg_mem/bsg_mem_1r1w_sync_mask_write_bit.sv            # else in macro
+                   basejump_stl/hard/tsmc_16/bsg_mem/bsg_mem_1rw_sync.sv                            # else in macro
+                   basejump_stl/hard/tsmc_16/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.sv             # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_dataflow/bsg_fifo_shift_datapath.sv           # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_mem/bsg_mem_1r1w.sv                           # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_mem/bsg_mem_1r1w_sync_mask_write_bit.sv       # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_mem/bsg_mem_1rw_sync.sv                       # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.sv        # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_mem/bsg_mem_2r1w.sv                           # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_and.sv                               # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_buf.sv                               # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_clkbuf.sv                            # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_dff.sv                               # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_dff_en.sv                            # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_dff_reset.sv                         # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_dff_reset_en.sv                      # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_inv.sv                               # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_mul/bsg_mul_and_csa_block_hard.sv    # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_mul/bsg_mul_booth_4_block_rep.sv     # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_mul/bsg_mul_comp42_rep.sv            # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_mux.sv                               # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_mux_one_hot.sv                       # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_nand.sv                              # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_nor3.sv                              # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_reduce.sv                            # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_tiehi.sv                             # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_tielo.sv                             # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_xnor.sv                              # else in macro
+                   basejump_stl/hard/tsmc_180_250/bsg_misc/bsg_xor.sv                               # else in macro
+                   basejump_stl/hard/tsmc_28/bsg_async/bsg_launch_sync_sync.sv                      # Keyword in macro, else in macro
+                   basejump_stl/hard/tsmc_28/bsg_async/bsg_sync_sync.sv                             # else in macro
+                   basejump_stl/hard/tsmc_28/bsg_misc/bsg_buf.sv                                    # else in macro
+                   basejump_stl/hard/tsmc_28/bsg_misc/bsg_dff.sv                                    # else in macro
+                   basejump_stl/hard/tsmc_28/bsg_misc/bsg_nand.sv                                   # else in macro
+                   basejump_stl/hard/tsmc_28/bsg_misc/bsg_nor3.sv                                   # else in macro
+                   basejump_stl/hard/tsmc_28/bsg_misc/bsg_xnor.sv                                   # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_mem/bsg_mem_1r1w.sv                                # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_mem/bsg_mem_1r1w_sync.sv                           # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_mem/bsg_mem_1r1w_sync_mask_write_bit.sv            # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_mem/bsg_mem_1rw_sync.sv                            # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.sv             # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_mem/bsg_mem_1rw_sync_mask_write_byte.sv            # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_mem/bsg_mem_2r1w.sv                                # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_and.sv                                    # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_buf.sv                                    # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_clkbuf.sv                                 # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_dff.sv                                    # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_dff_en.sv                                 # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_dff_reset.sv                              # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_dff_reset_en.sv                           # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_inv.sv                                    # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_mul/bsg_mul_and_csa_block_hard.sv         # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_mul/bsg_mul_booth_4_block_rep.sv          # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_mul/bsg_mul_comp42_rep.sv                 # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_mux.sv                                    # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_mux_one_hot.sv                            # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_nand.sv                                   # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_nor3.sv                                   # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_reduce.sv                                 # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_tiehi.sv                                  # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_tielo.sv                                  # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_xnor.sv                                   # else in macro
+                   basejump_stl/hard/tsmc_40/bsg_misc/bsg_xor.sv                                    # else in macro
+                   basejump_stl/hard/ultrascale_plus/bsg_async/bsg_launch_sync_sync.sv              # Keyword in macro, else in macro
+                   basejump_stl/testing/bsg_cache/dmc/bsg_trace_rom.sv                              # else in macro
+                   basejump_stl/testing/bsg_cache/lock_test/testbench.sv                            # Use of keyword 'checker' as an identifier
+                   basejump_stl/testing/bsg_cache/regression_64/testbench.sv                        # Use of keyword 'checker' as an identifier
+                   basejump_stl/testing/bsg_cache/regression_non_blocking/testbench.sv              # Use of keyword 'checker' as an identifier
+                   basejump_stl/testing/bsg_cache/regression_v2/testbench.sv                        # Use of keyword 'checker' as an identifier
+                   basejump_stl/testing/bsg_cache/wormhole_fanout/testbench.sv                      # Use of keyword 'checker' as an identifier
+                   basejump_stl/testing/bsg_cache/wormhole_stream/testbench.sv                      # Use of keyword 'checker' as an identifier
+                   basejump_stl/testing/bsg_dmc/lpddr_verilog_model/mobile_ddr.sv                   # Use of weird macro, and custom system tasks with args with spaces
+                   basejump_stl/testing/bsg_dmc/lpddr_verilog_model/mobile_ddr_mcp.sv               # Use of weird macro
+                   basejump_stl/testing/bsg_dmc/lpddr_verilog_model/tb.sv                           # Use of weird macro
+                   basejump_stl/testing/bsg_dmc/traffic_generator.sv                                # Missing range for packed dimension
+                   basejump_stl/testing/bsg_misc/bsg_counter_clock_downsample/test_bsg.sv           # Weird macro `WIDTH_P'd0;
+                   basejump_stl/testing/bsg_misc/bsg_mux/test_bsg.sv                                # Macro usage for static cast
+                   basejump_stl/testing/bsg_misc/bsg_rotate_left/main.sv                            # Macro usage for static cast
+                   basejump_stl/testing/bsg_noc/bsg_mesh_to_ring_stitch/test_mesh_to_ring_stitch.sv # Static cast with system_tf
+                   basejump_stl/testing/bsg_test/bsg_nonsynth_dramsim3/testbench.sv                 # Usage of macro for package import
+                   basejump_stl/testing/bsg_test/bsg_nonsynth_dramsim3/testbench_multi.sv           # Usage of macro for package import
+                   basejump_stl/testing/bsg_test/dramsim3_bandwidth/testbench.sv                    # Usage of macro for package import
+                   basejump_stl/testing/bsg_test/dramsim3_bandwidth2/testbench.sv                   # Usage of macro for package import
                    # TODO:
                    sv-tests/chapter-22/22.3--resetall_illegal.sv
                    github/issue_34.sv

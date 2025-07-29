@@ -1,0 +1,479 @@
+============================================
+basejump_stl/testing/bsg_cache/regression_non_blocking/cov_miss_fifo
+============================================
+
+
+`include "bsg_cache_non_blocking.svh"
+
+module cov_miss_fifo
+  import bsg_cache_non_blocking_pkg::*;
+  (
+    input clk_i
+    , input reset_i
+    
+    , input v_i
+    , input ready_o
+    , input v_o
+    , input yumi_i
+    , input bsg_cache_non_blocking_miss_fifo_op_e yumi_op_i
+    , input scan_not_dq_i
+    , input read_write_same_addr
+    , input v_r
+    , input empty
+    , input rptr_valid
+    , input enque
+    , input rollback_i
+  );
+
+
+  covergroup cg_output_taken @ (negedge clk_i iff v_r & yumi_i & ~rollback_i);
+
+    coverpoint yumi_op_i;
+    coverpoint read_write_same_addr;
+    coverpoint enque;
+
+    cross yumi_op_i, read_write_same_addr, enque;
+
+  endgroup
+
+
+  covergroup cg_input_output @ (negedge clk_i);
+
+    coverpoint v_i;
+    coverpoint ready_o;
+    coverpoint v_o;
+    coverpoint yumi_i;
+
+    cross v_i, ready_o, v_o, yumi_i {
+      ignore_bins n_v_o = 
+        binsof(v_o) intersect {1'b0} &&
+        binsof(yumi_i) intersect {1'b1};
+    }
+
+  endgroup 
+
+
+  covergroup cg_output_not_valid @ (negedge clk_i iff ~rollback_i & ~v_r);
+
+    coverpoint empty;
+    coverpoint scan_not_dq_i;
+    coverpoint rptr_valid;
+    coverpoint enque;
+
+    cross empty, scan_not_dq_i, rptr_valid, enque {
+      ignore_bins ig0 =
+        binsof(empty) intersect {1'b1} &&
+        binsof(scan_not_dq_i) intersect {1'b0} &&
+        binsof(rptr_valid) intersect {1'b1};
+    
+      ignore_bins ig1 = 
+        binsof(empty) intersect {1'b1} &&
+        binsof(scan_not_dq_i) intersect {1'b1} &&
+        binsof(enque) intersect {1'b1};
+    }
+
+  endgroup
+
+
+  initial begin
+    cg_output_taken ot = new;
+    cg_input_output io = new;
+    cg_output_not_valid onv = new;
+  end
+
+
+endmodule
+
+----
+
+(source_file
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (package_import_declaration
+        (package_import_item
+          (simple_identifier)))
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (simple_identifier))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))))
+    (covergroup_declaration
+      name: (simple_identifier)
+      (coverage_event
+        (clocking_event
+          (event_expression
+            (edge_identifier)
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))
+            (expression
+              left: (expression
+                left: (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier))))
+                right: (expression
+                  (primary
+                    (hierarchical_identifier
+                      (simple_identifier)))))
+              right: (expression
+                operator: (unary_operator)
+                argument: (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))))))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_cross
+          (list_of_cross_items
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier))
+          (cross_body))))
+    (covergroup_declaration
+      name: (simple_identifier)
+      (coverage_event
+        (clocking_event
+          (event_expression
+            (edge_identifier)
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier)))))))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_cross
+          (list_of_cross_items
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier))
+          (cross_body
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))))))))))
+    (covergroup_declaration
+      name: (simple_identifier)
+      (coverage_event
+        (clocking_event
+          (event_expression
+            (edge_identifier)
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))
+            (expression
+              left: (expression
+                operator: (unary_operator)
+                argument: (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              right: (expression
+                operator: (unary_operator)
+                argument: (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))))))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_cross
+          (list_of_cross_items
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier))
+          (cross_body
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_expression
+                        (select_condition
+                          (bins_expression
+                            (simple_identifier))
+                          (covergroup_range_list
+                            (covergroup_value_range
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (integral_number
+                                      (binary_number
+                                        size: (unsigned_number)
+                                        base: (binary_base)
+                                        value: (binary_value))))))))))
+                      (select_expression
+                        (select_condition
+                          (bins_expression
+                            (simple_identifier))
+                          (covergroup_range_list
+                            (covergroup_value_range
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (integral_number
+                                      (binary_number
+                                        size: (unsigned_number)
+                                        base: (binary_base)
+                                        value: (binary_value)))))))))))
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))))))
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_expression
+                        (select_condition
+                          (bins_expression
+                            (simple_identifier))
+                          (covergroup_range_list
+                            (covergroup_value_range
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (integral_number
+                                      (binary_number
+                                        size: (unsigned_number)
+                                        base: (binary_base)
+                                        value: (binary_value))))))))))
+                      (select_expression
+                        (select_condition
+                          (bins_expression
+                            (simple_identifier))
+                          (covergroup_range_list
+                            (covergroup_value_range
+                              (expression
+                                (primary
+                                  (primary_literal
+                                    (integral_number
+                                      (binary_number
+                                        size: (unsigned_number)
+                                        base: (binary_base)
+                                        value: (binary_value)))))))))))
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))))))))))
+    (initial_construct
+      (statement_or_null
+        (statement
+          (statement_item
+            (seq_block
+              (block_item_declaration
+                (data_declaration
+                  (data_type_or_implicit
+                    (data_type
+                      (simple_identifier)))
+                  (list_of_variable_decl_assignments
+                    (variable_decl_assignment
+                      name: (simple_identifier)
+                      (class_new)))))
+              (block_item_declaration
+                (data_declaration
+                  (data_type_or_implicit
+                    (data_type
+                      (simple_identifier)))
+                  (list_of_variable_decl_assignments
+                    (variable_decl_assignment
+                      name: (simple_identifier)
+                      (class_new)))))
+              (block_item_declaration
+                (data_declaration
+                  (data_type_or_implicit
+                    (data_type
+                      (simple_identifier)))
+                  (list_of_variable_decl_assignments
+                    (variable_decl_assignment
+                      name: (simple_identifier)
+                      (class_new))))))))))))

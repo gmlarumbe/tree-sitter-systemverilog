@@ -1,0 +1,567 @@
+============================================
+basejump_stl/bsg_link/bsg_link_oddr_phy
+============================================
+
+
+//
+// Paul Gao 03/2019
+//
+// This is an output DDR PHY
+//
+// Output clock is center-aligned to output data
+// Theoretically clk_r_o is always centered to data_r_o, because negedge of clk_i
+// has 90-degree phase delay to posedge of clk_i.
+// Need output delay constraint(s) to ensure clock and data delay are same
+//
+// Waveform of all signals when going out of reset:
+/******************************************************************************************
+
+          +---+   +---+   +---+   +---+   +---+   +---+   +---+   +---+   +---+   +---+
+clk_i         |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+              +---+   +---+   +---+   +---+   +---+   +---+   +---+   +---+   +---+   +---+
+          +--------+
+reset_i            |
+                   +----------------------------------------------------------------------+
+          +----------------+
+reset_i_r                  |
+                           +--------------------------------------------------------------+
+                               +-------+       +-------+       +-------+       +-------+
+clk_r                          |       |       |       |       |       |       |       |
+          +--------------------+       +-------+       +-------+       +-------+       +---
+                           +-------+       +-------+       +-------+       +-------+
+odd_r                      |       |       |       |       |       |       |       |
+          +----------------+       +-------+       +-------+       +-------+       +-------
+          +----------------+       +-------+       +-------+       +-------+       +-------
+ready_o                    |       |       |       |       |       |       |       |
+                           +-------+       +-------+       +-------+       +-------+
+          +--------+-----------------------------------------------------------------------
+data_i    |        | d1d0  |       | d1d0  |       | d1d0  |       | d1d0  |       | d1d0
+          +--------------------------------------------------------------------------------
+          +--------------------------------------------------------------------------------
+data_i_r  |                |     d1d0      |     d1d0      |     d1d0      |     d1d0
+          +----------------+---------------------------------------------------------------
+                                       +-------+       +-------+       +-------+       +---
+clk_o                                  |       |       |       |       |       |       |
+          +----------------------------+       +-------+       +-------+       +-------+
+          +--------------------------------+---------------+---------------+---------------
+data_o    |                        |  d0   |  d1   |  d0   |  d1   |  d0   |  d1   |  d0
+          +------------------------+-------+-------+-------+-------+-------+-------+-------
+
+******************************************************************************************/
+//
+// Schematic and more information: (Google Doc) 
+// https://docs.google.com/document/d/1lmkOxvlAvxrk_MM5W8xv3ho2DS26xbOMTCqUIyS6di8/edit?ts=5cf76063#heading=h.o6ptt6mn49us
+//
+//
+
+`include "bsg_defines.sv"
+
+module bsg_link_oddr_phy
+
+ #(parameter `BSG_INV_PARAM(width_p ))
+
+  (// reset, data and ready signals synchronous to clk_i
+   // no valid signal required (assume valid_i is constant 1)
+   input                      reset_i
+  ,input                      clk_i
+  ,input [1:0][width_p-1:0]   data_i
+  ,output                     ready_o
+   // output clock and data
+  ,output logic [width_p-1:0] data_r_o
+  ,output logic               clk_r_o
+  );
+  
+  logic odd_r, clk_r, reset_i_r;  
+  logic [1:0][width_p-1:0] data_i_r;
+  
+  // ready to accept new data every two cycles
+  assign ready_o = ~odd_r;
+  
+  // register 2x-wide input data in flops
+  always_ff @(posedge clk_i)
+    if (~odd_r)
+        data_i_r <= data_i;
+        
+  // odd_r signal (mux select bit)
+  always_ff @(posedge clk_i)
+    if (reset_i)
+        odd_r <= 1'b0;
+    else 
+        odd_r <= ~odd_r;
+  
+  // reset_i is sync to posedge of clk_i, while clk_r is sync to negedge.
+  // This will potentially become critical path (only 1/2 period max delay).
+  // Add an extra flop for clk_r reset.
+  always_ff @(posedge clk_i)
+    reset_i_r <= reset_i;
+  
+  // clock output
+  always_ff @(negedge clk_i)
+  begin
+    if (reset_i_r)
+        clk_r <= 1'b0;
+    else 
+        clk_r <= ~clk_r;
+    // Logically, clk_o launch flop is not necessary
+    // Add launch flop for clk_o signal for two reasons:
+    // 1. Easier to center-align with data bits on ASIC (symmetric to data launch flops)
+    // 2. Pack-up register into IOB on FPGA
+    clk_r_o <= clk_r;
+  end
+  
+  // data launch flops
+  // odd_r is not a reset; should not need to put a reset in here
+
+  always_ff @(posedge clk_i)
+    if (odd_r) 
+        data_r_o <= data_i_r[0];
+    else 
+        data_r_o <= data_i_r[1];
+
+endmodule
+
+`BSG_ABSTRACT_MODULE(bsg_link_oddr_phy)
+
+----
+
+(source_file
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (block_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (one_line_comment)
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (parameter_port_list
+        (parameter_port_declaration
+          (parameter_declaration
+            (list_of_param_assignments
+              (param_assignment
+                (text_macro_usage
+                  (simple_identifier)
+                  (list_of_actual_arguments
+                    (actual_argument
+                      (param_expression
+                        (mintypmax_expression
+                          (expression
+                            (primary
+                              (hierarchical_identifier
+                                (simple_identifier))))))))))))))
+      (list_of_port_declarations
+        (one_line_comment)
+        (one_line_comment)
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction)
+            (net_port_type
+              (data_type_or_implicit
+                (implicit_data_type
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))
+                  (packed_dimension
+                    (constant_range
+                      (constant_expression
+                        left: (constant_expression
+                          (constant_primary
+                            (simple_identifier)))
+                        right: (constant_expression
+                          (constant_primary
+                            (primary_literal
+                              (integral_number
+                                (decimal_number
+                                  (unsigned_number)))))))
+                      (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number))))))))))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (one_line_comment)
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (integer_vector_type)
+                (packed_dimension
+                  (constant_range
+                    (constant_expression
+                      left: (constant_expression
+                        (constant_primary
+                          (simple_identifier)))
+                      right: (constant_expression
+                        (constant_primary
+                          (primary_literal
+                            (integral_number
+                              (decimal_number
+                                (unsigned_number)))))))
+                    (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number)))))))))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (integer_vector_type))))
+          port_name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))
+        (variable_decl_assignment
+          name: (simple_identifier))
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)
+          (packed_dimension
+            (constant_range
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))
+          (packed_dimension
+            (constant_range
+              (constant_expression
+                left: (constant_expression
+                  (constant_primary
+                    (simple_identifier)))
+                right: (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number)))))))
+              (constant_expression
+                (constant_primary
+                  (primary_literal
+                    (integral_number
+                      (decimal_number
+                        (unsigned_number))))))))))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (one_line_comment)
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (simple_identifier))
+          (expression
+            operator: (unary_operator)
+            argument: (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))
+    (one_line_comment)
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (conditional_statement
+                    (cond_predicate
+                      (expression
+                        operator: (unary_operator)
+                        argument: (primary
+                          (hierarchical_identifier
+                            (simple_identifier)))))
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))))))
+    (one_line_comment)
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (conditional_statement
+                    (cond_predicate
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier)))))
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              operator: (unary_operator)
+                              argument: (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))))))
+    (one_line_comment)
+    (one_line_comment)
+    (one_line_comment)
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (nonblocking_assignment
+                    (variable_lvalue
+                      (hierarchical_identifier
+                        (simple_identifier)))
+                    (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))))))))))
+    (one_line_comment)
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (seq_block
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (conditional_statement
+                            (cond_predicate
+                              (expression
+                                (primary
+                                  (hierarchical_identifier
+                                    (simple_identifier)))))
+                            (statement_or_null
+                              (statement
+                                (statement_item
+                                  (nonblocking_assignment
+                                    (variable_lvalue
+                                      (hierarchical_identifier
+                                        (simple_identifier)))
+                                    (expression
+                                      (primary
+                                        (primary_literal
+                                          (integral_number
+                                            (binary_number
+                                              size: (unsigned_number)
+                                              base: (binary_base)
+                                              value: (binary_value))))))))))
+                            (statement_or_null
+                              (statement
+                                (statement_item
+                                  (nonblocking_assignment
+                                    (variable_lvalue
+                                      (hierarchical_identifier
+                                        (simple_identifier)))
+                                    (expression
+                                      operator: (unary_operator)
+                                      argument: (primary
+                                        (hierarchical_identifier
+                                          (simple_identifier))))))))))))
+                    (one_line_comment)
+                    (one_line_comment)
+                    (one_line_comment)
+                    (one_line_comment)
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))))))
+    (one_line_comment)
+    (one_line_comment)
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (conditional_statement
+                    (cond_predicate
+                      (expression
+                        (primary
+                          (hierarchical_identifier
+                            (simple_identifier)))))
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))
+                                (select
+                                  (bit_select
+                                    (expression
+                                      (primary
+                                        (primary_literal
+                                          (integral_number
+                                            (decimal_number
+                                              (unsigned_number))))))))))))))
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))
+                                (select
+                                  (bit_select
+                                    (expression
+                                      (primary
+                                        (primary_literal
+                                          (integral_number
+                                            (decimal_number
+                                              (unsigned_number)))))))))))))))))))))))
+  (text_macro_usage
+    (simple_identifier)
+    (list_of_actual_arguments
+      (actual_argument
+        (param_expression
+          (mintypmax_expression
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))))

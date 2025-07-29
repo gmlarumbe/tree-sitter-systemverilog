@@ -1,0 +1,845 @@
+============================================
+basejump_stl/testing/bsg_fpu/i2f_32/testbench
+============================================
+
+/**
+ *  testbench.sv
+ *
+ */
+
+
+module testbench();
+
+localparam width_p = 32;
+localparam ring_width_p = width_p + 1;
+localparam rom_addr_width_p = 32;
+
+logic clk;
+logic reset;
+
+bsg_nonsynth_clock_gen #(
+  .cycle_time_p(10)
+) clock_gen (
+  .o(clk)
+);
+
+bsg_nonsynth_reset_gen #(
+  .reset_cycles_lo_p(4)
+  ,.reset_cycles_hi_p(4)
+) reset_gen (
+  .clk_i(clk)
+  ,.async_reset_o(reset)
+);
+
+logic v_li;
+logic [width_p-1:0] a_li;
+logic signed_li;
+logic ready_and_lo;
+
+logic v_lo;
+logic [width_p-1:0] z_lo;
+logic yumi_li;
+
+bsg_fpu_i2f #(
+  .e_p(8)
+  ,.m_p(23)
+) dut (
+  .clk_i(clk)
+  ,.reset_i(reset)
+  ,.en_i(1'b1)
+  
+  ,.v_i(v_li)
+  ,.a_i(a_li)
+  ,.signed_i(signed_li)
+  ,.ready_and_o(ready_and_lo)
+
+  ,.v_o(v_lo)
+  ,.z_o(z_lo)
+  ,.yumi_i(yumi_li)
+);
+
+logic tr_v_li;
+logic [ring_width_p-1:0] tr_data_li;
+logic tr_ready_and_lo;
+
+logic tr_v_lo;
+logic [ring_width_p-1:0] tr_data_lo;
+logic tr_yumi_li;
+
+logic [rom_addr_width_p-1:0] rom_addr;
+logic [ring_width_p+4-1:0] rom_data;
+
+logic done_lo;
+
+bsg_fsb_node_trace_replay #(
+  .ring_width_p(ring_width_p)
+  ,.rom_addr_width_p(rom_addr_width_p)
+) tr (
+  .clk_i(clk)
+  ,.reset_i(reset)
+  ,.en_i(1'b1)
+
+  ,.v_i(tr_v_li)
+  ,.data_i(tr_data_li)
+  ,.ready_and_o(tr_ready_and_lo)
+
+  ,.v_o(tr_v_lo)
+  ,.data_o(tr_data_lo)
+  ,.yumi_i(tr_yumi_li)
+
+  ,.rom_addr_o(rom_addr)
+  ,.rom_data_i(rom_data)
+
+  ,.done_o(done_lo)
+  ,.error_o()
+);
+
+assign {signed_li, a_li} = tr_data_lo;
+
+bsg_fpu_trace_rom #(
+  .width_p(ring_width_p+4)
+  ,.addr_width_p(rom_addr_width_p)
+) rom (
+  .addr_i(rom_addr)
+  ,.data_o(rom_data)
+);
+
+assign tr_data_li = {
+  1'b0
+  , z_lo
+};
+
+assign v_li = tr_v_lo;
+assign tr_yumi_li = tr_v_lo & ready_and_lo;
+
+assign tr_v_li = v_lo;
+assign yumi_li = v_lo & tr_ready_and_lo;
+
+initial begin
+  wait(done_lo);
+  $finish;
+end
+
+endmodule
+
+----
+
+(source_file
+  (block_comment)
+  (module_declaration
+    (module_nonansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_ports))
+    (module_item
+      (local_parameter_declaration
+        (list_of_param_assignments
+          (param_assignment
+            (simple_identifier)
+            (constant_param_expression
+              (constant_mintypmax_expression
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))))
+    (module_item
+      (local_parameter_declaration
+        (list_of_param_assignments
+          (param_assignment
+            (simple_identifier)
+            (constant_param_expression
+              (constant_mintypmax_expression
+                (constant_expression
+                  left: (constant_expression
+                    (constant_primary
+                      (simple_identifier)))
+                  right: (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))))))))
+    (module_item
+      (local_parameter_declaration
+        (list_of_param_assignments
+          (param_assignment
+            (simple_identifier)
+            (constant_param_expression
+              (constant_mintypmax_expression
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (parameter_value_assignment
+          (list_of_parameter_value_assignments
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))))))
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (simple_identifier))
+          (list_of_port_connections
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (module_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (parameter_value_assignment
+          (list_of_parameter_value_assignments
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))))
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))))))
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (simple_identifier))
+          (list_of_port_connections
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)
+            (packed_dimension
+              (constant_range
+                (constant_expression
+                  left: (constant_expression
+                    (constant_primary
+                      (simple_identifier)))
+                  right: (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)
+            (packed_dimension
+              (constant_range
+                (constant_expression
+                  left: (constant_expression
+                    (constant_primary
+                      (simple_identifier)))
+                  right: (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (parameter_value_assignment
+          (list_of_parameter_value_assignments
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))))
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))))))
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (simple_identifier))
+          (list_of_port_connections
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (primary_literal
+                    (integral_number
+                      (binary_number
+                        size: (unsigned_number)
+                        base: (binary_base)
+                        value: (binary_value)))))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)
+            (packed_dimension
+              (constant_range
+                (constant_expression
+                  left: (constant_expression
+                    (constant_primary
+                      (simple_identifier)))
+                  right: (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)
+            (packed_dimension
+              (constant_range
+                (constant_expression
+                  left: (constant_expression
+                    (constant_primary
+                      (simple_identifier)))
+                  right: (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)
+            (packed_dimension
+              (constant_range
+                (constant_expression
+                  left: (constant_expression
+                    (constant_primary
+                      (simple_identifier)))
+                  right: (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)
+            (packed_dimension
+              (constant_range
+                (constant_expression
+                  left: (constant_expression
+                    left: (constant_expression
+                      (constant_primary
+                        (simple_identifier)))
+                    right: (constant_expression
+                      (constant_primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number)))))))
+                  right: (constant_expression
+                    (constant_primary
+                      (primary_literal
+                        (integral_number
+                          (decimal_number
+                            (unsigned_number)))))))
+                (constant_expression
+                  (constant_primary
+                    (primary_literal
+                      (integral_number
+                        (decimal_number
+                          (unsigned_number))))))))))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (data_declaration
+        (data_type_or_implicit
+          (data_type
+            (integer_vector_type)))
+        (list_of_variable_decl_assignments
+          (variable_decl_assignment
+            name: (simple_identifier)))))
+    (module_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (parameter_value_assignment
+          (list_of_parameter_value_assignments
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))))
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (simple_identifier))
+          (list_of_port_connections
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (primary_literal
+                    (integral_number
+                      (binary_number
+                        size: (unsigned_number)
+                        base: (binary_base)
+                        value: (binary_value)))))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier))))))
+    (module_item
+      (continuous_assign
+        (list_of_net_assignments
+          (net_assignment
+            (net_lvalue
+              (net_lvalue
+                (simple_identifier))
+              (net_lvalue
+                (simple_identifier)))
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))
+    (module_item
+      (module_instantiation
+        instance_type: (simple_identifier)
+        (parameter_value_assignment
+          (list_of_parameter_value_assignments
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    left: (expression
+                      (primary
+                        (hierarchical_identifier
+                          (simple_identifier))))
+                    right: (expression
+                      (primary
+                        (primary_literal
+                          (integral_number
+                            (decimal_number
+                              (unsigned_number))))))))))
+            (named_parameter_assignment
+              (simple_identifier)
+              (param_expression
+                (mintypmax_expression
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))))
+        (hierarchical_instance
+          (name_of_instance
+            instance_name: (simple_identifier))
+          (list_of_port_connections
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))
+            (named_port_connection
+              port_name: (simple_identifier)
+              connection: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (module_item
+      (continuous_assign
+        (list_of_net_assignments
+          (net_assignment
+            (net_lvalue
+              (simple_identifier))
+            (expression
+              (primary
+                (concatenation
+                  (expression
+                    (primary
+                      (primary_literal
+                        (integral_number
+                          (binary_number
+                            size: (unsigned_number)
+                            base: (binary_base)
+                            value: (binary_value))))))
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)))))))))))
+    (module_item
+      (continuous_assign
+        (list_of_net_assignments
+          (net_assignment
+            (net_lvalue
+              (simple_identifier))
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))
+    (module_item
+      (continuous_assign
+        (list_of_net_assignments
+          (net_assignment
+            (net_lvalue
+              (simple_identifier))
+            (expression
+              left: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              right: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (module_item
+      (continuous_assign
+        (list_of_net_assignments
+          (net_assignment
+            (net_lvalue
+              (simple_identifier))
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))))))
+    (module_item
+      (continuous_assign
+        (list_of_net_assignments
+          (net_assignment
+            (net_lvalue
+              (simple_identifier))
+            (expression
+              left: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              right: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier)))))))))
+    (module_item
+      (initial_construct
+        (statement_or_null
+          (statement
+            (statement_item
+              (seq_block
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (wait_statement
+                        (expression
+                          (primary
+                            (hierarchical_identifier
+                              (simple_identifier))))
+                        (statement_or_null)))))
+                (statement_or_null
+                  (statement
+                    (statement_item
+                      (subroutine_call_statement
+                        (simulation_control_task)))))))))))))

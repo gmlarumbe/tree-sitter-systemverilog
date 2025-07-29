@@ -1,0 +1,131 @@
+============================================
+basejump_stl/bsg_legacy/bsg_tag/config_net/src/relay_node
+============================================
+
+`include "bsg_defines.sv"
+
+`include "config_defs.v"
+
+module relay_node
+   (input config_s config_i,
+    output config_s config_o
+   );
+
+  /* ========================================================================== *
+   * This node simply forwards configuration bits from input to output(s). It
+   * can be used to break critical paths in the config_nodw network.
+   * ========================================================================== */
+
+  logic bit_r, bit_n;
+
+  assign bit_n = config_i.cfg_bit;
+
+  always_ff @ (posedge config_i.cfg_clk) begin
+    bit_r <= bit_n;
+  end
+
+  assign config_o.cfg_clk = config_i.cfg_clk;
+  assign config_o.cfg_bit = bit_r;
+
+endmodule
+
+----
+
+(source_file
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (simple_identifier))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (simple_identifier))))
+          port_name: (simple_identifier))))
+    (block_comment)
+    (data_declaration
+      (data_type_or_implicit
+        (data_type
+          (integer_vector_type)))
+      (list_of_variable_decl_assignments
+        (variable_decl_assignment
+          name: (simple_identifier))
+        (variable_decl_assignment
+          name: (simple_identifier))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (simple_identifier))
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)
+                (simple_identifier)))))))
+    (always_construct
+      (always_keyword)
+      (statement
+        (statement_item
+          (procedural_timing_control_statement
+            (event_control
+              (clocking_event
+                (event_expression
+                  (edge_identifier)
+                  (expression
+                    (primary
+                      (hierarchical_identifier
+                        (simple_identifier)
+                        (simple_identifier)))))))
+            (statement_or_null
+              (statement
+                (statement_item
+                  (seq_block
+                    (statement_or_null
+                      (statement
+                        (statement_item
+                          (nonblocking_assignment
+                            (variable_lvalue
+                              (hierarchical_identifier
+                                (simple_identifier)))
+                            (expression
+                              (primary
+                                (hierarchical_identifier
+                                  (simple_identifier))))))))))))))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (hierarchical_identifier
+              (simple_identifier)
+              (simple_identifier)))
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)
+                (simple_identifier)))))))
+    (continuous_assign
+      (list_of_net_assignments
+        (net_assignment
+          (net_lvalue
+            (hierarchical_identifier
+              (simple_identifier)
+              (simple_identifier)))
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier)))))))))

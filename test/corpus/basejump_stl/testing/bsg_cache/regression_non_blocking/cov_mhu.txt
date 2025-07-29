@@ -1,0 +1,491 @@
+============================================
+basejump_stl/testing/bsg_cache/regression_non_blocking/cov_mhu
+============================================
+
+
+`include "bsg_cache_non_blocking.svh"
+
+module cov_mhu
+  import bsg_cache_non_blocking_pkg::*;
+  (
+    input clk_i
+    , input reset_i
+    
+    , input mhu_state_e mhu_state_r
+
+    , input data_mem_pkt_yumi_i
+    , input is_secondary
+    , input miss_fifo_v_i
+    , input tl_block_loading_i
+    
+  );
+
+  covergroup cg_dequeue_mode @ (negedge clk_i iff mhu_state_r == DEQUEUE_MODE);
+
+    coverpoint data_mem_pkt_yumi_i;
+    coverpoint is_secondary;
+    coverpoint miss_fifo_v_i;
+    coverpoint tl_block_loading_i;
+
+    cross data_mem_pkt_yumi_i, is_secondary, miss_fifo_v_i, tl_block_loading_i {
+      ignore_bins non_secondary =
+        binsof(data_mem_pkt_yumi_i) intersect {1'b1} &&
+        binsof(is_secondary) intersect {1'b0};
+
+      ignore_bins tl_block_load = 
+        binsof(tl_block_loading_i) intersect {1'b1} && 
+        binsof(data_mem_pkt_yumi_i) intersect {1'b1};
+
+      ignore_bins miss_fifo_not_v = 
+        binsof(miss_fifo_v_i) intersect {1'b0} && 
+        (binsof(data_mem_pkt_yumi_i) intersect {1'b1} || binsof(is_secondary) intersect {1'b0});
+        
+    }
+
+  endgroup
+
+
+  covergroup cg_scan_mode @ (negedge clk_i iff mhu_state_r == SCAN_MODE);
+  
+    coverpoint miss_fifo_v_i;
+    coverpoint is_secondary;
+    coverpoint data_mem_pkt_yumi_i;
+    coverpoint tl_block_loading_i;
+
+    cross data_mem_pkt_yumi_i, is_secondary, miss_fifo_v_i, tl_block_loading_i {
+      ignore_bins miss_fifo_not_v = 
+        binsof(miss_fifo_v_i) intersect {1'b0} && 
+        (binsof(data_mem_pkt_yumi_i) intersect {1'b1} || binsof(is_secondary) intersect {1'b0});
+
+      ignore_bins non_secondary =
+        binsof(data_mem_pkt_yumi_i) intersect {1'b1} &&
+        binsof(is_secondary) intersect {1'b0};
+
+      ignore_bins tl_block_load = 
+        binsof(tl_block_loading_i) intersect {1'b1} && 
+        binsof(data_mem_pkt_yumi_i) intersect {1'b1};
+    }
+
+  endgroup
+
+  initial begin
+    cg_dequeue_mode dq = new;
+    cg_scan_mode sc = new;
+  end
+
+endmodule
+
+----
+
+(source_file
+  (include_compiler_directive
+    (quoted_string
+      (quoted_string_item)))
+  (module_declaration
+    (module_ansi_header
+      (module_keyword)
+      name: (simple_identifier)
+      (package_import_declaration
+        (package_import_item
+          (simple_identifier)))
+      (list_of_port_declarations
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (variable_port_header
+            (port_direction)
+            (variable_port_type
+              (data_type
+                (simple_identifier))))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))
+        (ansi_port_declaration
+          (net_port_header
+            (port_direction))
+          port_name: (simple_identifier))))
+    (covergroup_declaration
+      name: (simple_identifier)
+      (coverage_event
+        (clocking_event
+          (event_expression
+            (edge_identifier)
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))
+            (expression
+              left: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              right: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))))))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_cross
+          (list_of_cross_items
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier))
+          (cross_body
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))))))
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))))))
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (select_expression
+                      (select_expression
+                        (select_expression
+                          (select_condition
+                            (bins_expression
+                              (simple_identifier))
+                            (covergroup_range_list
+                              (covergroup_value_range
+                                (expression
+                                  (primary
+                                    (primary_literal
+                                      (integral_number
+                                        (binary_number
+                                          size: (unsigned_number)
+                                          base: (binary_base)
+                                          value: (binary_value))))))))))
+                        (select_expression
+                          (select_condition
+                            (bins_expression
+                              (simple_identifier))
+                            (covergroup_range_list
+                              (covergroup_value_range
+                                (expression
+                                  (primary
+                                    (primary_literal
+                                      (integral_number
+                                        (binary_number
+                                          size: (unsigned_number)
+                                          base: (binary_base)
+                                          value: (binary_value))))))))))))))))))))
+    (covergroup_declaration
+      name: (simple_identifier)
+      (coverage_event
+        (clocking_event
+          (event_expression
+            (edge_identifier)
+            (expression
+              (primary
+                (hierarchical_identifier
+                  (simple_identifier))))
+            (expression
+              left: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))
+              right: (expression
+                (primary
+                  (hierarchical_identifier
+                    (simple_identifier))))))))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_point
+          (expression
+            (primary
+              (hierarchical_identifier
+                (simple_identifier))))
+          (bins_or_empty)))
+      (coverage_spec_or_option
+        (cover_cross
+          (list_of_cross_items
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier)
+            (simple_identifier))
+          (cross_body
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (select_expression
+                      (select_expression
+                        (select_expression
+                          (select_condition
+                            (bins_expression
+                              (simple_identifier))
+                            (covergroup_range_list
+                              (covergroup_value_range
+                                (expression
+                                  (primary
+                                    (primary_literal
+                                      (integral_number
+                                        (binary_number
+                                          size: (unsigned_number)
+                                          base: (binary_base)
+                                          value: (binary_value))))))))))
+                        (select_expression
+                          (select_condition
+                            (bins_expression
+                              (simple_identifier))
+                            (covergroup_range_list
+                              (covergroup_value_range
+                                (expression
+                                  (primary
+                                    (primary_literal
+                                      (integral_number
+                                        (binary_number
+                                          size: (unsigned_number)
+                                          base: (binary_base)
+                                          value: (binary_value))))))))))))))))
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))))))
+            (cross_body_item
+              (bins_selection_or_option
+                (bins_selection
+                  (bins_keyword)
+                  (simple_identifier)
+                  (select_expression
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))
+                    (select_expression
+                      (select_condition
+                        (bins_expression
+                          (simple_identifier))
+                        (covergroup_range_list
+                          (covergroup_value_range
+                            (expression
+                              (primary
+                                (primary_literal
+                                  (integral_number
+                                    (binary_number
+                                      size: (unsigned_number)
+                                      base: (binary_base)
+                                      value: (binary_value))))))))))))))))))
+    (initial_construct
+      (statement_or_null
+        (statement
+          (statement_item
+            (seq_block
+              (block_item_declaration
+                (data_declaration
+                  (data_type_or_implicit
+                    (data_type
+                      (simple_identifier)))
+                  (list_of_variable_decl_assignments
+                    (variable_decl_assignment
+                      name: (simple_identifier)
+                      (class_new)))))
+              (block_item_declaration
+                (data_declaration
+                  (data_type_or_implicit
+                    (data_type
+                      (simple_identifier)))
+                  (list_of_variable_decl_assignments
+                    (variable_decl_assignment
+                      name: (simple_identifier)
+                      (class_new))))))))))))
