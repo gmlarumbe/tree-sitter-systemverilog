@@ -4549,21 +4549,17 @@ const rules = {
 
   list_of_formal_arguments: $ => commaSep1($.formal_argument),
 
-  // formal_argument: $ => seq(
-  //   reserved('macros', $.simple_identifier),
-  //   optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, reserved('macros', $.simple_identifier))),
-  // ),
   formal_argument: $ => reserved('macros', seq(
     $.simple_identifier,
     optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, $.simple_identifier)),
   )),
 
-  text_macro_identifier: $ => $._identifier,
+  text_macro_identifier: $ => reserved('macros', $._identifier),
 
   text_macro_usage: $ => prec.right(seq(
     '`',
     $.text_macro_identifier,
-    optseq('(', optional($.list_of_actual_arguments), ')')
+    reserved('macros', optseq('(', optional($.list_of_actual_arguments), ')'))
   )),
 
   list_of_actual_arguments: $ => list_of_args($, 'list_of_arguments', $.actual_argument),
