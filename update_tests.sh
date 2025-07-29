@@ -33,16 +33,17 @@ EXPECTED_FAIL_FILELIST=(core/subroutines/call_method_cond_expr_rhs_assignment_ER
                         sv-tests/chapter-5/5.10-structure-arrays-illegal.sv
                         sv-tests/chapter-6/6.9.2--vector_vectored_inv.sv
                         sv-tests/chapter-11/11.3.6--assign_in_expr_inv.sv
+                        sv-tests/chapter-22/22.3--resetall_illegal.sv
+                        sv-tests/chapter-22/22.5.1--define-expansion_21.sv
+                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-1.sv
+                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-2.sv
+                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-3.sv
                         sv-tests/chapter-22/22.11--pragma-invalid.sv
                         sv-tests/chapter-22/22.12--line-illegal-1.sv
                         sv-tests/chapter-22/22.12--line-illegal-2.sv
                         sv-tests/chapter-22/22.12--line-illegal-3.sv
                         sv-tests/chapter-22/22.12--line-illegal-4.sv
                         sv-tests/chapter-22/22.12--line-illegal-5.sv
-                        sv-tests/chapter-22/22.5.1--define-expansion_21.sv
-                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-1.sv
-                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-2.sv
-                        sv-tests/chapter-22/22.9--unconnected_drive-invalid-3.sv
                         sv-tests/sanity.sv
                         doulos/69.2_name.sv
                         doulos/73.3_number.sv
