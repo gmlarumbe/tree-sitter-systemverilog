@@ -1437,7 +1437,11 @@ const rules = {
 
   net_decl_assignment: $ => seq($.net_identifier, repeat($.unpacked_dimension), optseq('=', $.expression)),
 
-  param_assignment: $ => seq($.parameter_identifier, repeat($._variable_dimension), optseq('=', $.constant_param_expression)),
+  param_assignment: $ => seq(
+    choice($.parameter_identifier, $.text_macro_usage), // $.text_macro_usage Out of LRM
+    repeat($._variable_dimension),
+    optseq('=', $.constant_param_expression)
+  ),
 
   specparam_assignment: $ => choice(
     seq($.specparam_identifier, '=', $.constant_mintypmax_expression),
@@ -6146,6 +6150,7 @@ module.exports = grammar({
     [$.constant_primary, $.hierarchical_identifier],
     [$.constant_primary, $.net_lvalue, $.hierarchical_identifier],
     [$.data_type, $.constant_primary, $.hierarchical_identifier],
+
   ],
 
 });

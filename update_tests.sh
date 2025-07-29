@@ -33,7 +33,7 @@ EXPECTED_FAIL_FILELIST=(core/subroutines/call_method_cond_expr_rhs_assignment_ER
                         sv-tests/chapter-5/5.10-structure-arrays-illegal.sv
                         sv-tests/chapter-6/6.9.2--vector_vectored_inv.sv
                         sv-tests/chapter-11/11.3.6--assign_in_expr_inv.sv
-                        sv-tests/chapter-22/22.3--resetall_illegal.sv
+                        # sv-tests/chapter-22/22.3--resetall_illegal.sv # TODO:
                         sv-tests/chapter-22/22.5.1--define-expansion_21.sv
                         sv-tests/chapter-22/22.9--unconnected_drive-invalid-1.sv
                         sv-tests/chapter-22/22.9--unconnected_drive-invalid-2.sv
@@ -56,6 +56,7 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    sv-tests/chapter-11/11.4.14.3--unpack_stream_inv.sv                   # No intention of parse the width of the streaming assignment target
                    sv-tests/chapter-22/22.5.1--define-expansion_20.sv                    # No intention of supporting parsing of macro expansion
                    sv-tests/chapter-22/22.5.1--define-expansion_25.sv                    # No intention of supporting parsing of macro expansion of string values
+                   sv-tests/chapter-22/22.3--resetall_illegal.sv # TODO:
                    # No intention of supporting expansion with ifdef/ifndef
                    sv-tests/generic/preproc/preproc_test_2.sv
                    # ifdef conditional compilation breaks seq_block declaration -> statements order
