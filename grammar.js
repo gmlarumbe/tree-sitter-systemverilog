@@ -217,10 +217,6 @@ function paren_expr(expr) {
   ));
 }
 
-function directive(command) {
-  return alias(new RegExp('`' + command), 'directive_' + command);
-}
-
 
 /**
  *
@@ -3891,7 +3887,8 @@ const rules = {
     $.conditional_expression,
     $.inside_expression,
     $.tagged_union_expression,
-    $.text_macro_usage, // Out of LRM
+    $.text_macro_usage,               // Out of LRM
+    $.file_or_line_compiler_directive // Out of LRM
   ),
 
   tagged_union_expression: $ => prec.right(seq(
@@ -4511,7 +4508,7 @@ const rules = {
 
 
 // ** 22-3 `resetall
-  resetall_compiler_directive: $ => directive('resetall'),
+  resetall_compiler_directive: $ => '`resetall',
 
 
 // ** 22-4 `include
@@ -4522,11 +4519,11 @@ const rules = {
   )),
 
   include_compiler_directive: $ => seq(
-    directive('include'),
+    '`include',
     choice(
       $.quoted_string,
       $.system_lib_string,
-      $.text_macro_usage,// Out of LRM (test sv-tests/chapter-22/22.5.1--include-define-expansion)
+      $.text_macro_usage, // Out of LRM (test sv-tests/chapter-22/22.5.1--include-define-expansion)
     )
   ),
 
@@ -4539,7 +4536,7 @@ const rules = {
   macro_text: $ => token(prec(-1, /(\\(.|\r?\n)|[^\\\n])*/)),
 
   text_macro_definition: $ => seq(
-    directive('define'),
+    '`define',
     $.text_macro_name,
     optional($.macro_text),
     token.immediate(/\r?\n/),
@@ -4552,10 +4549,14 @@ const rules = {
 
   list_of_formal_arguments: $ => commaSep1($.formal_argument),
 
-  formal_argument: $ => seq(
-    reserved('macros', $.simple_identifier),
-    optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, reserved('macros', $.simple_identifier))),
-  ),
+  // formal_argument: $ => seq(
+  //   reserved('macros', $.simple_identifier),
+  //   optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, reserved('macros', $.simple_identifier))),
+  // ),
+  formal_argument: $ => reserved('macros', seq(
+    $.simple_identifier,
+    optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, $.simple_identifier)),
+  )),
 
   text_macro_identifier: $ => $._identifier,
 
@@ -4575,23 +4576,23 @@ const rules = {
     ';'
   ),
 
-  undefine_compiler_directive: $ => seq(directive('undef'), $.text_macro_identifier),
+  undefine_compiler_directive: $ => seq('`undef', $.text_macro_identifier),
 
-  undefineall_compiler_directive: $ => directive('undefineall'),
+  undefineall_compiler_directive: $ => '`undefineall',
 
 
 // ** 22.6 `ifdef, `else, `elsif, `endif, `ifndef
   // Modified with respect to LRM: do not parse preprocessed code
   conditional_compilation_directive: $ => choice(
     seq($._ifdef_or_ifndef, $.ifdef_condition),
-    seq(directive('elsif'), $.ifdef_condition),
-    directive('else'),
-    directive('endif')
+    seq('`elsif', $.ifdef_condition),
+    '`else',
+    '`endif'
   ),
 
   _ifdef_or_ifndef: $ => choice(
-    directive('ifdef'),
-    directive('ifndef')
+    '`ifdef',
+    '`ifndef'
   ),
 
   ifdef_condition: $ => choice(
@@ -4611,7 +4612,7 @@ const rules = {
 
 // ** 22-7 timescale
   timescale_compiler_directive: $ => seq(
-    directive('timescale'),
+    '`timescale',
     $.time_literal, // time_unit,
     '/',
     $.time_literal, // time_precision
@@ -4620,7 +4621,7 @@ const rules = {
 
 // ** 22-8 default_nettype
   default_nettype_compiler_directive: $ => seq(
-    directive('default_nettype'),
+    '`default_nettype',
     $.default_nettype_value,
     token.immediate(/\r?\n/),
   ),
@@ -4630,21 +4631,21 @@ const rules = {
 
 // ** 22-9
   unconnected_drive_compiler_directive: $ => seq(
-    directive('unconnected_drive'),
+    '`unconnected_drive',
     choice('pull0', 'pull1'),
     token.immediate(/\r?\n/),
   ),
 
 
 // ** 22.10 `celldefine and `endcelldefine
-  celldefine_compiler_directive: $ => directive('celldefine'),
+  celldefine_compiler_directive: $ => '`celldefine',
 
-  endcelldefine_compiler_directive: $ => directive('endcelldefine'),
+  endcelldefine_compiler_directive: $ => '`endcelldefine',
 
 
 // ** 22.11 `pragma
   pragma: $ => prec.right(seq(
-    directive('pragma'),
+    '`pragma',
     $.pragma_name,
     commaSep($.pragma_expression),
   )),
@@ -4672,7 +4673,7 @@ const rules = {
 
 // ** 22-12 `line
   line_compiler_directive: $ => seq(
-    directive('line'),
+    '`line',
     $.unsigned_number,
     $.quoted_string,
     alias(token(/[0-2]/), $.level),
@@ -4681,14 +4682,14 @@ const rules = {
 
 // ** 22.13 `__FILE__ and `__LINE__
   file_or_line_compiler_directive: $ => choice(
-    directive('__FILE__'),
-    directive('__LINE__'),
+    '`__FILE__',
+    '`__LINE__',
   ),
 
 
 // ** 22.14 `begin_keywords, `end_keywords
   keywords_directive: $ => seq(
-    directive('begin_keywords'),
+    '`begin_keywords',
     '\"',
     $.version_specifier,
     '\"',
@@ -4706,7 +4707,7 @@ const rules = {
     '1364-1995',
   ),
 
-  endkeywords_directive: $ => directive('end_keywords'),
+  endkeywords_directive: $ => '`end_keywords',
 
 };
 
@@ -4722,6 +4723,7 @@ module.exports = grammar({
   // Annex B
   reserved: {
     global: $ => [
+      // Keywords
       'accept_on', 'alias', 'always', 'always_comb', 'always_ff',
       'always_latch', 'and', 'assert', 'assign', 'assume', 'automatic',
       'before', 'begin', 'bind', 'bins', 'binsof', 'bit', 'break', 'buf',
@@ -4761,6 +4763,12 @@ module.exports = grammar({
       'vectored', 'virtual', 'void', 'wait', 'wait_order', 'wand', 'weak',
       'weak0', 'weak1', 'while', 'wildcard', 'wire', 'with', 'within', 'wor',
       'xnor', 'xor',
+      // Compiler directives
+      '`__FILE__', '`__LINE__', '`begin_keywords', '`celldefine',
+      '`default_nettype', '`define', '`else', '`elsif', '`end_keywords',
+      '`endcelldefine', '`endif', '`ifdef', '`ifndef', '`include', '`line',
+      '`pragma', '`resetall', '`timescale', '`unconnected_drive', '`undef',
+      '`undefineall',
     ],
 
     macros: $ => [],
@@ -6154,3 +6162,4 @@ module.exports = grammar({
   ],
 
 });
+
