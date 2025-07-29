@@ -1206,7 +1206,7 @@ const rules = {
     ),
     seq(
       'enum', optional($.enum_base_type),
-      '{', choice($._directives, commaSep1($.enum_name_declaration)), '}', // _directives out of LRM, (e.g. allow use of `ifdefs in structs)
+      '{', repeat1(choice($._directives, seq($.enum_name_declaration, optional(',')))), '}', // _directives out of LRM, (e.g. allow use of `ifdefs in enums)
       repeat($.packed_dimension)
     ),
     'string',
