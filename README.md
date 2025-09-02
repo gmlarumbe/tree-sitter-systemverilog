@@ -24,6 +24,7 @@ Full SystemVerilog IEEE 1800-2023 grammar for [tree-sitter](https://github.com/t
 - Currently used by:
   - Emacs [`verilog-ts-mode`](https://github.com/gmlarumbe/verilog-ts-mode)
   - [`nvim systemverilog`](https://github.com/nvim-treesitter/nvim-treesitter) plugin
+  - [`helix`](https://helix-editor.com/)
   - [mergiraf](https://mergiraf.org/)
 
 ## Cons
