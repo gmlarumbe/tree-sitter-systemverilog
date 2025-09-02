@@ -297,7 +297,7 @@ fi
 
 echo ""
 echo "List of changed files:"
-git status --porcelain -uno test/corpus
+git submodule foreach git status --porcelain -uno
 echo ""
 
 # Report if all tests have passed
