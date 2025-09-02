@@ -2827,12 +2827,12 @@ const rules = {
 
 
 // ** A.6.6 Conditional statements
-  conditional_statement: $ => prec.right(seq(
+  conditional_statement: $ => seq(
     optional($.unique_priority),
     'if', '(', $.cond_predicate, ')', $.statement_or_null, optional($.conditional_compilation_directive),                 // $.conditional_compilation_directive out of LRM
     repseq('else', 'if', '(', $.cond_predicate, ')', $.statement_or_null, optional($.conditional_compilation_directive)), // $.conditional_compilation_directive out of LRM
-    optseq('else', $.statement_or_null)
-  )),
+    prec.dynamic(-1, optseq('else', $.statement_or_null))
+  ),
 
   unique_priority: $ => choice('unique', 'unique0', 'priority'),
 
