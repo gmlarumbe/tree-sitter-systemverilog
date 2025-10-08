@@ -4,7 +4,7 @@ endif
 
 LANGUAGE_NAME := tree-sitter-systemverilog
 HOMEPAGE_URL := https://github.com/gmlarumbe/tree-sitter-systemverilog
-VERSION := 0.2.1
+VERSION := 0.3.0
 
 # repository
 SRC_DIR := src
