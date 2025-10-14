@@ -1,5 +1,8 @@
 [![CI](https://github.com/gmlarumbe/tree-sitter-systemverilog/actions/workflows/ci.yml/badge.svg)](https://github.com/gmlarumbe/tree-sitter-systemverilog/actions/workflows/ci.yml)
 [![CI-Bindings](https://github.com/gmlarumbe/tree-sitter-systemverilog/actions/workflows/ci_bind.yml/badge.svg)](https://github.com/gmlarumbe/tree-sitter-systemverilog/actions/workflows/ci_bind.yml)
+[![npm](https://img.shields.io/npm/v/tree-sitter-systemverilog?color=blue)](https://www.npmjs.com/package/tree-sitter-systemverilog)
+[![pypi](https://img.shields.io/pypi/v/tree-sitter-systemverilog?color=blue)](https://pypi.org/project/tree-sitter-systemverilog/)
+[![crates](https://img.shields.io/crates/v/tree-sitter-systemverilog?color=blue)](https://crates.io/crates/tree-sitter-systemverilog)
 
 # tree-sitter-systemverilog
 
