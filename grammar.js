@@ -442,6 +442,7 @@ const rules = {
     ),
     optseq('implements', commaSep1($.interface_class_type)),
     ';',
+    optional($.timeunits_declaration), // Out of LRM
     repeat($.class_item),
     enclosing('endclass', $.class_identifier)
   ),
