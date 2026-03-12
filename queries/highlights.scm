@@ -321,5 +321,10 @@
 @function.builtin
 
 
+;; Uppercase identifiers (constants, defines, parameters)
+((simple_identifier) @constant
+ (#match? @constant "^[A-Z][A-Z0-9_]+$"))
+
+
 ;; Errors
 (ERROR) @error
