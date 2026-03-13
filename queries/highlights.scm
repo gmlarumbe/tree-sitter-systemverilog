@@ -204,25 +204,25 @@
 ;; Numbers
 (hex_number
  size: (unsigned_number) @number
- base: (hex_base) @punctuation.delimiter)
+ base: (hex_base) @number)
 (decimal_number
  size: (unsigned_number) @number
- base: (decimal_base) @punctuation.delimiter)
+ base: (decimal_base) @number)
 (octal_number
  size: (unsigned_number) @number
- base: (octal_base) @punctuation.delimiter)
+ base: (octal_base) @number)
 (binary_number
  size: (unsigned_number) @number
- base: (binary_base) @punctuation.delimiter)
+ base: (binary_base) @number)
 ;; Same as before but without the width (width extension)
 (hex_number
- base: (hex_base) @punctuation.delimiter)
+ base: (hex_base) @number)
 (decimal_number
- base: (decimal_base) @punctuation.delimiter)
+ base: (decimal_base) @number)
 (octal_number
- base: (octal_base) @punctuation.delimiter)
+ base: (octal_base) @number)
 (binary_number
- base: (binary_base) @punctuation.delimiter)
+ base: (binary_base) @number)
 
 
 ;; Arrays
