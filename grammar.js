@@ -4546,7 +4546,7 @@ const rules = {
     '`define',
     $.text_macro_name,
     optional($.macro_text),
-    token.immediate(/\r?\n/),
+    token.immediate(/[ \t]*\r?\n/),
   ),
 
   // LRM 22.5.1: If formal arguments are used, the list of formal argument names shall be enclosed in
