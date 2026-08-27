@@ -4504,6 +4504,7 @@ const rules = {
     $.timescale_compiler_directive,
     $.default_nettype_compiler_directive,
     $.unconnected_drive_compiler_directive,
+    $.nounconnected_drive_compiler_directive,
     $.celldefine_compiler_directive,
     $.endcelldefine_compiler_directive,
     $.pragma,
@@ -4688,6 +4689,7 @@ const rules = {
     choice('pull0', 'pull1'),
     token.immediate(/\r?\n/),
   ),
+  nounconnected_drive_compiler_directive: $ => '`nounconnected_drive',
 
 
 // ** 22.10 `celldefine and `endcelldefine
