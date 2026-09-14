@@ -277,6 +277,10 @@ process_file(){
     fi
 }
 
+# Warm up the tree-sitter cache to avoid Bash race conditions when processing files
+echo "Warming up tree-sitter cache..."
+tree-sitter parse test/files/core/module/ansi_0.sv >/dev/null
+
 
 # Create and process tests in parallel
 for file in "${FILES_SV[@]}"; do
