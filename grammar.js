@@ -927,7 +927,8 @@ const rules = {
 
   constraint_block_item: $ => choice(
     seq('solve', $.solve_before_list, 'before', $.solve_before_list, ';'),
-    $.constraint_expression
+    $.constraint_expression,
+    $._directives // Out of LRM
   ),
 
   solve_before_list: $ => commaSep1($.constraint_primary),
@@ -3880,7 +3881,7 @@ const rules = {
     $.constant_expression, choice('+:', '-:'), $.constant_expression
   ),
 
-  expression: $ => choice(
+  expression: $ => prec('expression', choice(
     $.primary,
     $._unary_expression,
     $.inc_or_dec_expression,
@@ -3891,7 +3892,7 @@ const rules = {
     $.tagged_union_expression,
     $.text_macro_usage,               // Out of LRM
     $.file_or_line_compiler_directive // Out of LRM
-  ),
+  )),
 
   tagged_union_expression: $ => prec.right(seq(
     'tagged', $.member_identifier, optional($.primary)
@@ -5572,6 +5573,12 @@ module.exports = grammar({
     ['_simple_type', 'hierarchical_identifier'],
 
 
+    // Allow conditional compilation on constraint blocks (#67)
+    // 1:  'randomize'  'with'  '{'  (_directives  text_macro_usage)  •  '-'  …  (precedence: '_directives')
+    // 2:  'randomize'  'with'  '{'  (expression  text_macro_usage)  •  '-'  …
+    ['expression', '_directives'],
+
+
     // Leave these two standalone to avoid having to replicate code with function 'list_of_args'
     ['property_list_of_arguments'],
     ['sequence_list_of_arguments'],
@@ -6212,6 +6219,10 @@ module.exports = grammar({
     [$.constant_primary, $.net_lvalue, $.hierarchical_identifier],
     [$.data_type, $.constant_primary, $.hierarchical_identifier],
 
+    // Allow conditional compilation on constraint blocks (#67)
+    [$.constant_expression, $._directives],
+    [$.expression, $.variable_lvalue, $._directives],
+    [$.constant_expression, $.expression, $._directives],
   ],
 
 });
