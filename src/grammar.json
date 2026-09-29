@@ -5293,8 +5293,17 @@
               {
                 "type": "REPEAT",
                 "content": {
-                  "type": "SYMBOL",
-                  "name": "constraint_expression"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "constraint_expression"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "_directives"
+                    }
+                  ]
                 }
               },
               {
@@ -27103,28 +27112,95 @@
       }
     },
     "method_call": {
-      "type": "SEQ",
+      "type": "CHOICE",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "_method_call_root"
-        },
-        {
-          "type": "CHOICE",
+          "type": "SEQ",
           "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_method_call_root"
+            },
             {
               "type": "STRING",
               "value": "."
             },
             {
-              "type": "STRING",
-              "value": "::"
+              "type": "SYMBOL",
+              "name": "method_call_body"
             }
           ]
         },
         {
-          "type": "SYMBOL",
-          "name": "method_call_body"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_method_call_root"
+            },
+            {
+              "type": "STRING",
+              "value": "::"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "static_method_call_body"
+              },
+              "named": true,
+              "value": "method_call_body"
+            }
+          ]
+        }
+      ]
+    },
+    "static_method_call_body": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "method_identifier"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_instance"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "arguments",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "("
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "list_of_arguments"
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              },
+              {
+                "type": "STRING",
+                "value": ")"
+              }
+            ]
+          }
         }
       ]
     },
@@ -27491,8 +27567,17 @@
       "type": "SEQ",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "variable_identifier"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "variable_identifier"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "hierarchical_variable_identifier"
+            }
+          ]
         },
         {
           "type": "REPEAT",
@@ -27504,8 +27589,17 @@
                 "value": ","
               },
               {
-                "type": "SYMBOL",
-                "name": "variable_identifier"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "variable_identifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "hierarchical_variable_identifier"
+                  }
+                ]
               }
             ]
           }
@@ -37141,6 +37235,10 @@
     ],
     [
       "hierarchical_identifier"
+    ],
+    [
+      "hierarchical_identifier",
+      "variable_identifier_list"
     ],
     [
       "variable_port_type"
