@@ -3706,10 +3706,17 @@ const rules = {
 
   list_of_arguments: $ => list_of_args($, 'list_of_arguments', $.expression),
 
-  method_call: $ => seq(
-    $._method_call_root,
-    choice('.', '::'), // :: Out of LRM: Needed to support static method calls
-    $.method_call_body
+  method_call: $ => choice(
+    seq($._method_call_root, '.', $.method_call_body),
+    seq($._method_call_root, '::', alias($.static_method_call_body, $.method_call_body)) // Out of LRM
+  ),
+
+  // Out of LRM: Added to remove ambiguity between member access and static
+  //             method call by enforcing usage of parenthesis for the latter.
+  static_method_call_body: $ => seq(
+    field('name', $.method_identifier),
+    repeat($.attribute_instance),
+    field('arguments', seq('(', optional($.list_of_arguments), ')'))
   ),
 
   method_call_body: $ => prec.right(choice(
