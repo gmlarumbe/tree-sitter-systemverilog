@@ -955,7 +955,7 @@ const rules = {
 
   constraint_set: $ => prec('constraint_set', choice(
     $.constraint_expression,
-    seq('{', repeat($.constraint_expression), '}')
+    seq('{', repeat(choice($.constraint_expression, $._directives)), '}') // _directives: allow ifdef/endif inside inline constraint blocks (if/foreach bodies)
   )),
 
   expression_or_dist: $ => prec('expression_or_dist', seq(
