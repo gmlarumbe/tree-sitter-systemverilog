@@ -4052,7 +4052,10 @@ const rules = {
 
   // Modified to avoid matching empty string
   bit_select: $ => repeat1(
-    seq('[', $.expression, ']')
+    choice(
+      seq('[', $.expression, ']'),
+      seq('[', $.constant_range, ']') // Out of LRM: allow constant_range in bit_select (e.g. [pkg::CONSTANT-1:0])
+    )
   ),
 
   // Modified to avoid matching empty string
@@ -6200,6 +6203,9 @@ module.exports = grammar({
 
     // Allow constraint blocks on text_macro_usage
     [$.constraint_block, $.empty_unpacked_array_concatenation],
+    // Allow constant_range in bit_select
+    [$._part_select_range, $.bit_select],
+    [$._constant_part_select_range, $._part_select_range, $.bit_select],
 
 
     // Allow text_macro_usage on LHS of blocking and non-blocking assignments (on $.variable_lvalue)
