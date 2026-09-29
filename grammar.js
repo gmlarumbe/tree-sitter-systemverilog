@@ -3751,7 +3751,10 @@ const rules = {
     optseq('with', optseq('(', optional($.identifier_list), ')'), $.constraint_block)
   )),
 
-  variable_identifier_list: $ => commaSep1($.variable_identifier),
+  variable_identifier_list: $ => commaSep1(choice(
+    $.variable_identifier,
+    $.hierarchical_variable_identifier, // Out of LRM: std::randomize() accepts hierarchical variables
+  )),
 
   identifier_list: $ => commaSep1($._identifier),
 
@@ -5653,6 +5656,9 @@ module.exports = grammar({
     //   1:  module_nonansi_header  'initial'  (hierarchical_identifier  _identifier)  •  '.'  …       (precedence: 'hierarchical_identifier')
     //   2:  module_nonansi_header  'initial'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
     [$.hierarchical_identifier],
+    // std::randomize()'s variable_identifier_list allows hierarchical names,
+    // causing an LR conflict with hierarchical_identifier at _identifier ','.
+    [$.hierarchical_identifier, $.variable_identifier_list],
 
 
     // From the LRM:
