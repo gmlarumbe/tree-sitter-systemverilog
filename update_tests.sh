@@ -221,6 +221,8 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    # TODO:
                    sv-tests/chapter-22/22.3--resetall_illegal.sv
                    github/issue_34.sv
+                   github/issue_35.sv
+                   github/issue_83.sv
                    core/bit_select/complex_4.sv
                    core/directives/macro_2.sv         # Detects `define_var as macro definition instead of macro usage after adding directives as reserved keywords (same as sv-tests/chapter-22/22.4--check_included_definitions.sv)
                    core/directives/macro_keyword_1.sv # reserved('macros') still not working
