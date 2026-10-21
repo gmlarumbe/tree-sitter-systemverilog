@@ -91,7 +91,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    cva6/cva6_rvfi.sv                  # Complex macros (WITH, COMMA)
                    cva6/uvme_cvxif_covg.sv            # Complex macros (WITH, COMMA)
                    cva6/uvme_isa_covg.sv              # Complex macros (WITH, COMMA)
-                   cva6/issue_read_operands.sv        # Not sure, a bit complex
                    cva6/tb_div.sv                     # for snippet detected as for generate
                    cva6/tb_rem.sv                     # for snippet detected as for generate
                    cva6/tb_udiv.sv                    # for snippet detected as for generate
@@ -220,10 +219,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    basejump_stl/testing/bsg_test/dramsim3_bandwidth2/testbench.sv                   # Usage of macro for package import
                    # TODO:
                    sv-tests/chapter-22/22.3--resetall_illegal.sv
-                   github/issue_34.sv
-                   github/issue_35.sv
-                   github/issue_83.sv
-                   core/bit_select/complex_4.sv
                    core/directives/macro_2.sv         # Detects `define_var as macro definition instead of macro usage after adding directives as reserved keywords (same as sv-tests/chapter-22/22.4--check_included_definitions.sv)
                    core/directives/macro_keyword_1.sv # reserved('macros') still not working
                    core/directives/macro_keyword_2.sv # reserved('macros') still not working
