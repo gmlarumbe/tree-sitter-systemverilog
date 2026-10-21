@@ -2608,7 +2608,7 @@ const rules = {
     field('instance_type', $.udp_identifier),
     optional($.drive_strength),
     optional($.delay2),
-    prec.dynamic(-1, commaSep1($.udp_instance)), // Give $.hierarchical_instance and $.module_instantiation higher priority
+    prec.dynamic(-2, commaSep1($.udp_instance)), // Give $.hierarchical_instance and $.module_instantiation higher priority
     ';'
   ),
 
