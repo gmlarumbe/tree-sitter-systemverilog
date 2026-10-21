@@ -1184,7 +1184,7 @@ const rules = {
   casting_type: $ => choice(
     $._simple_type,
     $.integral_number,                              // $.constant_primary branch
-    seq('(', $.constant_mintypmax_expression, ')'), // $.constant_primary branch
+    seq('(', alias($.mintypmax_expression, $.constant_mintypmax_expression), ')'), // $.constant_primary branch (shared parse with $.primary)
     $.type_reference,                               // $.constant_primary branch
     $._signing,
     'string',
@@ -4060,10 +4060,10 @@ const rules = {
     'super'
   )),
 
-  // Modified to avoid matching empty string
-  bit_select: $ => repeat1(
-    seq('[', $.expression, ']')
-  ),
+  // LRM A.8.4: bit_select is a single [expression] index.
+  // Repetition is handled by select/nonrange_select, so that a trailing
+  // part-select range stays a sibling of the bit-select.
+  bit_select: $ => seq('[', $.expression, ']'),
 
   // Modified to avoid matching empty string
   // Dynamic precedences are set so that indexes are set to belong to $.hierarchical_identifier rather than to $.select.
@@ -4071,12 +4071,12 @@ const rules = {
   select: $ => choice(
     prec.dynamic(-2, seq(
       // This branch does not support $.text_macro_usage as $.hierarchical_identifier does
-      repeat(seq('.', $.member_identifier, optional($.bit_select))), '.', $.member_identifier,
-      optional($.bit_select),
+      repeat(seq('.', $.member_identifier, repeat($.bit_select))), '.', $.member_identifier,
+      repeat($.bit_select),
       optseq('[', $._part_select_range, ']')
     )),
     prec.dynamic(-1, seq(
-      $.bit_select,
+      repeat1($.bit_select),
       optseq('[', $._part_select_range, ']')
     )),
     prec.dynamic(0, seq('[', $._part_select_range, ']'))
@@ -4085,10 +4085,10 @@ const rules = {
   // Modified to avoid matching empty string
   nonrange_select: $ => choice(
     seq(
-      repeat(seq('.', $.member_identifier, optional($.bit_select))), '.', $.member_identifier,
-      optional($.bit_select)
+      repeat(seq('.', $.member_identifier, repeat($.bit_select))), '.', $.member_identifier,
+      repeat($.bit_select)
     ),
-    $.bit_select
+    repeat1($.bit_select)
   ),
 
   // Modified to avoid matching empty string
@@ -5678,12 +5678,8 @@ module.exports = grammar({
     [$.variable_port_type],
 
 
-    // Setting left associativity (prec.left) prevents having more than 1 bit_select dimension:
+    // Setting left associativity (prec.left) prevents having more than 1 constant_bit_select dimension:
     //
-    // module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  bit_select1_repeat1  •  '['  …
-    //   1:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select  bit_select1_repeat1)  •  '['  …
-    //   2:  module_nonansi_header  'var'  _identifier  '='  hierarchical_identifier  (bit_select1_repeat1  bit_select1_repeat1  •  bit_select1_repeat1)
-    [$.bit_select],
     //   '['  _identifier  constant_bit_select1_repeat1  •  '['  …
     //   1:  '['  _identifier  (constant_bit_select  constant_bit_select1_repeat1)  •  '['  …
     //   2:  '['  _identifier  (constant_bit_select1_repeat1  constant_bit_select1_repeat1  •  constant_bit_select1_repeat1)
@@ -6202,11 +6198,9 @@ module.exports = grammar({
     [$._simple_type, $._structure_pattern_key],
     [$.clocking_event, $.hierarchical_identifier],
     [$.expression_or_dist, $.event_expression, $.list_of_arguments],
-    [$.property_instance, $.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.property_instance, $.sequence_instance, $.tf_call, $.hierarchical_identifier],
     [$.property_instance, $.sequence_instance, $.tf_call],
     [$.property_list_of_arguments, $.sequence_list_of_arguments, $.list_of_arguments],
-    [$.sequence_instance, $.tf_call, $.constant_primary, $.hierarchical_identifier],
     [$.sequence_instance, $.tf_call, $.hierarchical_identifier],
     [$.sequence_instance, $.tf_call],
 
