@@ -4557,10 +4557,10 @@ const rules = {
   macro_text: $ => {
     const esc = String.raw`\\(.|\r?\n)`;                       // Escaped char or line continuation
     const str_open = String.raw`"([^"\\\n]|${esc})*`;
-    const str = `${str_open}"`;
     const triple_str = String.raw`"""("?"?([^"\\]|${esc}))*"""`;
-    // A '"""' right after a closing quote is read as strings on the same line, never as a triple-quoted string
-    const quoted = `/?(${str}|${triple_str})(${str}|/(${str}|${triple_str}))*`;
+    // Adjacent strings, where an empty '""' can't be followed by another '"', which would make it a '"""'
+    const quoted_seg = String.raw`("([^"\\\n]|${esc})+"|${triple_str})+("")?|""`;
+    const quoted = `/?(${quoted_seg})(/(${quoted_seg}))*`;
     const unquoted = [
       esc,
       String.raw`[^\\\n"/]`,                                   // Plain char, starts no other unit
