@@ -4552,7 +4552,30 @@ const rules = {
 
   default_text: $ => token(prec(-1, /[^,\\\n\)]+/)),
 
-  macro_text: $ => token(prec(-1, /(\\(.|\r?\n)|[^\\\n])*/)),
+  // LRM 22.5.1: ends at an unescaped newline, but block comments and triple-quoted strings may span lines.
+  // Strings and '//' comments are matched whole, so a '/*' inside them doesn't open a block comment.
+  macro_text: $ => {
+    const esc = String.raw`\\(.|\r?\n)`;                       // Escaped char or line continuation
+    const str_open = String.raw`"([^"\\\n]|${esc})*`;
+    const triple_str = String.raw`"""("?"?([^"\\]|${esc}))*"""`;
+    // Adjacent strings, where an empty '""' can't be followed by another '"', which would make it a '"""'
+    const quoted_seg = String.raw`("([^"\\\n]|${esc})+"|${triple_str})+("")?|""`;
+    const quoted = `/?(${quoted_seg})(/(${quoted_seg}))*`;
+    const unquoted = [
+      esc,
+      String.raw`[^\\\n"/]`,                                   // Plain char, starts no other unit
+      String.raw`/\*([^*]|\*+[^*/])*\*+/`,                     // Block comment
+      String.raw`/([^\\\n"/*]|${esc})`,                        // '/' that starts neither '//' nor '/*'
+    ].join('|');
+    const rest_of_line = String.raw`(${esc}|[^\\\n])*`;
+    const last_unit = [
+      `//${rest_of_line}`,                                     // One-line comment
+      String.raw`/\*${rest_of_line}`,                          // Unterminated block comment
+      str_open,                                                // Unterminated string
+      '/',                                                     // Trailing '/'
+    ].join('|');
+    return token(prec(-1, new RegExp(`(${quoted})?((${unquoted})+(${quoted})?)*(${last_unit})?`)));
+  },
 
   text_macro_definition: $ => seq(
     '`define',
