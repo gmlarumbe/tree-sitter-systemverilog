@@ -1323,7 +1323,7 @@ const rules = {
   // Set precedence to fix parsing conflict: could result in an endless loop due to recursivity
   _incomplete_class_scoped_type: $ => prec('_incomplete_class_scoped_type', choice(
     seq($.type_identifier, '::', $._type_identifier_or_class_type),
-    $._incomplete_class_scoped_type, '::', $._type_identifier_or_class_type
+    '::', $._type_identifier_or_class_type
   )),
 
   _type_identifier_or_class_type: $ => prec('_type_identifier_or_class_type', choice($.type_identifier, $.class_type)),
