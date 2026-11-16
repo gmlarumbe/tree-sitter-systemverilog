@@ -1315,15 +1315,14 @@ const rules = {
     '(', choice($.expression, $._data_type_or_incomplete_class_scoped_type), ')'
   ),
 
-  _data_type_or_incomplete_class_scoped_type: $ => prec('_data_type_or_incomplete_class_scoped_type', choice(
+  _data_type_or_incomplete_class_scoped_type: $ => choice(
     $.data_type,
     $._incomplete_class_scoped_type
-  )),
+  ),
 
-  // Set precedence to fix parsing conflict: could result in an endless loop due to recursivity
   _incomplete_class_scoped_type: $ => prec('_incomplete_class_scoped_type', choice(
     seq($.type_identifier, '::', $._type_identifier_or_class_type),
-    '::', $._type_identifier_or_class_type
+    seq($._incomplete_class_scoped_type, '::', $._type_identifier_or_class_type)
   )),
 
   _type_identifier_or_class_type: $ => prec('_type_identifier_or_class_type', choice($.type_identifier, $.class_type)),
@@ -5080,14 +5079,6 @@ module.exports = grammar({
     ['class_constructor_declaration', 'implicit_class_handle'],
 
 
-    // Not sure about this one, but the other way around creates an endless loop in the parsing process
-    //
-    // 'typedef'  _incomplete_class_scoped_type  •  '\'  …
-    // 1:  'typedef'  (_data_type_or_incomplete_class_scoped_type  _incomplete_class_scoped_type)  •  '\'  …
-    // 2:  'typedef'  (_incomplete_class_scoped_type  _incomplete_class_scoped_type)  •  '\'  …
-    ['_data_type_or_incomplete_class_scoped_type', '_incomplete_class_scoped_type'],
-
-
     // pure virtual function will always be a function prototype overriden in the extended class
     //
     // 'class'  _identifier  ';'  'pure'  'virtual'  •  'function'  …
@@ -5466,6 +5457,7 @@ module.exports = grammar({
     // 2:  'typedef'  _identifier  '::'  (_type_identifier_or_class_type  _identifier)  •  '\'  …
     // 3:  'typedef'  _identifier  (class_type_repeat1  '::'  _identifier)  •  '\'  …             (precedence: 'class_type')
     ['class_type_repeat1', '_type_identifier_or_class_type'],
+    ['class_type_repeat1', 'class_type'],
 
 
     // Save one extra level of unnecessary nesting with data_type
