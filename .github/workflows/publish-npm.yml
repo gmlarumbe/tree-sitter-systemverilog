@@ -1,0 +1,160 @@
+# Copy of: https://github.com/georgeharker/tree-sitter-zsh/commit/8eb8a7ac4b0c424ef45041c21b952d459550c42d
+# Workaround issue with VS2026 and NPM publishing.
+
+name: Publish package (npm)
+
+# A copy of tree-sitter/workflows' package-npm.yml (d66eebce). Upstream's
+# windows-11-arm build fails (tree-sitter/workflows#78): that runner image now
+# has only Visual Studio 2026, which the node-gyp bundled with Node 22's npm
+# (11.x) can't find; node-gyp >= 12.1 can. This repo has node-gyp as a
+# devDependency, so `npm i` (node-gyp-build) and prebuildify both use it.
+#
+# Called by publish.yml for release tags. Can also be run by hand from the
+# Actions tab (Publish package (npm) > Run workflow) for any branch or tag:
+# with "publish" unticked it builds everything and runs `npm publish --dry-run`.
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: true
+    secrets:
+      NPM_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or tag to build (default is the run's ref)
+        required: false
+        type: string
+      publish:
+        description: Publish to npm (unticked = npm publish --dry-run)
+        type: boolean
+        default: false
+
+concurrency:
+  # Not github.workflow: when publish.yml calls this, that is the caller's
+  # name, the group equals the caller's own, and the run fails to start.
+  group: publish-npm-${{inputs.ref || github.ref}}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: ${{vars.NODE_VERSION || '22'}}
+
+jobs:
+  build_wasm:
+    name: Build Wasm binaries
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{inputs.ref || github.ref}}
+          persist-credentials: false
+      - name: Set up NodeJS
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          cache: npm
+          node-version: ${{env.NODE_VERSION}}
+      - name: Install dependencies
+        run: npm i --omit peer --omit optional
+      - name: Build Wasm binaries
+        run: |-
+          while read -r grammar_dir; do
+            npm x -- tree-sitter build --wasm "$grammar_dir"
+          done < <(jq -r '.grammars[].path // "."' tree-sitter.json)
+      - name: Upload binaries
+        # yamllint disable-line rule:line-length
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: "*.wasm"
+          name: prebuilds-wasm
+          retention-days: 2
+
+  build_node:
+    name: Build NodeJS binaries on ${{matrix.os}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+          - windows-2022
+          - windows-11-arm
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - macos-15
+          - macos-15-intel
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{inputs.ref || github.ref}}
+          persist-credentials: false
+      - name: Set up NodeJS
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          cache: npm
+          node-version: ${{env.NODE_VERSION}}
+      - name: Install dependencies
+        run: npm i --omit peer --omit optional
+      - name: Build binary
+        run: npm x -- prebuildify -t 20.19.5
+      - name: Upload binaries
+        # yamllint disable-line rule:line-length
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: prebuilds/**
+          name: prebuilds-${{matrix.os}}
+          retention-days: 2
+
+  package:
+    name: Publish NodeJS package
+    needs: [build_wasm, build_node]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing / provenance
+    # A dry run needs no npm environment (and its approval rules, if any).
+    environment:
+      name: ${{inputs.publish && 'npm' || ''}}
+      url: https://www.npmjs.com/package/tree-sitter-systemverilog
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{inputs.ref || github.ref}}
+          persist-credentials: false
+      - name: Set up NodeJS
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          cache: npm
+          node-version: ${{env.NODE_VERSION}}
+          registry-url: https://registry.npmjs.org/
+      - name: Download binaries
+        # yamllint disable-line rule:line-length
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          path: prebuilds
+          pattern: prebuilds-*
+          merge-multiple: true
+      - name: Check binaries
+        run: tree prebuilds
+      - name: Move Wasm binaries to root
+        continue-on-error: true
+        run: mv -v prebuilds/*.wasm .
+      - name: Publish to npm
+        if: ${{inputs.publish}}
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+      - name: Publish to npm (dry run)
+        if: ${{!inputs.publish}}
+        run: npm publish --dry-run
