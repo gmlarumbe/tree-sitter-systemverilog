@@ -101,7 +101,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    basejump_stl/bsg_async/bsg_launch_sync_sync.sv                                   # Keyword in macro, else in macro
                    basejump_stl/bsg_async/bsg_sync_sync.sv                                          # else in macro
                    basejump_stl/bsg_comm_link/test_bsg_comm_link_checker.sv                         # Macro with complex prefix with space
-                   basejump_stl/bsg_comm_link/tests/test_bsg_assembler/test_bsg_assembler.sv        # Static cast with system_tf $clog2(num_channels_lp)'
                    basejump_stl/bsg_comm_link/tests/test_bsg_comm_link/test_bsg_comm_link.sv        # Use of checker keyword as instance name
                    basejump_stl/bsg_dmc/bsg_dmc_phy.sv                                              # Macro usage with arg with spaces
                    basejump_stl/bsg_legacy/bsg_chip/bsg_nonsynth_mixin_motherboard.v                # Macro usage for module names
@@ -204,7 +203,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    basejump_stl/testing/bsg_dmc/lpddr_verilog_model/tb.sv                           # Use of weird macro
                    basejump_stl/testing/bsg_dmc/traffic_generator.sv                                # Missing range for packed dimension
                    basejump_stl/testing/bsg_misc/bsg_counter_clock_downsample/test_bsg.sv           # Weird macro `WIDTH_P'd0;
-                   basejump_stl/testing/bsg_noc/bsg_mesh_to_ring_stitch/test_mesh_to_ring_stitch.sv # Static cast with system_tf
                    basejump_stl/testing/bsg_test/bsg_nonsynth_dramsim3/testbench.sv                 # Usage of macro for package import
                    basejump_stl/testing/bsg_test/bsg_nonsynth_dramsim3/testbench_multi.sv           # Usage of macro for package import
                    basejump_stl/testing/bsg_test/dramsim3_bandwidth/testbench.sv                    # Usage of macro for package import
