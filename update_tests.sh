@@ -71,7 +71,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    doulos/35.2_export_dpi-c.sv               # Don't parse C code
                    doulos/61.2_let.sv                        # Complex let construct, macro-like (come back if integrating $.let_expression with dynamic precedence)
                    doulos/117.1_define.sv
-                   doulos/117.2_define.sv
                    doulos/135.5_sequence.sv                  # Multiclock assertion with syntax errors
                    # Pulp AXI
                    pulp_axi/src/axi_demux_simple.sv     # Not supporting |-> on macro usage (line 505)
@@ -105,7 +104,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    basejump_stl/bsg_comm_link/tests/test_bsg_assembler/test_bsg_assembler.sv        # Static cast with system_tf $clog2(num_channels_lp)'
                    basejump_stl/bsg_comm_link/tests/test_bsg_comm_link/test_bsg_comm_link.sv        # Use of checker keyword as instance name
                    basejump_stl/bsg_dmc/bsg_dmc_phy.sv                                              # Macro usage with arg with spaces
-                   basejump_stl/bsg_dmc/bsg_dmc_xilinx_ui_trace_replay.sv                           # Macro usage for static cast
                    basejump_stl/bsg_legacy/bsg_chip/bsg_nonsynth_mixin_motherboard.v                # Macro usage for module names
                    basejump_stl/bsg_legacy/bsg_chip/bsg_rocket/bsg_chip_rocket.v                    # Syntax errors in code
                    basejump_stl/bsg_legacy/bsg_chip/bsg_rocket/bsg_nonsynth_chipset_rocket_fsb.v    # Syntax errors in code
@@ -113,14 +111,10 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    basejump_stl/bsg_legacy/bsg_tag/config_net/sim/send_config_tag.v                 # Include missing ""
                    basejump_stl/bsg_mem/bsg_mem_multiport_latch_write_banked_bypassing.sv           # Extra end
                    basejump_stl/bsg_misc/bsg_encode_one_hot.sv                                      # Time as macro arg
-                   basejump_stl/bsg_misc/bsg_round_robin_arb.sv                                     # Macro with ~ before usage
                    basejump_stl/bsg_misc/bsg_scan.sv                                                # Time as macro arg
                    basejump_stl/bsg_test/bsg_nonsynth_dpi_clock_gen.sv                              # Data type as macro arg
-                   basejump_stl/bsg_test/bsg_nonsynth_dramsim3_map.sv                               # Macro usage as static cast type
                    basejump_stl/bsg_test/bsg_nonsynth_profiler.sv                                   # Parameter RHS is empty array '{}
                    basejump_stl/bsg_test/bsg_nonsynth_dramsim3.sv                                   # Macro with data type as arg
-                   basejump_stl/experimental/bsg_dataflow/bsg_fifo_reorder_sync.sv                  # Macro usage with ! (!`BSG_IS_POW2(els_p))
-                   basejump_stl/experimental/bsg_dataflow/bsg_fifo_reorder_sync_variable.sv         #  Macro usage with ! (!`BSG_IS_POW2(els_p))
                    basejump_stl/hard/gf_14/bsg_async/bsg_launch_sync_sync.sv                        # Keyword in macro, else in macro
                    basejump_stl/hard/gf_14/bsg_async/bsg_sync_sync.sv                               # else in macro
                    basejump_stl/hard/pickle_40/bsg_mem/bsg_mem_1rw_sync.sv                          # else in macro
@@ -210,8 +204,6 @@ EXCLUDED_FILELIST=(sv-tests/chapter-5/5.6.4--compiler-directives-preprocessor-ma
                    basejump_stl/testing/bsg_dmc/lpddr_verilog_model/tb.sv                           # Use of weird macro
                    basejump_stl/testing/bsg_dmc/traffic_generator.sv                                # Missing range for packed dimension
                    basejump_stl/testing/bsg_misc/bsg_counter_clock_downsample/test_bsg.sv           # Weird macro `WIDTH_P'd0;
-                   basejump_stl/testing/bsg_misc/bsg_mux/test_bsg.sv                                # Macro usage for static cast
-                   basejump_stl/testing/bsg_misc/bsg_rotate_left/main.sv                            # Macro usage for static cast
                    basejump_stl/testing/bsg_noc/bsg_mesh_to_ring_stitch/test_mesh_to_ring_stitch.sv # Static cast with system_tf
                    basejump_stl/testing/bsg_test/bsg_nonsynth_dramsim3/testbench.sv                 # Usage of macro for package import
                    basejump_stl/testing/bsg_test/bsg_nonsynth_dramsim3/testbench_multi.sv           # Usage of macro for package import
