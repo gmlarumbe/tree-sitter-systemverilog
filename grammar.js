@@ -928,7 +928,7 @@ const rules = {
   constraint_block_item: $ => choice(
     seq('solve', $.solve_before_list, 'before', $.solve_before_list, ';'),
     $.constraint_expression,
-    $._directives // Out of LRM
+    prec.dynamic(-1, $._directives) // Out of LRM
   ),
 
   solve_before_list: $ => commaSep1($.constraint_primary),
@@ -3890,7 +3890,7 @@ const rules = {
     $.constant_expression, choice('+:', '-:'), $.constant_expression
   ),
 
-  expression: $ => prec('expression', choice(
+  expression: $ => choice(
     $.primary,
     $._unary_expression,
     $.inc_or_dec_expression,
@@ -3900,8 +3900,7 @@ const rules = {
     $.inside_expression,
     $.tagged_union_expression,
     $.text_macro_usage,               // Out of LRM
-    $.file_or_line_compiler_directive // Out of LRM
-  )),
+  ),
 
   tagged_union_expression: $ => prec.right(seq(
     'tagged', $.member_identifier, optional($.primary)
@@ -3985,7 +3984,8 @@ const rules = {
     $._constant_assignment_pattern_expression,
     $.type_reference,
     '$', // Out of LRM, required for 7.10.4 (bullet point 47): The $ primary shall be legal only in a select for a queue variable.
-    'null'
+    'null',
+    prec.dynamic(-1, seq($.text_macro_usage, optional($.constant_select))), // Out of LRM: a macro expands to a primary before parsing
   )),
 
   module_path_primary: $ => choice(
@@ -4045,6 +4045,7 @@ const rules = {
     $.time_literal,
     $.unbased_unsized_literal,
     $.string_literal,
+    $.file_or_line_compiler_directive, // Out of LRM: expands to a number or a string
   ),
 
   time_literal: $ => seq(
@@ -4369,7 +4370,7 @@ const rules = {
       choice($._identifier, $.text_macro_usage), // Slightly out of LRM to support use of $.text_macro_usage as part of hierarchical identifiers
       optional($.constant_bit_select),
       '.'))) ,
-    $._identifier
+    choice($._identifier, prec.dynamic(-1, $.text_macro_usage)) // Out of LRM: a macro expands to an identifier before parsing
   )),
 
   hierarchical_net_identifier: $ => $.hierarchical_identifier,
@@ -4503,7 +4504,7 @@ const rules = {
   ),
 
 // * 22. Compiler directives
-  _directives: $ => prec('_directives', choice(
+  _directives: $ => choice(
     $.resetall_compiler_directive,
     $.include_compiler_directive,
     $.text_macro_definition,
@@ -4522,7 +4523,7 @@ const rules = {
     $.file_or_line_compiler_directive,
     $.keywords_directive,
     $.endkeywords_directive
-  )),
+  ),
 
 
 // ** 22-3 `resetall
@@ -5431,14 +5432,6 @@ module.exports = grammar({
     ['constraint_set', 'empty_unpacked_array_concatenation'],
 
 
-    // Out of LRM support for macros in identifiers
-    //
-    // text_macro_usage  •  '['  …
-    // 1:  (_directives  text_macro_usage)  •  '['  …                                         (precedence: '_directives')
-    // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
-    ['hierarchical_identifier', '_directives'],
-
-
     // Set the one higher in the syntax tree: _incomplete_class_scoped_type
     //
     // 'typedef'  _identifier  •  '::'  …
@@ -5598,12 +5591,6 @@ module.exports = grammar({
     //   1:  (_simple_type  _identifier)  •  '''  …             (precedence: '_simple_type')
     //   2:  (hierarchical_identifier  _identifier)  •  '''  …  (precedence: 'hierarchical_identifier')
     ['_simple_type', 'hierarchical_identifier'],
-
-
-    // Allow conditional compilation on constraint blocks (#67)
-    // 1:  'randomize'  'with'  '{'  (_directives  text_macro_usage)  •  '-'  …  (precedence: '_directives')
-    // 2:  'randomize'  'with'  '{'  (expression  text_macro_usage)  •  '-'  …
-    ['expression', '_directives'],
 
 
     // Leave these two standalone to avoid having to replicate code with function 'list_of_args'
@@ -5928,7 +5915,13 @@ module.exports = grammar({
     // '('  text_macro_usage  •  ':'  …
     // 1:  '('  (constant_expression  text_macro_usage)  •  ':'  …
     // 2:  '('  (expression  text_macro_usage)  •  ':'  …
-    [$.constant_expression, $.expression],
+    //
+    // A macro can also be the last segment of a $.hierarchical_identifier, and a $.constant_primary,
+    // so the same `M has one more parse in each context. Dynamic precedence picks the plain macro.
+    [$.constant_expression, $.expression, $.constant_primary, $.hierarchical_identifier],
+    [$.constant_expression, $.constant_primary, $.hierarchical_identifier],
+    [$.expression, $.hierarchical_identifier],
+    [$._method_call_root, $.constant_primary, $.hierarchical_identifier],
 
 
     // $.nonrange_select would cover the $.dynamic_array_new case
@@ -6224,14 +6217,17 @@ module.exports = grammar({
     [$.constraint_block, $.empty_unpacked_array_concatenation],
 
 
-    // Allow text_macro_usage on LHS of blocking and non-blocking assignments (on $.variable_lvalue)
-    [$.variable_lvalue, $._directives],
-    [$.expression, $.variable_lvalue],
-    [$.constant_expression, $.expression, $.variable_lvalue],
+    // Allow text_macro_usage on LHS of blocking and non-blocking assignments (on $.variable_lvalue),
+    // reached through the last segment of $.hierarchical_identifier
+    [$.variable_lvalue, $.hierarchical_identifier],
+    [$.variable_lvalue, $.hierarchical_identifier, $._directives],
+    [$.expression, $.variable_lvalue, $.hierarchical_identifier],
+    [$.constant_expression, $.expression, $.constant_primary, $.variable_lvalue, $.hierarchical_identifier],
 
 
     // Fix macro arguments parsing
     [$._identifier, $.formal_argument],
+    [$.hierarchical_identifier, $.formal_argument],
 
 
     // Support for `ifdefs in module header package import section
@@ -6243,10 +6239,17 @@ module.exports = grammar({
     [$.constant_primary, $.net_lvalue, $.hierarchical_identifier],
     [$.data_type, $.constant_primary, $.hierarchical_identifier],
 
-    // Allow conditional compilation on constraint blocks (#67)
-    [$.constant_expression, $._directives],
-    [$.expression, $.variable_lvalue, $._directives],
-    [$.constant_expression, $.expression, $._directives],
+    // Allow conditional compilation on constraint blocks (#67), with the macro also reached
+    // through $.hierarchical_identifier and $.constant_primary
+    [$.constant_expression, $.constant_primary, $.hierarchical_identifier, $._directives],
+    [$.expression, $.variable_lvalue, $.hierarchical_identifier, $._directives],
+    [$.constant_expression, $.expression, $.constant_primary, $.hierarchical_identifier, $._directives],
+
+    // A macro or a `__FILE__/`__LINE__ can be a directive, or a primary/identifier inside an expression
+    [$.hierarchical_identifier, $._directives],
+    [$.expression, $.hierarchical_identifier, $._directives],
+    [$._method_call_root, $.hierarchical_identifier, $._directives],
+    [$.primary_literal, $._directives],
   ],
 
 });
