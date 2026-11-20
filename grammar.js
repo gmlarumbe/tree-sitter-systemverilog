@@ -3953,7 +3953,18 @@ const rules = {
   _genvar_expression: $ => $.constant_expression,
 
   // The ones below are not part of the LRM explicitly (added to simplify reading of the grammar)
-  _unary_expression: $ => unary_expr($, $.unary_operator, $.primary),
+  // Out of LRM: besides a primary, the operand can be a parenthesized assignment or a postfix increment
+  // or decrement, as slang accepts (e.g. !(x = y), !x++). Both are aliased to primary, the LRM operand.
+  _unary_expression: $ => unary_expr($, $.unary_operator, choice($.primary, alias($._unary_operand, $.primary))),
+
+  _unary_operand: $ => choice(
+    $._parenthesized_expression,
+    alias($._postfix_inc_or_dec_expression, $.inc_or_dec_expression),
+  ),
+
+  _postfix_inc_or_dec_expression: $ => prec.left(PREC.UNARY, seq(
+    $.variable_lvalue, repeat($.attribute_instance), $.inc_or_dec_operator
+  )),
 
   _binary_expression: $ => binary_expr($, BINARY_OP_TABLE, $.expression),
 
