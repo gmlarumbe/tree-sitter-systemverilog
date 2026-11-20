@@ -4970,8 +4970,12 @@
           "name": "constraint_expression"
         },
         {
-          "type": "SYMBOL",
-          "name": "_directives"
+          "type": "PREC_DYNAMIC",
+          "value": -1,
+          "content": {
+            "type": "SYMBOL",
+            "name": "_directives"
+          }
         }
       ]
     },
@@ -28461,53 +28465,45 @@
       ]
     },
     "expression": {
-      "type": "PREC",
-      "value": "expression",
-      "content": {
-        "type": "CHOICE",
-        "members": [
-          {
-            "type": "SYMBOL",
-            "name": "primary"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "_unary_expression"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "inc_or_dec_expression"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "_parenthesized_expression"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "_binary_expression"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "conditional_expression"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "inside_expression"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "tagged_union_expression"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "text_macro_usage"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "file_or_line_compiler_directive"
-          }
-        ]
-      }
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "primary"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_unary_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "inc_or_dec_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_parenthesized_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_binary_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "conditional_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "inside_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "tagged_union_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "text_macro_usage"
+        }
+      ]
     },
     "tagged_union_expression": {
       "type": "PREC_RIGHT",
@@ -31771,6 +31767,31 @@
           {
             "type": "STRING",
             "value": "null"
+          },
+          {
+            "type": "PREC_DYNAMIC",
+            "value": -1,
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "text_macro_usage"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "constant_select"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            }
           }
         ]
       }
@@ -32132,6 +32153,10 @@
         {
           "type": "SYMBOL",
           "name": "string_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "file_or_line_compiler_directive"
         }
       ]
     },
@@ -34131,8 +34156,21 @@
             }
           },
           {
-            "type": "SYMBOL",
-            "name": "_identifier"
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "_identifier"
+              },
+              {
+                "type": "PREC_DYNAMIC",
+                "value": -1,
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "text_macro_usage"
+                }
+              }
+            ]
           }
         ]
       }
@@ -34717,85 +34755,81 @@
       ]
     },
     "_directives": {
-      "type": "PREC",
-      "value": "_directives",
-      "content": {
-        "type": "CHOICE",
-        "members": [
-          {
-            "type": "SYMBOL",
-            "name": "resetall_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "include_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "text_macro_definition"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "text_macro_usage"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "undefine_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "undefineall_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "conditional_compilation_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "timescale_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "default_nettype_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "unconnected_drive_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "nounconnected_drive_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "celldefine_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "endcelldefine_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "pragma"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "line_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "file_or_line_compiler_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "keywords_directive"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "endkeywords_directive"
-          }
-        ]
-      }
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "resetall_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "include_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "text_macro_definition"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "text_macro_usage"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "undefine_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "undefineall_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "conditional_compilation_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "timescale_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "default_nettype_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "unconnected_drive_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "nounconnected_drive_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "celldefine_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "endcelldefine_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "pragma"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "line_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "file_or_line_compiler_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "keywords_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "endkeywords_directive"
+        }
+      ]
     },
     "resetall_compiler_directive": {
       "type": "STRING",
@@ -37328,7 +37362,23 @@
     ],
     [
       "constant_expression",
-      "expression"
+      "expression",
+      "constant_primary",
+      "hierarchical_identifier"
+    ],
+    [
+      "constant_expression",
+      "constant_primary",
+      "hierarchical_identifier"
+    ],
+    [
+      "expression",
+      "hierarchical_identifier"
+    ],
+    [
+      "_method_call_root",
+      "constant_primary",
+      "hierarchical_identifier"
     ],
     [
       "select",
@@ -37878,19 +37928,31 @@
     ],
     [
       "variable_lvalue",
+      "hierarchical_identifier"
+    ],
+    [
+      "variable_lvalue",
+      "hierarchical_identifier",
       "_directives"
     ],
     [
       "expression",
-      "variable_lvalue"
+      "variable_lvalue",
+      "hierarchical_identifier"
     ],
     [
       "constant_expression",
       "expression",
-      "variable_lvalue"
+      "constant_primary",
+      "variable_lvalue",
+      "hierarchical_identifier"
     ],
     [
       "_identifier",
+      "formal_argument"
+    ],
+    [
+      "hierarchical_identifier",
       "formal_argument"
     ],
     [
@@ -37912,16 +37974,39 @@
     ],
     [
       "constant_expression",
+      "constant_primary",
+      "hierarchical_identifier",
       "_directives"
     ],
     [
       "expression",
       "variable_lvalue",
+      "hierarchical_identifier",
       "_directives"
     ],
     [
       "constant_expression",
       "expression",
+      "constant_primary",
+      "hierarchical_identifier",
+      "_directives"
+    ],
+    [
+      "hierarchical_identifier",
+      "_directives"
+    ],
+    [
+      "expression",
+      "hierarchical_identifier",
+      "_directives"
+    ],
+    [
+      "_method_call_root",
+      "hierarchical_identifier",
+      "_directives"
+    ],
+    [
+      "primary_literal",
       "_directives"
     ]
   ],
@@ -38577,16 +38662,6 @@
     [
       {
         "type": "STRING",
-        "value": "hierarchical_identifier"
-      },
-      {
-        "type": "STRING",
-        "value": "_directives"
-      }
-    ],
-    [
-      {
-        "type": "STRING",
         "value": "_incomplete_class_scoped_type"
       },
       {
@@ -38832,16 +38907,6 @@
       {
         "type": "STRING",
         "value": "hierarchical_identifier"
-      }
-    ],
-    [
-      {
-        "type": "STRING",
-        "value": "expression"
-      },
-      {
-        "type": "STRING",
-        "value": "_directives"
       }
     ],
     [
