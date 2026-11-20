@@ -28852,9 +28852,65 @@
             "type": "FIELD",
             "name": "argument",
             "content": {
-              "type": "SYMBOL",
-              "name": "primary"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "primary"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_unary_operand"
+                  },
+                  "named": true,
+                  "value": "primary"
+                }
+              ]
             }
+          }
+        ]
+      }
+    },
+    "_unary_operand": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_parenthesized_expression"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_postfix_inc_or_dec_expression"
+          },
+          "named": true,
+          "value": "inc_or_dec_expression"
+        }
+      ]
+    },
+    "_postfix_inc_or_dec_expression": {
+      "type": "PREC_LEFT",
+      "value": 36,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "variable_lvalue"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "attribute_instance"
+            }
+          },
+          {
+            "type": "SYMBOL",
+            "name": "inc_or_dec_operator"
           }
         ]
       }
