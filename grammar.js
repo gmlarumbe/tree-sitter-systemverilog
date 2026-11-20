@@ -1178,8 +1178,9 @@ const rules = {
 
 // ** A.2.2 Declaration data types
 // *** A.2.2.1 Net and variable types
-  // $.integral_number, $.constant_mintypmax_expression and $.type_reference replace the $.constant_primary
-  // branch, as these are the only possible options of $.constant_primary in a static cast.
+  // $.constant_primary itself is left out (it caused an issue with a concatenation on the RHS), so the
+  // branches marked below replace it: a number, a parenthesized expression, a type reference, an identifier
+  // with a select, and a function or system call.
   // A.10.45: It shall be legal to use a type_reference constant_primary as the casting_type in a static cast.
   casting_type: $ => choice(
     $._simple_type,
@@ -1190,7 +1191,13 @@ const rules = {
     'string',
     'const',
     $.hierarchical_identifier, // Out of LRM but supported by most tools
+    seq($.hierarchical_identifier, $.select), // $.constant_primary branch
+    $.system_tf_call,          // $.constant_primary branch ($.constant_function_call)
+    alias($._casting_tf_call, $.tf_call), // $.constant_primary branch ($.constant_function_call)
   ),
+
+  // Only calls with parentheses, so that a bare identifier stays a $.hierarchical_identifier
+  _casting_tf_call: $ => seq($.hierarchical_identifier, '(', optional($.list_of_arguments), ')'),
 
   data_type: $ => prec('data_type', choice(
     seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension)),
@@ -6033,7 +6040,11 @@ module.exports = grammar({
     // 1:  '['  (primary  hierarchical_identifier  •  select)  (precedence: 'primary')
     // 2:  '['  (primary  hierarchical_identifier)  •  '.'  …  (precedence: 'primary')
     // 3:  '['  (tf_call  hierarchical_identifier)  •  '.'  …  (precedence: 'tf_call', associativity: Right)
-    [$.tf_call, $.primary],
+    //
+    // $.casting_type also takes a call or a select, decided by the '\'' after it, e.g. f(x)'(y), a[1]'(y)
+    [$.casting_type, $.tf_call, $.primary],
+    [$.casting_type, $.tf_call, $.primary, $.variable_lvalue],
+    [$.casting_type, $.tf_call, $.primary, $.net_lvalue, $.variable_lvalue],
 
 
     // Didn't test but makes sense to leave the conflict to avoid errors
@@ -6130,7 +6141,7 @@ module.exports = grammar({
     //  $.class_new branch in $.blocking_assignment
     [$.blocking_assignment, $.class_qualifier],
     [$.blocking_assignment, $._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.blocking_assignment, $.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.casting_type, $.blocking_assignment, $.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.blocking_assignment, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.blocking_assignment, $.variable_lvalue],
     [$.blocking_assignment, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
@@ -6138,7 +6149,7 @@ module.exports = grammar({
 
     // After removing $.constant_primary from $.casting_type to fix issue with concatenation on RHS
     [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.class_qualifier],
-    [$.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.casting_type, $.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
     // Sequences/Properties/Assertions
